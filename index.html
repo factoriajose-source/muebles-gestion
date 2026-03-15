@@ -189,7 +189,7 @@ tr:last-child td{border-bottom:none}
             <select id="c-vendedor" disabled>
               <option>Elisa</option><option>Livi</option><option>Jose Antonio</option>
               <option>Jose Ángel</option><option>Ángel</option><option>Javi</option>
-              <option>Kike</option><option>Luci</option><option>Patricia</option><option>Lucía</option>
+              <option>Kike</option><option>Luci</option><option>Patricia</option><option>Lucía</option><option>Carmen</option>
             </select>
           </div>
         </div>
@@ -278,7 +278,7 @@ tr:last-child td{border-bottom:none}
           <option value="all">Todos los vendedores</option>
           <option>Elisa</option><option>Livi</option><option>Jose Antonio</option>
           <option>Jose Ángel</option><option>Ángel</option><option>Javi</option>
-          <option>Kike</option><option>Luci</option><option>Patricia</option><option>Lucía</option>
+          <option>Kike</option><option>Luci</option><option>Patricia</option><option>Lucía</option><option>Carmen</option><option>Carmen</option>
         </select>
       </div>
       <div id="lista-content"><div class="spinner">Cargando...</div></div>
@@ -332,12 +332,31 @@ tr:last-child td{border-bottom:none}
           <option value="year">Este año</option>
           <option value="all">Todo</option>
         </select>
+        <select id="st-mes" style="padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:#fff;-webkit-appearance:none">
+          <option value="all">Todos los meses</option>
+          <option value="01">Enero</option><option value="02">Febrero</option>
+          <option value="03">Marzo</option><option value="04">Abril</option>
+          <option value="05">Mayo</option><option value="06">Junio</option>
+          <option value="07">Julio</option><option value="08">Agosto</option>
+          <option value="09">Septiembre</option><option value="10">Octubre</option>
+          <option value="11">Noviembre</option><option value="12">Diciembre</option>
+        </select>
         <select id="st-tienda" style="padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:#fff;-webkit-appearance:none">
           <option value="all">Todas las tiendas</option>
           <option>Muebles La Factoría</option>
           <option>Merkamueble</option>
           <option>ExpoSofá</option>
         </select>
+        <select id="st-vendedor" style="padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:#fff;-webkit-appearance:none">
+          <option value="all">Todos los vendedores</option>
+          <option>Elisa</option><option>Livi</option><option>Jose Antonio</option>
+          <option>Jose Ángel</option><option>Ángel</option><option>Javi</option>
+          <option>Kike</option><option>Luci</option><option>Patricia</option><option>Lucía</option><option>Carmen</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:1rem">
+        <button class="tab active" id="st-tab-presup" onclick="switchStatsTab('presup')">Presupuestos</button>
+        <button class="tab" id="st-tab-visitas" onclick="switchStatsTab('visitas')">Visitas</button>
       </div>
       <div id="stats-content"><div class="spinner">Cargando...</div></div>
     </div>
@@ -395,7 +414,7 @@ const STORES = {
   }
 };
 
-const VENDORS = ["Elisa","Livi","Jose Antonio","Jose Ángel","Ángel","Javi","Kike","Luci","Patricia","Lucía"];
+const VENDORS = ["Elisa","Livi","Jose Antonio","Jose Ángel","Ángel","Javi","Kike","Luci","Patricia","Lucía","Carmen"];
 const DAYS = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
 
 let currentUser = null;
@@ -924,19 +943,42 @@ function inPeriod(dateStr, period) {
   return true;
 }
 
+let currentStatsTab = "presup";
+
+function switchStatsTab(tab) {
+  currentStatsTab = tab;
+  document.getElementById("st-tab-presup").classList.toggle("active", tab === "presup");
+  document.getElementById("st-tab-visitas").classList.toggle("active", tab === "visitas");
+  renderStats();
+}
+
 function renderStats() {
+  if (currentStatsTab === "visitas") { renderVisStats(); return; }
+  renderPresupStats();
+}
+
+function renderPresupStats() {
   const period = document.getElementById("st-period").value;
+  const mes = document.getElementById("st-mes").value;
   const tienda = document.getElementById("st-tienda").value;
+  const vendedor = document.getElementById("st-vendedor").value;
+
   const filtered = presupuestos.filter(p => {
     if (tienda !== "all" && p.tienda !== tienda) return false;
-    return inPeriod(p.fecha, period);
+    if (vendedor !== "all" && p.vendedor !== vendedor) return false;
+    if (mes !== "all" && !p.fecha.startsWith(new Date().getFullYear() + "-" + mes) && !p.fecha.slice(5,7) === mes) return false;
+    if (mes !== "all" && p.fecha.slice(5,7) !== mes) return false;
+    if (mes === "all") return inPeriod(p.fecha, period);
+    return true;
   });
-  if (!filtered.length) { document.getElementById("stats-content").innerHTML = "<div class='card'><p class='empty'>Sin datos para este periodo</p></div>"; return; }
+
+  if (!filtered.length) { document.getElementById("stats-content").innerHTML = "<div class='card'><p class='empty'>Sin datos para este filtro</p></div>"; return; }
   const total = filtered.length;
   const pedidos = filtered.filter(p => p.estado === "pedido").length;
   const impTotal = filtered.reduce((s,p) => s + calcTotal(p), 0);
   const impPedidos = filtered.filter(p => p.estado === "pedido").reduce((s,p) => s + calcTotal(p), 0);
   const conv = Math.round(pedidos/total*100);
+
   const bySeller = {};
   filtered.forEach(p => {
     if (!bySeller[p.vendedor]) bySeller[p.vendedor] = {total:0,pedidos:0,importe:0};
@@ -946,6 +988,7 @@ function renderStats() {
   });
   const sellerList = Object.entries(bySeller).sort((a,b) => b[1].total - a[1].total);
   const maxS = sellerList.reduce((m,x) => Math.max(m,x[1].total), 1);
+
   const byStore = {};
   filtered.forEach(p => {
     if (!byStore[p.tienda]) byStore[p.tienda] = {total:0,pedidos:0,importe:0};
@@ -956,39 +999,182 @@ function renderStats() {
   const storeList = Object.entries(byStore).sort((a,b) => b[1].total - a[1].total);
   const maxSt = storeList.reduce((m,x) => Math.max(m,x[1].total), 1);
 
-  let html = "<div class='stat-grid'>"
-    + "<div class='stat-card'><div class='stat-lbl'>Presupuestos</div><div class='stat-val'>" + total + "</div><div class='stat-sub'>en el periodo</div></div>"
+  const byMonth = {};
+  filtered.forEach(p => {
+    const m = p.fecha.slice(0,7);
+    if (!byMonth[m]) byMonth[m] = {total:0,pedidos:0};
+    byMonth[m].total++; if (p.estado === "pedido") byMonth[m].pedidos++;
+  });
+  const monthList = Object.entries(byMonth).sort((a,b) => a[0].localeCompare(b[0]));
+  const MESES = ["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+
+  let h = "<div class='stat-grid'>"
+    + "<div class='stat-card'><div class='stat-lbl'>Presupuestos</div><div class='stat-val'>" + total + "</div><div class='stat-sub'>en el filtro</div></div>"
     + "<div class='stat-card'><div class='stat-lbl'>Pedidos</div><div class='stat-val' style='color:#3b6d11'>" + pedidos + "</div><div class='stat-sub'>" + conv + "% conversión</div></div>"
-    + "<div class='stat-card'><div class='stat-lbl'>Importe total</div><div class='stat-val' style='font-size:17px'>" + fmt(impTotal) + "</div><div class='stat-sub'>pedidos: " + fmt(impPedidos) + "</div></div>"
+    + "<div class='stat-card'><div class='stat-lbl'>Importe total</div><div class='stat-val' style='font-size:16px'>" + fmt(impTotal) + "</div><div class='stat-sub'>pedidos: " + fmt(impPedidos) + "</div></div>"
     + "</div>";
 
-  html += "<div class='card'><p class='card-title'>Por vendedor/a</p>";
+  h += "<div class='card'><p class='card-title'>Por vendedor/a</p>";
   sellerList.forEach(([name,d]) => {
     const pct = Math.round(d.total/maxS*100), cv = d.total ? Math.round(d.pedidos/d.total*100) : 0;
-    html += "<div class='bar-row'><span class='bar-name' style='font-weight:500'>" + name + "</span>"
+    h += "<div class='bar-row'><span class='bar-name' style='font-weight:500'>" + name + "</span>"
       + "<div class='bar-wrap'><div class='bar-blue' style='width:" + pct + "%'></div></div>"
       + "<span style='font-size:12px;min-width:24px;text-align:right'>" + d.total + "</span>"
       + "<span style='font-size:11px;color:#3b6d11;min-width:60px;text-align:right'>" + d.pedidos + " pedidos</span>"
       + "<span style='font-size:11px;color:#888;min-width:36px;text-align:right'>" + cv + "%</span>"
       + "<span style='font-size:11px;color:#185fa5;min-width:70px;text-align:right'>" + fmt(d.importe) + "</span></div>";
   });
-  html += "</div>";
+  h += "</div>";
 
   if (tienda === "all") {
-    html += "<div class='card'><p class='card-title'>Por tienda</p>";
+    h += "<div class='card'><p class='card-title'>Por tienda</p>";
     storeList.forEach(([name,d]) => {
       const pct = Math.round(d.total/maxSt*100), cv = d.total ? Math.round(d.pedidos/d.total*100) : 0;
-      html += "<div class='bar-row'><span class='bar-name'>" + name + "</span>"
+      h += "<div class='bar-row'><span class='bar-name'>" + name + "</span>"
         + "<div class='bar-wrap'><div class='bar-orange' style='width:" + pct + "%'></div></div>"
         + "<span style='font-size:12px;min-width:24px;text-align:right'>" + d.total + "</span>"
         + "<span style='font-size:11px;color:#3b6d11;min-width:60px;text-align:right'>" + d.pedidos + " pedidos</span>"
         + "<span style='font-size:11px;color:#888;min-width:36px;text-align:right'>" + cv + "%</span>"
         + "<span style='font-size:11px;color:#185fa5;min-width:70px;text-align:right'>" + fmt(d.importe) + "</span></div>";
     });
-    html += "</div>";
+    h += "</div>";
   }
 
-  document.getElementById("stats-content").innerHTML = html;
+  if (monthList.length > 1) {
+    const maxM = monthList.reduce((m,x) => Math.max(m,x[1].total), 1);
+    h += "<div class='card'><p class='card-title'>Evolución mensual</p>";
+    monthList.forEach(([m,d]) => {
+      const pct = Math.round(d.total/maxM*100);
+      const mn = MESES[parseInt(m.slice(5,7))]; const yr = m.slice(0,4);
+      h += "<div class='bar-row'><span class='bar-name'>" + mn + " " + yr + "</span>"
+        + "<div class='bar-wrap'><div class='bar-blue' style='width:" + pct + "%'></div></div>"
+        + "<span style='font-size:12px;min-width:24px;text-align:right'>" + d.total + "</span>"
+        + "<span style='font-size:11px;color:#3b6d11;min-width:60px;text-align:right'>" + d.pedidos + " pedidos</span>"
+        + "<span style='font-size:11px;color:#888;min-width:36px;text-align:right'>" + Math.round(d.pedidos/d.total*100) + "%</span></div>";
+    });
+    h += "</div>";
+  }
+
+  document.getElementById("stats-content").innerHTML = h;
+}
+
+async function renderVisStats() {
+  const period = document.getElementById("st-period").value;
+  const mes = document.getElementById("st-mes").value;
+  const tienda = document.getElementById("st-tienda").value;
+  document.getElementById("stats-content").innerHTML = "<div class='spinner'>Cargando visitas...</div>";
+
+  try {
+    const snap = await getDocs(collection(db, "visitas"));
+    let entries = [];
+    snap.forEach(d => entries.push(d.data()));
+
+    // Filter
+    entries = entries.filter(e => {
+      if (tienda !== "all" && e.tienda !== tienda) return false;
+      if (mes !== "all" && e.fecha.slice(5,7) !== mes) return false;
+      if (mes === "all") return inPeriod(e.fecha, period);
+      return true;
+    });
+
+    if (!entries.length) { document.getElementById("stats-content").innerHTML = "<div class='card'><p class='empty'>Sin registros de visitas para este filtro</p></div>"; return; }
+
+    const DIAS = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+    const MESES_N = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
+    // Totals
+    let totM = 0, totT = 0;
+    entries.forEach(e => {
+      totM += Object.values(e.m||{}).reduce((s,v) => s+v, 0);
+      totT += Object.values(e.t||{}).reduce((s,v) => s+v, 0);
+    });
+    const totVisitas = totM + totT;
+
+    // By day of week (Mon-Sat)
+    const byDay = {1:0,2:0,3:0,4:0,5:0,6:0};
+    entries.forEach(e => {
+      const d = new Date(e.fecha + "T12:00:00").getDay();
+      if (d >= 1 && d <= 6) {
+        const tot = Object.values(e.m||{}).reduce((s,v)=>s+v,0) + Object.values(e.t||{}).reduce((s,v)=>s+v,0);
+        byDay[d] = (byDay[d]||0) + tot;
+      }
+    });
+    const maxDay = Math.max(...Object.values(byDay), 1);
+
+    // By month
+    const byMonth = {};
+    entries.forEach(e => {
+      const m = e.fecha.slice(0,7);
+      if (!byMonth[m]) byMonth[m] = {total:0,m:0,t:0};
+      byMonth[m].m += Object.values(e.m||{}).reduce((s,v)=>s+v,0);
+      byMonth[m].t += Object.values(e.t||{}).reduce((s,v)=>s+v,0);
+      byMonth[m].total = byMonth[m].m + byMonth[m].t;
+    });
+    const monthList = Object.entries(byMonth).sort((a,b) => a[0].localeCompare(b[0]));
+    const maxM = monthList.reduce((m,x) => Math.max(m,x[1].total), 1);
+
+    // By seller
+    const bySeller = {};
+    entries.forEach(e => {
+      ["m","t"].forEach(shift => {
+        Object.entries(e[shift]||{}).forEach(([s,v]) => {
+          if (!bySeller[s]) bySeller[s] = {m:0,t:0};
+          bySeller[s][shift] += v;
+        });
+      });
+    });
+    const sellerList = Object.entries(bySeller).map(([n,d]) => [n,{...d,total:d.m+d.t}]).sort((a,b)=>b[1].total-a[1].total);
+    const maxS = sellerList.reduce((m,x)=>Math.max(m,x[1].total),1);
+
+    let h = "<div class='stat-grid'>"
+      + "<div class='stat-card'><div class='stat-lbl'>Total visitas</div><div class='stat-val'>" + totVisitas + "</div><div class='stat-sub'>" + entries.length + " días registrados</div></div>"
+      + "<div class='stat-card'><div class='stat-lbl'>Mañana</div><div class='stat-val'>" + totM + "</div><div class='stat-sub'>" + (totVisitas?Math.round(totM/totVisitas*100):0) + "% del total</div></div>"
+      + "<div class='stat-card'><div class='stat-lbl'>Tarde</div><div class='stat-val'>" + totT + "</div><div class='stat-sub'>" + (totVisitas?Math.round(totT/totVisitas*100):0) + "% del total</div></div>"
+      + "</div>";
+
+    // By day of week
+    h += "<div class='card'><p class='card-title'>Visitas por día de la semana</p>";
+    [1,2,3,4,5,6].forEach(d => {
+      const v = byDay[d]||0, pct = Math.round(v/maxDay*100);
+      h += "<div class='bar-row'><span class='bar-name' style='font-weight:500'>" + DIAS[d] + "</span>"
+        + "<div class='bar-wrap'><div class='bar-blue' style='width:" + pct + "%'></div></div>"
+        + "<span style='font-size:14px;font-weight:600;min-width:40px;text-align:right'>" + v + "</span></div>";
+    });
+    h += "</div>";
+
+    // By month
+    if (monthList.length > 0) {
+      h += "<div class='card'><p class='card-title'>Visitas por mes</p>";
+      monthList.forEach(([m,d]) => {
+        const pct = Math.round(d.total/maxM*100);
+        const mn = MESES_N[parseInt(m.slice(5,7))]; const yr = m.slice(0,4);
+        h += "<div class='bar-row'><span class='bar-name'>" + mn + " " + yr + "</span>"
+          + "<div class='bar-wrap'><div class='bar-orange' style='width:" + pct + "%'></div></div>"
+          + "<span style='font-size:13px;font-weight:600;min-width:40px;text-align:right'>" + d.total + "</span>"
+          + "<span style='font-size:11px;color:#854f0b;min-width:50px;text-align:right'>" + d.m + " mañ</span>"
+          + "<span style='font-size:11px;color:#185fa5;min-width:50px;text-align:right'>" + d.t + " tarde</span></div>";
+      });
+      h += "</div>";
+    }
+
+    // By seller
+    if (sellerList.length > 0) {
+      h += "<div class='card'><p class='card-title'>Visitas atendidas por vendedor/a</p>";
+      sellerList.forEach(([name,d]) => {
+        const pct = Math.round(d.total/maxS*100);
+        h += "<div class='bar-row'><span class='bar-name' style='font-weight:500'>" + name + "</span>"
+          + "<div class='bar-wrap'><div class='bar-blue' style='width:" + pct + "%'></div></div>"
+          + "<span style='font-size:13px;font-weight:600;min-width:40px;text-align:right'>" + d.total + "</span>"
+          + "<span style='font-size:11px;color:#854f0b;min-width:50px;text-align:right'>" + d.m + " mañ</span>"
+          + "<span style='font-size:11px;color:#185fa5;min-width:50px;text-align:right'>" + d.t + " tarde</span></div>";
+      });
+      h += "</div>";
+    }
+
+    document.getElementById("stats-content").innerHTML = h;
+  } catch(err) {
+    document.getElementById("stats-content").innerHTML = "<div class='card'><p class='empty'>Error al cargar: " + err.message + "</p></div>";
+  }
 }
 
 // ===== PDF =====
@@ -1128,7 +1314,9 @@ function initApp() {
   document.getElementById("fil-tienda").addEventListener("change", renderLista);
   document.getElementById("fil-vendedor").addEventListener("change", renderLista);
   document.getElementById("st-period").addEventListener("change", renderStats);
+  document.getElementById("st-mes").addEventListener("change", renderStats);
   document.getElementById("st-tienda").addEventListener("change", renderStats);
+  document.getElementById("st-vendedor").addEventListener("change", renderStats);
   document.getElementById("mo-precio").addEventListener("input", calcTotals);
   document.getElementById("desc-pct").addEventListener("input", calcTotals);
   document.getElementById("vis-fecha").addEventListener("change", loadVisita);
