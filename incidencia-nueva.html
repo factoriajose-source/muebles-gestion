@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Informe de Incidencia — Muebles La Factoría</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --rojo: #c0392b; --rojo-claro: #fdf0f0; --rojo-borde: #f5c6c2;
+  --gris: #f5f4f0; --gris-borde: #e0dfd8; --texto: #1a1a18; --suave: #888;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--gris); color: var(--texto); min-height: 100vh; }
+
+header { background: var(--rojo); color: #fff; padding: 1rem 1.5rem; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 50; box-shadow: 0 2px 12px rgba(0,0,0,.2); }
+.logo { font-size: 28px; }
+.htitle { font-family: 'Playfair Display', serif; font-size: 17px; }
+.hsub { font-size: 11px; opacity: .7; margin-top: 1px; }
+
+.progress-bar { height: 4px; background: rgba(255,255,255,.2); }
+.progress-fill { height: 100%; background: #fff; transition: width .3s; width: 0%; }
+
+.container { max-width: 680px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+
+.card { background: #fff; border-radius: 14px; border: 1px solid var(--gris-borde); margin-bottom: 1.25rem; overflow: hidden; }
+.card-hdr { background: var(--rojo-claro); border-bottom: 2px solid var(--rojo-borde); padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+.card-num { width: 26px; height: 26px; background: var(--rojo); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.card-title { font-size: 13px; font-weight: 700; color: var(--rojo); text-transform: uppercase; letter-spacing: .06em; }
+.card-body { padding: 1rem; }
+
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 480px) { .g2 { grid-template-columns: 1fr; } }
+
+.f { margin-bottom: 10px; }
+.f:last-child { margin-bottom: 0; }
+.f label { font-size: 11px; color: var(--suave); text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 4px; font-weight: 500; }
+
+input[type=text], input[type=tel], input[type=date], select, textarea {
+  width: 100%; padding: 11px 13px; border: 1.5px solid var(--gris-borde); border-radius: 9px;
+  font-size: 15px; font-family: 'DM Sans', sans-serif; background: #fff; color: var(--texto);
+  -webkit-appearance: none; transition: border-color .2s;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--rojo); box-shadow: 0 0 0 3px rgba(192,57,43,.08); }
+textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+
+.foto-card { border: 1.5px solid var(--gris-borde); border-radius: 12px; overflow: hidden; margin-bottom: 14px; }
+.foto-hdr { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: var(--gris); border-bottom: 1px solid var(--gris-borde); }
+.foto-num { font-weight: 700; font-size: 13px; color: var(--rojo); }
+.foto-del { padding: 4px 10px; border: 1px solid #f09595; border-radius: 6px; background: #fff; color: #a32d2d; font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; touch-action: manipulation; }
+.foto-body { padding: 12px; }
+.foto-body img { width: 100%; max-height: 240px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; display: block; }
+
+.flabel { font-size: 11px; color: var(--suave); text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 4px; font-weight: 500; }
+.ftxta { width: 100%; padding: 10px; border: 1.5px solid var(--gris-borde); border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; resize: vertical; margin-bottom: 10px; }
+.ftxta:focus { outline: none; border-color: var(--rojo); }
+
+.estado-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.estado-btn { display: flex; align-items: center; gap: 6px; padding: 9px 10px; border-radius: 8px; cursor: pointer; font-size: 11px; font-family: 'DM Sans', sans-serif; border: 1.5px solid var(--gris-borde); background: var(--gris); color: #555; text-align: left; touch-action: manipulation; line-height: 1.3; transition: all .15s; }
+.estado-btn .ei { font-size: 16px; flex-shrink: 0; }
+
+.btn-add { width: 100%; padding: 14px; border: 1.5px dashed var(--rojo); border-radius: 10px; background: var(--rojo-claro); color: var(--rojo); font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; touch-action: manipulation; margin-top: 8px; }
+.empty-fotos { text-align: center; padding: 2rem; color: #aaa; border: 1.5px dashed var(--gris-borde); border-radius: 10px; font-size: 13px; line-height: 1.8; }
+
+.firma-hint { font-size: 12px; color: var(--suave); text-align: center; margin-bottom: 8px; }
+#firma-canvas { width: 100%; height: 140px; display: block; border: 1.5px solid var(--gris-borde); border-radius: 10px; background: #fff; touch-action: none; margin-bottom: 8px; cursor: crosshair; }
+.btn-borrar { padding: 8px 16px; border: 1px solid var(--gris-borde); border-radius: 8px; background: #fff; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+
+.btn-guardar { width: 100%; padding: 16px; margin-top: 1rem; background: var(--rojo); color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; touch-action: manipulation; box-shadow: 0 4px 16px rgba(192,57,43,.3); }
+.btn-guardar:disabled { background: #ccc; box-shadow: none; cursor: not-allowed; }
+
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1a1a18; color: #fff; padding: 12px 24px; border-radius: 24px; font-size: 14px; z-index: 9999; transition: transform .3s; pointer-events: none; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+#exito { display: none; text-align: center; padding: 3rem 1rem; }
+#exito .eicon { font-size: 64px; margin-bottom: 1rem; }
+#exito h2 { font-family: 'Playfair Display', serif; font-size: 26px; margin-bottom: 8px; }
+#exito p { color: var(--suave); font-size: 15px; margin-bottom: 2rem; }
+.btn-nueva { padding: 12px 28px; background: var(--rojo); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⚠️</div>
+  <div>
+    <div class="htitle">Informe de Incidencia</div>
+    <div class="hsub">Muebles La Factoría · Merkamueble · ExpoSofá</div>
+  </div>
+</header>
+<div class="progress-bar"><div class="progress-fill" id="prog"></div></div>
+
+<div class="container">
+
+  <div id="exito">
+    <div class="eicon">✅</div>
+    <h2>Incidencia registrada</h2>
+    <p>El informe se ha guardado correctamente.<br>Puedes cerrar esta página.</p>
+    <button class="btn-nueva" onclick="location.reload()">Nueva incidencia</button>
+  </div>
+
+  <div id="formulario">
+
+    <!-- 1 Inspector -->
+    <div class="card">
+      <div class="card-hdr"><div class="card-num">1</div><div class="card-title">Inspector</div></div>
+      <div class="card-body">
+        <div class="f"><label>Nombre del inspector / técnico</label><input type="text" id="inspector" placeholder="Tu nombre completo"></div>
+        <div class="g2">
+          <div class="f"><label>Fecha de inspección</label><input type="date" id="fecha-inspeccion"></div>
+          <div class="f"><label>Lugar</label><input type="text" id="lugar" placeholder="Domicilio del cliente / Tienda"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 Cliente -->
+    <div class="card">
+      <div class="card-hdr"><div class="card-num">2</div><div class="card-title">Datos del cliente</div></div>
+      <div class="card-body">
+        <div class="g2">
+          <div class="f"><label>Nombre y apellidos</label><input type="text" id="cli-nombre" placeholder="Nombre del cliente"></div>
+          <div class="f"><label>Teléfono</label><input type="tel" id="cli-tel" placeholder="600 000 000"></div>
+          <div class="f"><label>Dirección</label><input type="text" id="cli-dir" placeholder="Calle, número, localidad"></div>
+          <div class="f"><label>Tienda</label>
+            <select id="tienda">
+              <option value="">Seleccionar...</option>
+              <option>Muebles La Factoría</option><option>Merkamueble</option><option>ExpoSofá</option>
+            </select>
+          </div>
+          <div class="f"><label>N° Pedido</label><input type="text" id="num-pedido" placeholder="Ej: 0042"></div>
+          <div class="f"><label>Fecha de compra</label><input type="date" id="fecha-compra"></div>
+          <div class="f" style="grid-column:1/-1"><label>Producto reclamado</label><input type="text" id="producto" placeholder="Ej: Sofá 3 plazas, Mesa extensible..."></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 Fotos -->
+    <div class="card">
+      <div class="card-hdr"><div class="card-num">3</div><div class="card-title">Fotos e incidencias — Una ficha por cada foto</div></div>
+      <div class="card-body">
+        <div id="fotos-lista"></div>
+        <button type="button" class="btn-add" id="btn-add-foto">📷 Añadir foto + incidencia (0)</button>
+        <input type="file" id="file-inp" accept="image/*" multiple style="display:none">
+      </div>
+    </div>
+
+    <!-- 4 Dictamen -->
+    <div class="card">
+      <div class="card-hdr"><div class="card-num">4</div><div class="card-title">Valoración técnica y dictamen final</div></div>
+      <div class="card-body">
+        <div class="f"><label>Conclusión técnica general (aplica a todas las fotos)</label>
+          <textarea id="dictamen" placeholder="Conclusión técnica, responsabilidad, acciones a tomar..." style="min-height:100px"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5 Firma -->
+    <div class="card">
+      <div class="card-hdr"><div class="card-num">5</div><div class="card-title">Firma del cliente</div></div>
+      <div class="card-body">
+        <p class="firma-hint">El cliente firma para confirmar que ha sido informado de la inspección</p>
+        <canvas id="firma-canvas" width="640" height="140"></canvas>
+        <div style="display:flex;justify-content:flex-end">
+          <button type="button" class="btn-borrar" id="btn-borrar">Borrar firma</button>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" class="btn-guardar" id="btn-guardar">Guardar informe de incidencia</button>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
+  authDomain: "muebles-presupuestos.firebaseapp.com",
+  projectId: "muebles-presupuestos",
+  storageBucket: "muebles-presupuestos.firebasestorage.app",
+  messagingSenderId: "37365883872",
+  appId: "1:37365883872:web:842ca4d318c01652684185"
+});
+const db = getFirestore(app);
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function today() { return new Date().toISOString().split("T")[0]; }
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2800);
+}
+
+// Fecha hoy
+document.getElementById("fecha-inspeccion").value = today();
+
+// Progreso
+function actualizarProgreso() {
+  const campos = ["inspector","cli-nombre","tienda","producto","dictamen"];
+  const rellenos = campos.filter(id => { const el = document.getElementById(id); return el && el.value.trim(); }).length;
+  document.getElementById("prog").style.width = Math.round(rellenos / campos.length * 100) + "%";
+}
+document.querySelectorAll("input,select,textarea").forEach(el => el.addEventListener("input", actualizarProgreso));
+
+// Estados del producto
+const ESTADOS = [
+  { label:"Correcto / dentro de tolerancias normales de uso", icon:"✅", bg:"#eaf3de", col:"#3b6d11" },
+  { label:"Desgaste normal por uso",                          icon:"🔄", bg:"#fff8e1", col:"#f57c00" },
+  { label:"Posible mal uso del producto",                     icon:"⚠️", bg:"#fdf0f0", col:"#c0392b" },
+  { label:"Defecto de fabricacion",                           icon:"🏭", bg:"#fdf0f0", col:"#c0392b" },
+  { label:"Defecto de montaje",                               icon:"🔧", bg:"#fff3e0", col:"#e65100" },
+  { label:"Otros",                                            icon:"📋", bg:"#f5f4f0", col:"#555"    }
+];
+
+// Array de fotos
+let fotos = [];
+
+function comprimirFoto(file, cb) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 900;
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+      else       { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      cb(c.toDataURL("image/jpeg", 0.75));
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderFotos() {
+  const lista = document.getElementById("fotos-lista");
+  lista.innerHTML = "";
+
+  if (fotos.length === 0) {
+    lista.innerHTML = '<div class="empty-fotos">📷<br><br>Añade fotos para documentar las incidencias.<br>Cada foto tendrá su propia descripción y estado.</div>';
+  } else {
+    fotos.forEach(function(f, i) {
+      const card = document.createElement("div");
+      card.className = "foto-card";
+
+      // Cabecera
+      const hdr = document.createElement("div");
+      hdr.className = "foto-hdr";
+      const num = document.createElement("span");
+      num.className = "foto-num";
+      num.textContent = "📷 Foto " + (i + 1);
+      const btnDel = document.createElement("button");
+      btnDel.type = "button";
+      btnDel.className = "foto-del";
+      btnDel.textContent = "Eliminar";
+      btnDel.addEventListener("click", function() { fotos.splice(i, 1); renderFotos(); });
+      hdr.appendChild(num); hdr.appendChild(btnDel);
+      card.appendChild(hdr);
+
+      // Cuerpo
+      const body = document.createElement("div");
+      body.className = "foto-body";
+
+      // Foto
+      const img = document.createElement("img");
+      img.src = f.img;
+      body.appendChild(img);
+
+      // Descripcion
+      const lDesc = document.createElement("span"); lDesc.className = "flabel"; lDesc.textContent = "Descripción de la reclamación";
+      const tDesc = document.createElement("textarea"); tDesc.className = "ftxta"; tDesc.rows = 3;
+      tDesc.placeholder = "¿Qué se observa en esta foto? Descripción detallada...";
+      tDesc.value = f.descripcion || "";
+      tDesc.addEventListener("input", function() { fotos[i].descripcion = this.value; });
+      body.appendChild(lDesc); body.appendChild(tDesc);
+
+      // Estado del producto
+      const lEst = document.createElement("span"); lEst.className = "flabel"; lEst.textContent = "Estado del producto";
+      body.appendChild(lEst);
+      const gridEst = document.createElement("div"); gridEst.className = "estado-grid";
+      ESTADOS.forEach(function(op) {
+        const btn = document.createElement("button");
+        btn.type = "button"; btn.className = "estado-btn";
+        const sel = f.estado_producto === op.label;
+        if (sel) { btn.style.border = "2px solid " + op.col; btn.style.background = op.bg; btn.style.color = op.col; btn.style.fontWeight = "700"; }
+        btn.innerHTML = '<span class="ei">' + op.icon + '</span><span>' + op.label + '</span>';
+        btn.addEventListener("click", function() { fotos[i].estado_producto = op.label; renderFotos(); });
+        gridEst.appendChild(btn);
+      });
+      body.appendChild(gridEst);
+
+      // Observaciones
+      const lObs = document.createElement("span"); lObs.className = "flabel"; lObs.textContent = "Observaciones técnicas";
+      const tObs = document.createElement("textarea"); tObs.className = "ftxta"; tObs.rows = 2;
+      tObs.placeholder = "Observaciones técnicas sobre esta foto...";
+      tObs.value = f.observaciones || "";
+      tObs.style.marginBottom = "0";
+      tObs.addEventListener("input", function() { fotos[i].observaciones = this.value; });
+      body.appendChild(lObs); body.appendChild(tObs);
+
+      card.appendChild(body);
+      lista.appendChild(card);
+    });
+  }
+
+  document.getElementById("btn-add-foto").textContent = "📷 Añadir foto + incidencia (" + fotos.length + ")";
+}
+
+renderFotos();
+
+// Botón añadir foto
+document.getElementById("btn-add-foto").addEventListener("click", function() {
+  document.getElementById("file-inp").click();
+});
+
+document.getElementById("file-inp").addEventListener("change", function(e) {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+  let cargadas = 0;
+  files.forEach(function(file) {
+    comprimirFoto(file, function(imgData) {
+      fotos.push({ img: imgData, descripcion: "", estado_producto: "", observaciones: "" });
+      cargadas++;
+      if (cargadas === files.length) renderFotos();
+    });
+  });
+  this.value = "";
+});
+
+// ===== FIRMA =====
+const canvas = document.getElementById("firma-canvas");
+const ctx = canvas.getContext("2d");
+ctx.strokeStyle = "#1a1a18";
+ctx.lineWidth = 2.5;
+ctx.lineCap = "round";
+ctx.lineJoin = "round";
+
+let dibujando = false;
+
+function getPos(ev) {
+  const r = canvas.getBoundingClientRect();
+  const sx = canvas.width / r.width;
+  const sy = canvas.height / r.height;
+  const src = ev.touches ? ev.touches[0] : ev;
+  return { x: (src.clientX - r.left) * sx, y: (src.clientY - r.top) * sy };
+}
+
+canvas.addEventListener("mousedown",  function(e) { dibujando = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+canvas.addEventListener("mousemove",  function(e) { if (!dibujando) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+canvas.addEventListener("mouseup",    function()  { dibujando = false; });
+canvas.addEventListener("mouseleave", function()  { dibujando = false; });
+canvas.addEventListener("touchstart", function(e) { e.preventDefault(); dibujando = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }, { passive: false });
+canvas.addEventListener("touchmove",  function(e) { e.preventDefault(); if (!dibujando) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }, { passive: false });
+canvas.addEventListener("touchend",   function()  { dibujando = false; });
+
+document.getElementById("btn-borrar").addEventListener("click", function() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+});
+
+// ===== GUARDAR =====
+document.getElementById("btn-guardar").addEventListener("click", async function() {
+  const inspector = document.getElementById("inspector").value.trim();
+  const clienteNombre = document.getElementById("cli-nombre").value.trim();
+
+  if (!inspector) { showToast("Introduce tu nombre como inspector"); document.getElementById("inspector").focus(); return; }
+  if (!clienteNombre) { showToast("Introduce el nombre del cliente"); document.getElementById("cli-nombre").focus(); return; }
+  if (fotos.length === 0) { showToast("Añade al menos una foto de la incidencia"); return; }
+
+  this.disabled = true;
+  this.textContent = "Guardando...";
+
+  const pixeles = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  const hayFirma = Array.from(pixeles).some(function(x) { return x !== 0; });
+
+  const data = {
+    id: uid(),
+    inspector: inspector,
+    fecha_revision: document.getElementById("fecha-inspeccion").value,
+    lugar_inspeccion: document.getElementById("lugar").value.trim(),
+    cliente_nombre: clienteNombre,
+    cliente_tel: document.getElementById("cli-tel").value.trim(),
+    cliente_dir: document.getElementById("cli-dir").value.trim(),
+    tienda: document.getElementById("tienda").value,
+    num_pedido: document.getElementById("num-pedido").value.trim(),
+    fecha_compra: document.getElementById("fecha-compra").value,
+    producto: document.getElementById("producto").value.trim(),
+    fotos: fotos,
+    dictamen: document.getElementById("dictamen").value.trim(),
+    firma_cliente: hayFirma ? canvas.toDataURL("image/png") : null,
+    estado: "abierta",
+    creado: today(),
+    origen: "inspector-externo"
+  };
+
+  try {
+    await setDoc(doc(db, "incidencias", data.id), data);
+    document.getElementById("formulario").style.display = "none";
+    document.getElementById("exito").style.display = "block";
+    window.scrollTo(0, 0);
+  } catch(err) {
+    showToast("Error al guardar: " + err.message);
+    this.disabled = false;
+    this.textContent = "Guardar informe de incidencia";
+  }
+});
+</script>
+</body>
+</html>
