@@ -2687,6 +2687,16 @@ function renderVendedores() {
 
 
 // ===== INCIDENCIAS =====
+
+const ESTADOS_PRODUCTO = [
+  { label:"Correcto / dentro de tolerancias normales de uso", icon:"✅", bg:"#eaf3de", col:"#3b6d11" },
+  { label:"Desgaste normal por uso",                          icon:"🔄", bg:"#fff8e1", col:"#f57c00" },
+  { label:"Posible mal uso del producto",                     icon:"⚠️", bg:"#fdf0f0", col:"#c0392b" },
+  { label:"Defecto de fabricacion",                           icon:"🏭", bg:"#fdf0f0", col:"#c0392b" },
+  { label:"Defecto de montaje",                               icon:"🔧", bg:"#fff3e0", col:"#e65100" },
+  { label:"Otros",                                            icon:"📋", bg:"#f5f4f0", col:"#555"    }
+];
+
 async function initIncidencias() {
   const cont = document.getElementById("incidencias-content");
   cont.innerHTML = "<div class='spinner'>Cargando incidencias...</div>";
@@ -2694,7 +2704,7 @@ async function initIncidencias() {
     const sn = await getDocs(collection(db, "incidencias"));
     const lista = [];
     sn.forEach(d => lista.push(d.data()));
-    lista.sort((a,b) => b.fecha_revision.localeCompare(a.fecha_revision));
+    lista.sort((a,b) => (b.fecha_revision||"").localeCompare(a.fecha_revision||""));
     renderIncidencias(lista, cont);
   } catch(e) {
     cont.innerHTML = "<div class='card'><p class='empty'>Error: " + e.message + "</p></div>";
@@ -2703,8 +2713,6 @@ async function initIncidencias() {
 
 function renderIncidencias(lista, cont) {
   cont.innerHTML = "";
-
-  // Header
   const hdr = document.createElement("div");
   hdr.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:8px";
   const ttl = document.createElement("div");
@@ -2717,21 +2725,18 @@ function renderIncidencias(lista, cont) {
   btnNueva.addEventListener("click", () => mostrarFormIncidencia(null, lista, cont));
   hdr.appendChild(ttl); hdr.appendChild(btnNueva); cont.appendChild(hdr);
 
-  // Filters
   const filDiv = document.createElement("div");
   filDiv.style.cssText = "display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap";
   const filEstado = document.createElement("select");
   filEstado.style.cssText = "padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:#fff;-webkit-appearance:none";
   filEstado.innerHTML = "<option value='all'>Todas</option><option value='abierta'>Abiertas</option><option value='cerrada'>Cerradas</option>";
+  const listaDiv = document.createElement("div");
   filEstado.addEventListener("change", () => {
     const v = filEstado.value;
     const filtered = v === "all" ? lista : lista.filter(i => i.estado === v);
     renderListaInc(filtered, listaDiv, lista, cont);
   });
-  filDiv.appendChild(filEstado);
-  cont.appendChild(filDiv);
-
-  const listaDiv = document.createElement("div");
+  filDiv.appendChild(filEstado); cont.appendChild(filDiv);
   cont.appendChild(listaDiv);
   renderListaInc(lista, listaDiv, lista, cont);
 }
@@ -2748,83 +2753,65 @@ function renderListaInc(lista, listaDiv, allInc, cont) {
 
     const top = document.createElement("div");
     top.style.cssText = "display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:6px";
-
     const info = document.createElement("div");
+    const numFotos = (inc.fotos||[]).length;
     info.innerHTML = "<div style='font-weight:700;font-size:15px'>" + (inc.cliente_nombre||"—") + "</div>"
       + "<div style='font-size:12px;color:#888'>" + (inc.tienda||"") + " · Ped: #" + (inc.num_pedido||"—") + " · " + fmtDate(inc.fecha_revision) + "</div>"
-      + "<div style='font-size:12px;color:#666'>Inspector: " + (inc.inspector||"—") + "</div>";
-
-    const badges = document.createElement("div");
-    badges.style.cssText = "display:flex;gap:6px;align-items:center;flex-wrap:wrap";
+      + "<div style='font-size:12px;color:#666'>Inspector: " + (inc.inspector||"—") + " · " + numFotos + " foto" + (numFotos!==1?"s":"") + "</div>";
     const badgeEstado = document.createElement("span");
     badgeEstado.style.cssText = "padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:" + (inc.estado==="cerrada"?"#eaf3de":"#fdf0f0") + ";color:" + (inc.estado==="cerrada"?"#3b6d11":"#c0392b");
     badgeEstado.textContent = inc.estado==="cerrada" ? "Cerrada" : "Abierta";
-    badges.appendChild(badgeEstado);
+    top.appendChild(info); top.appendChild(badgeEstado); card.appendChild(top);
 
-    top.appendChild(info);
-    top.appendChild(badges);
-    card.appendChild(top);
-
-    // Photos preview
+    // Fotos preview strip
     if (inc.fotos && inc.fotos.length) {
-      const fotosDiv = document.createElement("div");
-      fotosDiv.className = "foto-grid";
-      inc.fotos.slice(0,4).forEach(f => {
-        const item = document.createElement("div");
-        item.className = "foto-item";
+      const strip = document.createElement("div");
+      strip.style.cssText = "display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px";
+      inc.fotos.slice(0,6).forEach(f => {
         const img = document.createElement("img");
-        img.src = f.img; img.alt = "";
-        const com = document.createElement("div");
-        com.className = "foto-comentario";
-        com.textContent = f.comentario || "";
-        item.appendChild(img); item.appendChild(com);
-        fotosDiv.appendChild(item);
+        img.src = f.img;
+        img.style.cssText = "height:60px;width:80px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid #e0dfd8";
+        strip.appendChild(img);
       });
-      if (inc.fotos.length > 4) {
+      if (inc.fotos.length > 6) {
         const more = document.createElement("div");
-        more.style.cssText = "display:flex;align-items:center;justify-content:center;background:#f5f4f0;border-radius:8px;font-size:13px;color:#888;font-weight:500;height:110px";
-        more.textContent = "+" + (inc.fotos.length-4) + " fotos";
-        fotosDiv.appendChild(more);
+        more.style.cssText = "height:60px;width:80px;background:#f5f4f0;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#888;font-weight:600";
+        more.textContent = "+" + (inc.fotos.length-6);
+        strip.appendChild(more);
       }
-      card.appendChild(fotosDiv);
+      card.appendChild(strip);
     }
 
-    // Estado producto
-    if (inc.estado_producto) {
-      const est = document.createElement("div");
-      est.style.cssText = "margin-top:8px;font-size:12px;padding:6px 10px;background:#f5f4f0;border-radius:6px";
-      est.textContent = "Estado: " + inc.estado_producto;
-      card.appendChild(est);
+    // Dictamen preview
+    if (inc.dictamen) {
+      const dict = document.createElement("div");
+      dict.style.cssText = "font-size:12px;color:#666;background:#f5f4f0;border-radius:6px;padding:6px 10px;margin-bottom:8px;border-left:3px solid #c0392b";
+      dict.textContent = inc.dictamen.length > 120 ? inc.dictamen.slice(0,120)+"..." : inc.dictamen;
+      card.appendChild(dict);
     }
 
-    // Actions
     const acts = document.createElement("div");
-    acts.style.cssText = "display:flex;gap:6px;margin-top:10px;flex-wrap:wrap";
-
+    acts.style.cssText = "display:flex;gap:6px;flex-wrap:wrap";
     const btnEdit = document.createElement("button");
     btnEdit.className = "btn btn-primary"; btnEdit.style.cssText = "padding:6px 12px;font-size:12px";
-    btnEdit.textContent = "Editar / Fotos";
+    btnEdit.textContent = "✏️ Editar";
     btnEdit.addEventListener("click", () => mostrarFormIncidencia(inc, allInc, cont));
-
     const btnPDF = document.createElement("button");
     btnPDF.className = "btn"; btnPDF.style.cssText = "padding:6px 12px;font-size:12px";
     btnPDF.textContent = "🖨️ Informe PDF";
     btnPDF.addEventListener("click", () => generarInformeIncidencia(inc));
-
     const btnCerrar = document.createElement("button");
     btnCerrar.className = "btn " + (inc.estado==="cerrada"?"":"btn-success");
     btnCerrar.style.cssText = "padding:6px 12px;font-size:12px";
-    btnCerrar.textContent = inc.estado==="cerrada" ? "Reabrir" : "Cerrar incidencia";
+    btnCerrar.textContent = inc.estado==="cerrada" ? "Reabrir" : "Cerrar";
     btnCerrar.addEventListener("click", async () => {
-      const nuevoEstado = inc.estado==="cerrada" ? "abierta" : "cerrada";
-      await setDoc(doc(db,"incidencias",inc.id), {...inc, estado:nuevoEstado}, {merge:true});
-      showToast("Incidencia " + nuevoEstado);
-      initIncidencias();
+      const nuevo = inc.estado==="cerrada" ? "abierta" : "cerrada";
+      await setDoc(doc(db,"incidencias",inc.id), {...inc, estado:nuevo}, {merge:true});
+      showToast("Incidencia " + nuevo); initIncidencias();
     });
-
     const btnDel = document.createElement("button");
     btnDel.className = "btn btn-danger"; btnDel.style.cssText = "padding:6px 12px;font-size:12px";
-    btnDel.textContent = "Eliminar";
+    btnDel.textContent = "🗑";
     btnDel.addEventListener("click", () => {
       mostrarModalClave(async () => {
         if (!confirm("Eliminar esta incidencia?")) return;
@@ -2832,18 +2819,19 @@ function renderListaInc(lista, listaDiv, allInc, cont) {
         showToast("Eliminada"); initIncidencias();
       });
     });
-
     [btnEdit, btnPDF, btnCerrar, btnDel].forEach(b => acts.appendChild(b));
     card.appendChild(acts);
     listaDiv.appendChild(card);
   });
 }
 
+// ===== FORMULARIO INCIDENCIA (centrado en fotos) =====
 function mostrarFormIncidencia(inc, allInc, cont) {
   const old = document.getElementById("inc-form-overlay");
   if (old) old.remove();
   const isEdit = !!inc;
   const datos = inc || { id: uid(), fecha_revision: today(), tienda: "", inspector: currentUser, estado:"abierta", fotos:[] };
+  // Each foto has: { img, descripcion, estado_producto, observaciones, comentario }
   let fotosLocales = JSON.parse(JSON.stringify(datos.fotos || []));
 
   const overlay = document.createElement("div");
@@ -2851,335 +2839,380 @@ function mostrarFormIncidencia(inc, allInc, cont) {
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto";
 
   const box = document.createElement("div");
-  box.style.cssText = "background:#fff;border-radius:16px;padding:1.5rem;width:100%;max-width:620px;margin:auto";
-
-  // Form HTML
-  box.innerHTML = "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem'>"
-    + "<h2 style='font-size:18px;font-weight:600'>" + (isEdit?"Editar":"Nueva") + " incidencia</h2>"
-    + "<button id='inc-form-close' style='background:none;border:none;font-size:24px;cursor:pointer;color:#666'>×</button>"
-    + "</div>"
-
-    // 1. Datos cliente
-    + "<div style='font-size:13px;font-weight:700;color:#c0392b;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #fdf0f0'>1. DATOS DEL CLIENTE</div>"
-    + "<div style='display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px'>"
-    + "<div><label style='font-size:11px;color:#666;display:block;margin-bottom:2px'>Nombre cliente</label><input id='inc-cliente' value='" + (datos.cliente_nombre||"") + "' placeholder='Nombre y apellidos' style='width:100%;padding:9px;border:1px solid #ccc;border-radius:8px;font-size:14px'></div>"
-    + "<div><label style='font-size:11px;color:#666;display:block;margin-bottom:2px'>Telefono</label><input id='inc-tel' value='" + (datos.cliente_tel||"") + "' placeholder='600 000 000' type='tel' style='width:100%;padding:9px;border:1px solid #ccc;border-radius:8px;font-size:14px'></div>"
-    + "<div><label style='font-size:11px;color:#666;display:block;margin-bottom:2px'>Direccion cliente</label><input id='inc-dir' value='" + (datos.cliente_dir||"").replace(/'/g,"&#39;") + "' placeholder='Calle, numero, localidad' style='width:100%;padding:9px;border:1px solid #ccc;border-radius:8px;font-size:14px'></div>"
-    + "<div><label style='font-size:11px;color:#666;display:block;margin-bottom:2px'>Tienda</label><select id='inc-tienda' style='width:100%;padding:9px;border:1px solid #ccc;border-radius:8px;font-size:14px;background:#fff;-webkit-appearance:none'>" + ["Muebles La Factoría","Merkamueble","ExpoSofá"].map(t=>"<option"+(datos.tienda===t?" selected":"")+">"+t+"</option>").join("") + "</select></div>"
-    + "<div><label style='font-size:11px;color:#666;display:block;margin-bottom:2px'>N° Pedido/Presupuesto</label><input id='inc-pedido' value='" + (datos.num_pedido||"") + "' placeholder='Ej: 0042' style='width:100%;padding:9px;border:1px solid #ccc;border-radius:8px;font-size:14px'></div>"
-    + "<div><label style='font-size:11px;color:#666;display:block;margin-bottom:2px'>Fecha de compra</label><input id='inc-fecha-compra' type='date' value='" + (datos.fecha_compra||"") + "' style='width:100%;padding:9px;border:1px solid #ccc;border-radius:8px;font-size:14px;-webkit-appearance:none;background:#fff'></div>"
-    + "</div>"
-
-    // 2. Descripcion reclamacion
-    + "<div style='font-size:13px;font-weight:700;color:#c0392b;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #fdf0f0'>2. DESCRIPCIÓN DE LA RECLAMACIÓN</div>"
-    + "<textarea id='inc-descripcion' placeholder='Descripcion detallada de la reclamacion del cliente...' style='width:100%;padding:9px;border:1px solid #ccc;border-radius:8px;font-size:14px;min-height:80px;resize:vertical;font-family:inherit;margin-bottom:10px'>" + (datos.descripcion||"") + "</textarea>"
-    + "<div><label style='font-size:11px;color:#666;display:block;margin-bottom:2px'>Producto reclamado</label><input id='inc-producto' value='" + (datos.producto||"").replace(/'/g,"&#39;") + "' placeholder='Ej: Sofa 3 plazas, Mesa extensible...' style='width:100%;padding:9px;border:1px solid #ccc;border-radius:8px;font-size:14px;margin-bottom:10px'></div>"
-
-    // 3. Inspeccion
-    + "<div style='font-size:13px;font-weight:700;color:#c0392b;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #fdf0f0'>3. INSPECCIÓN REALIZADA</div>"
-    + "<div style='display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px'>"
-    + "<div><label style='font-size:11px;color:#666;display:block;margin-bottom:2px'>Fecha de inspeccion</label><input id='inc-fecha-rev' type='date' value='" + (datos.fecha_revision||today()) + "' style='width:100%;padding:9px;border:1px solid #ccc;border-radius:8px;font-size:14px;-webkit-appearance:none;background:#fff'></div>"
-    + "<div><label style='font-size:11px;color:#666;display:block;margin-bottom:2px'>Lugar de inspeccion</label><input id='inc-lugar' value='" + (datos.lugar_inspeccion||"").replace(/'/g,"&#39;") + "' placeholder='Domicilio del cliente / Tienda' style='width:100%;padding:9px;border:1px solid #ccc;border-radius:8px;font-size:14px'></div>"
-    + "<div><label style='font-size:11px;color:#666;display:block;margin-bottom:2px'>Inspector</label><input id='inc-inspector' value='" + (datos.inspector||currentUser) + "' style='width:100%;padding:9px;border:1px solid #ccc;border-radius:8px;font-size:14px'></div>"
-    + "</div>"
-    + "<div><label style='font-size:11px;color:#666;display:block;margin-bottom:2px'>Observaciones tecnicas</label>"
-    + "<textarea id='inc-obs' placeholder='Describa detalladamente lo observado durante la inspeccion...' style='width:100%;padding:9px;border:1px solid #ccc;border-radius:8px;font-size:14px;min-height:80px;resize:vertical;font-family:inherit;margin-bottom:10px'>" + (datos.observaciones||"") + "</textarea></div>"
-
-    // 4. Estado producto
-    + "<div style='font-size:13px;font-weight:700;color:#c0392b;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #fdf0f0'>4. ESTADO DEL PRODUCTO</div>"
-    + "<div id='estado-prod-btns' style='margin-bottom:10px'></div>"
-    + "<input type='hidden' id='inc-estado-hidden' value='" + (datos.estado_producto||"") + "'>"
-
-    // 5. Valoracion y dictamen
-    + "<div style='font-size:13px;font-weight:700;color:#c0392b;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #fdf0f0'>5. VALORACIÓN TÉCNICA Y DICTAMEN</div>"
-    + "<textarea id='inc-dictamen' placeholder='Conclusion tecnica, responsabilidad, acciones a tomar...' style='width:100%;padding:9px;border:1px solid #ccc;border-radius:8px;font-size:14px;min-height:80px;resize:vertical;font-family:inherit;margin-bottom:10px'>" + (datos.dictamen||"") + "</textarea>"
-
-    // 6. Fotos
-    + "<div style='font-size:13px;font-weight:700;color:#c0392b;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #fdf0f0'>6. FOTOGRAFÍAS (" + fotosLocales.length + "/8)</div>"
-    + "<div id='fotos-container' style='margin-bottom:10px'></div>"
-    + "<button id='btn-add-foto' style='width:100%;padding:12px;border:1.5px dashed #c0392b;border-radius:8px;background:#fdf0f0;color:#c0392b;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:14px'>📷 Añadir foto</button>"
-
-    // Save
-    + "<div style='font-size:13px;font-weight:700;color:#c0392b;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #fdf0f0'>7. FIRMA DEL CLIENTE</div>"
-    + "<p style='font-size:12px;color:#888;margin-bottom:8px'>El cliente firma para confirmar que ha sido informado de la inspeccion realizada</p>"
-    + "<canvas id='inc-firma-canvas' width='560' height='130' style='width:100%;height:130px;border:1.5px solid #ccc;border-radius:8px;background:#fff;touch-action:none;display:block;margin-bottom:8px'></canvas>"
-    + "<div style='display:flex;gap:8px;margin-bottom:14px'>"
-    + "<button type='button' id='inc-firma-borrar' style='flex:1;padding:8px;border:1px solid #ccc;border-radius:8px;background:#fff;font-size:13px;cursor:pointer'>Borrar firma</button>"
-    + "</div>"
-    + "<button id='inc-form-save' style='width:100%;padding:14px;background:#c0392b;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer'>Guardar incidencia</button>";
-
+  box.style.cssText = "background:#fff;border-radius:16px;padding:1.5rem;width:100%;max-width:640px;margin:auto";
   overlay.appendChild(box);
   document.body.appendChild(overlay);
+  overlay.addEventListener("click", e => { if(e.target===overlay) overlay.remove(); });
 
-  // Render photos
-  function renderFotos() {
-    const fc = document.getElementById("fotos-container");
-    fc.innerHTML = "";
-    const grid = document.createElement("div");
-    grid.className = "foto-grid";
-    fotosLocales.forEach((f, i) => {
-      const item = document.createElement("div");
-      item.className = "foto-item";
-      const img = document.createElement("img"); img.src = f.img;
-      const delBtn = document.createElement("button");
-      delBtn.className = "foto-del"; delBtn.textContent = "×";
-      delBtn.addEventListener("click", () => { fotosLocales.splice(i,1); renderFotos(); });
-      const comWrap = document.createElement("div"); comWrap.style.padding = "4px";
-      const comInput = document.createElement("input");
-      comInput.placeholder = "Comentario foto...";
-      comInput.value = f.comentario || "";
-      comInput.style.cssText = "width:100%;border:none;background:transparent;font-size:11px;outline:none;font-family:inherit";
-      comInput.addEventListener("input", function() { fotosLocales[i].comentario = this.value; });
-      comWrap.appendChild(comInput);
-      item.appendChild(img); item.appendChild(delBtn); item.appendChild(comWrap);
-      grid.appendChild(item);
-    });
-    fc.appendChild(grid);
-    document.getElementById("btn-add-foto").textContent = "📷 Añadir foto (" + fotosLocales.length + "/8)";
+  function secHeader(num, titulo) {
+    const d = document.createElement("div");
+    d.style.cssText = "font-size:13px;font-weight:700;color:#c0392b;margin:1rem 0 8px;padding-bottom:4px;border-bottom:2px solid #fdf0f0;display:flex;align-items:center;gap:8px";
+    d.innerHTML = "<span style='background:#c0392b;color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0'>" + num + "</span>" + titulo;
+    return d;
   }
-  renderFotos();
+  function field(labelTxt, inputEl) {
+    const wrap = document.createElement("div");
+    wrap.style.marginBottom = "10px";
+    const lbl = document.createElement("label");
+    lbl.style.cssText = "font-size:11px;color:#888;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em";
+    lbl.textContent = labelTxt;
+    wrap.appendChild(lbl); wrap.appendChild(inputEl);
+    return wrap;
+  }
+  function inp(val, placeholder) {
+    const el = document.createElement("input"); el.type="text";
+    el.value = val||""; el.placeholder = placeholder||"";
+    el.style.cssText = "width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:14px;font-family:inherit";
+    return el;
+  }
+  function sel(options, current) {
+    const el = document.createElement("select");
+    el.style.cssText = "width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:14px;background:#fff;-webkit-appearance:none;font-family:inherit";
+    options.forEach(o => { const opt=document.createElement("option"); opt.value=o; opt.textContent=o; if(o===current)opt.selected=true; el.appendChild(opt); });
+    return el;
+  }
+  function txta(val, placeholder, minH) {
+    const el = document.createElement("textarea");
+    el.value = val||""; el.placeholder = placeholder||"";
+    el.style.cssText = "width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:14px;min-height:"+(minH||70)+"px;resize:vertical;font-family:inherit";
+    return el;
+  }
 
-  // Add photo
-  document.getElementById("btn-add-foto").addEventListener("click", () => {
-    if (fotosLocales.length >= 8) { showToast("Maximo 8 fotos por incidencia"); return; }
-    const inp = document.createElement("input"); inp.type="file"; inp.accept="image/*"; inp.multiple=true;
-    inp.onchange = e => {
-      const files = Array.from(e.target.files).slice(0, 8 - fotosLocales.length);
+  // Header
+  const hdrDiv = document.createElement("div");
+  hdrDiv.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem";
+  const hdrTtl = document.createElement("h2");
+  hdrTtl.style.cssText = "font-size:18px;font-weight:600";
+  hdrTtl.textContent = isEdit ? "Editar incidencia" : "Nueva incidencia";
+  const btnClose = document.createElement("button");
+  btnClose.style.cssText = "background:none;border:none;font-size:24px;cursor:pointer;color:#666";
+  btnClose.textContent = "×";
+  btnClose.addEventListener("click", () => overlay.remove());
+  hdrDiv.appendChild(hdrTtl); hdrDiv.appendChild(btnClose); box.appendChild(hdrDiv);
+
+  // --- SECCION 1: DATOS GENERALES ---
+  box.appendChild(secHeader(1, "DATOS GENERALES"));
+  const g1 = document.createElement("div");
+  g1.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:10px";
+
+  const elInspector = inp(datos.inspector||currentUser, "Nombre del inspector");
+  const elFechaRev = document.createElement("input"); elFechaRev.type="date"; elFechaRev.value=datos.fecha_revision||today();
+  elFechaRev.style.cssText = "width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:14px;-webkit-appearance:none;background:#fff;font-family:inherit";
+  const elLugar = inp(datos.lugar_inspeccion, "Ej: Domicilio del cliente / Tienda");
+  const elTienda = sel(["Muebles La Factoría","Merkamueble","ExpoSofá"], datos.tienda);
+  const elClienteNombre = inp(datos.cliente_nombre, "Nombre y apellidos");
+  const elClienteTel = inp(datos.cliente_tel, "600 000 000");
+  const elClienteDir = inp(datos.cliente_dir, "Calle, número, localidad");
+  const elPedido = inp(datos.num_pedido, "Ej: 0042");
+  const elFechaCompra = document.createElement("input"); elFechaCompra.type="date"; elFechaCompra.value=datos.fecha_compra||"";
+  elFechaCompra.style.cssText = "width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:14px;-webkit-appearance:none;background:#fff;font-family:inherit";
+  const elProducto = inp(datos.producto, "Ej: Sofá 3 plazas, Mesa extensible...");
+
+  [[elInspector,"Inspector"],[elFechaRev,"Fecha de inspección"],[elLugar,"Lugar de inspección"],[elTienda,"Tienda"],
+   [elClienteNombre,"Nombre cliente"],[elClienteTel,"Teléfono cliente"],[elClienteDir,"Dirección cliente"],[elPedido,"N° Pedido"],
+   [elFechaCompra,"Fecha de compra"],[elProducto,"Producto reclamado"]
+  ].forEach(([el,lbl]) => g1.appendChild(field(lbl, el)));
+  box.appendChild(g1);
+
+  // --- SECCION 2: FOTOS (cada foto tiene su ficha) ---
+  box.appendChild(secHeader(2, "FOTOS E INCIDENCIAS — Una ficha por cada foto"));
+
+  const fotosContainer = document.createElement("div");
+  fotosContainer.id = "inc-fotos-container";
+  box.appendChild(fotosContainer);
+
+  // Add photo button
+  const btnAddFoto = document.createElement("button");
+  btnAddFoto.type = "button";
+  btnAddFoto.style.cssText = "width:100%;padding:14px;border:1.5px dashed #c0392b;border-radius:10px;background:#fdf0f0;color:#c0392b;font-size:14px;font-weight:500;cursor:pointer;margin-top:8px;touch-action:manipulation;font-family:inherit";
+  btnAddFoto.textContent = "📷 Añadir foto + incidencia";
+  box.appendChild(btnAddFoto);
+
+  function renderFotoCard(fotoData, idx) {
+    const card = document.createElement("div");
+    card.style.cssText = "border:1.5px solid #e0dfd8;border-radius:12px;overflow:hidden;margin-bottom:12px";
+
+    // Photo header
+    const photoHdr = document.createElement("div");
+    photoHdr.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f5f4f0;border-bottom:1px solid #e0dfd8";
+    const photoNum = document.createElement("span");
+    photoNum.style.cssText = "font-weight:700;font-size:13px;color:#c0392b";
+    photoNum.textContent = "📷 Foto " + (idx+1);
+    const delBtn = document.createElement("button");
+    delBtn.style.cssText = "padding:4px 10px;border:1px solid #f09595;border-radius:6px;background:#fff;color:#a32d2d;font-size:12px;cursor:pointer;touch-action:manipulation";
+    delBtn.textContent = "Eliminar";
+    delBtn.addEventListener("click", () => { fotosLocales.splice(idx,1); renderTodasFotos(); });
+    photoHdr.appendChild(photoNum); photoHdr.appendChild(delBtn);
+    card.appendChild(photoHdr);
+
+    const body = document.createElement("div");
+    body.style.cssText = "padding:12px;display:grid;grid-template-columns:140px 1fr;gap:12px;align-items:start";
+
+    // Left: image
+    const imgWrap = document.createElement("div");
+    const img = document.createElement("img");
+    img.src = fotoData.img;
+    img.style.cssText = "width:140px;height:140px;object-fit:cover;border-radius:8px;border:1px solid #e0dfd8;display:block";
+    imgWrap.appendChild(img);
+    body.appendChild(imgWrap);
+
+    // Right: fields
+    const fieldsWrap = document.createElement("div");
+
+    // Description
+    const descEl = txta(fotoData.descripcion, "¿Qué se observa en esta foto? Descripción detallada...", 65);
+    descEl.addEventListener("input", function() { fotosLocales[idx].descripcion = this.value; });
+    fieldsWrap.appendChild(field("Descripción de la reclamación", descEl));
+
+    // Estado producto
+    const estadoLbl = document.createElement("label");
+    estadoLbl.style.cssText = "font-size:11px;color:#888;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em";
+    estadoLbl.textContent = "Estado del producto";
+    fieldsWrap.appendChild(estadoLbl);
+
+    const estadoGrid = document.createElement("div");
+    estadoGrid.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px";
+    ESTADOS_PRODUCTO.forEach(op => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      const sel = fotoData.estado_producto === op.label;
+      btn.style.cssText = "display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;padding:7px 8px;border-radius:7px;"
+        + "border:" + (sel?"2px solid "+op.col:"1.5px solid #e0dfd8") + ";"
+        + "background:" + (sel?op.bg:"#f5f4f0") + ";"
+        + "color:" + (sel?op.col:"#555") + ";"
+        + "font-weight:" + (sel?"700":"400") + ";text-align:left;font-family:inherit;touch-action:manipulation;line-height:1.2";
+      btn.innerHTML = "<span style='font-size:14px;flex-shrink:0'>" + op.icon + "</span><span>" + op.label + "</span>";
+      btn.addEventListener("click", () => {
+        fotosLocales[idx].estado_producto = op.label;
+        renderTodasFotos();
+      });
+      estadoGrid.appendChild(btn);
+    });
+    fieldsWrap.appendChild(estadoGrid);
+
+    // Observaciones tecnicas
+    const obsEl = txta(fotoData.observaciones, "Observaciones técnicas sobre esta foto...", 55);
+    obsEl.addEventListener("input", function() { fotosLocales[idx].observaciones = this.value; });
+    fieldsWrap.appendChild(field("Observaciones técnicas", obsEl));
+
+    body.appendChild(fieldsWrap);
+    card.appendChild(body);
+    return card;
+  }
+
+  function renderTodasFotos() {
+    fotosContainer.innerHTML = "";
+    if (fotosLocales.length === 0) {
+      const empty = document.createElement("div");
+      empty.style.cssText = "text-align:center;padding:2rem;color:#aaa;border:1.5px dashed #e0dfd8;border-radius:10px;font-size:13px";
+      empty.innerHTML = "📷<br>Añade fotos para documentar las incidencias.<br>Cada foto tendrá su propia descripción y estado.";
+      fotosContainer.appendChild(empty);
+    } else {
+      fotosLocales.forEach((f, i) => fotosContainer.appendChild(renderFotoCard(f, i)));
+    }
+    btnAddFoto.textContent = "📷 Añadir foto + incidencia (" + fotosLocales.length + ")";
+  }
+  renderTodasFotos();
+
+  btnAddFoto.addEventListener("click", () => {
+    const inputFile = document.createElement("input");
+    inputFile.type = "file"; inputFile.accept = "image/*"; inputFile.multiple = true;
+    inputFile.onchange = e => {
+      const files = Array.from(e.target.files);
       let loaded = 0;
       files.forEach(file => {
         const reader = new FileReader();
         reader.onload = ev => {
-          const img = new Image();
-          img.onload = () => {
-            const MAX=800; let w=img.width,h=img.height;
+          const imgEl = new Image();
+          imgEl.onload = () => {
+            const MAX=900; let w=imgEl.width,h=imgEl.height;
             if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
             const c=document.createElement("canvas"); c.width=w; c.height=h;
-            c.getContext("2d").drawImage(img,0,0,w,h);
-            fotosLocales.push({ img: c.toDataURL("image/jpeg",0.75), comentario:"" });
+            c.getContext("2d").drawImage(imgEl,0,0,w,h);
+            fotosLocales.push({ img:c.toDataURL("image/jpeg",0.75), descripcion:"", estado_producto:"", observaciones:"" });
             loaded++;
-            if (loaded === files.length) renderFotos();
+            if(loaded===files.length) renderTodasFotos();
           };
-          img.src = ev.target.result;
+          imgEl.src = ev.target.result;
         };
         reader.readAsDataURL(file);
       });
     };
-    inp.click();
+    inputFile.click();
   });
 
-  // Render estado producto buttons with DOM
-  const estadoBtns = document.getElementById("estado-prod-btns");
-  const OPCIONES = [
-    {label:"Correcto / dentro de tolerancias normales de uso", icon:"✅", bg:"#eaf3de", col:"#3b6d11"},
-    {label:"Desgaste normal por uso",                          icon:"🔄", bg:"#fff8e1", col:"#f57c00"},
-    {label:"Posible mal uso del producto",                     icon:"⚠️", bg:"#fdf0f0", col:"#c0392b"},
-    {label:"Defecto de fabricacion",                           icon:"🏭", bg:"#fdf0f0", col:"#c0392b"},
-    {label:"Defecto de montaje",                               icon:"🔧", bg:"#fff3e0", col:"#e65100"},
-    {label:"Otros",                                            icon:"📋", bg:"#f5f4f0", col:"#555"}
-  ];
-  const hiddenEstado = document.getElementById("inc-estado-hidden");
-  let selectedEstado = datos.estado_producto || "";
+  // --- SECCION 3: VALORACION FINAL ---
+  box.appendChild(secHeader(3, "VALORACIÓN TÉCNICA Y DICTAMEN FINAL"));
+  const elDictamen = txta(datos.dictamen, "Conclusión técnica general, responsabilidad, acciones a tomar...", 90);
+  box.appendChild(field("Dictamen final (aplica a todas las fotos)", elDictamen));
 
-  function renderEstadoBtns() {
-    estadoBtns.innerHTML = "";
-    const grid = document.createElement("div");
-    grid.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:8px";
-    OPCIONES.forEach(op => {
-      const btn = document.createElement("button");
-      const sel = selectedEstado === op.label;
-      btn.type = "button";
-      btn.style.cssText = "display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:10px 12px;border-radius:8px;"
-        + "border:" + (sel ? "2px solid " + op.col : "1.5px solid #e0dfd8") + ";"
-        + "background:" + (sel ? op.bg : "#f5f4f0") + ";"
-        + "color:" + (sel ? op.col : "#555") + ";"
-        + "font-weight:" + (sel ? "700" : "400") + ";"
-        + "text-align:left;transition:all .15s;touch-action:manipulation;line-height:1.3";
-      btn.innerHTML = "<span style='font-size:18px;flex-shrink:0'>" + op.icon + "</span><span>" + op.label + "</span>";
-      // Hidden radio
-      const radio = document.createElement("input");
-      radio.type = "radio"; radio.name = "inc-estado-prod"; radio.value = op.label;
-      radio.style.display = "none";
-      if (sel) radio.checked = true;
-      btn.appendChild(radio);
-      btn.addEventListener("click", function() {
-        selectedEstado = op.label;
-        hiddenEstado.value = op.label;
-        renderEstadoBtns();
-      });
-      grid.appendChild(btn);
-    });
-    estadoBtns.appendChild(grid);
-  }
-  renderEstadoBtns();
+  // --- SECCION 4: FIRMA DEL CLIENTE ---
+  box.appendChild(secHeader(4, "FIRMA DEL CLIENTE"));
+  const firmaP = document.createElement("p");
+  firmaP.style.cssText = "font-size:12px;color:#888;margin-bottom:8px";
+  firmaP.textContent = "El cliente firma para confirmar que ha sido informado de la inspección realizada";
+  box.appendChild(firmaP);
 
-  // Wire firma canvas
-  const firmaCanvas = document.getElementById("inc-firma-canvas");
+  const firmaCanvas = document.createElement("canvas");
+  firmaCanvas.width = 560; firmaCanvas.height = 130;
+  firmaCanvas.style.cssText = "width:100%;height:130px;border:1.5px solid #ccc;border-radius:8px;background:#fff;touch-action:none;display:block;margin-bottom:8px";
+  box.appendChild(firmaCanvas);
+
   const firmaCtx = firmaCanvas.getContext("2d");
-  firmaCtx.strokeStyle = "#1a1a18"; firmaCtx.lineWidth = 2; firmaCtx.lineCap = "round";
-  // Restore existing signature if editing
-  if (datos.firma_cliente) {
-    const img = new Image(); img.onload = () => firmaCtx.drawImage(img,0,0); img.src = datos.firma_cliente;
-  }
+  firmaCtx.strokeStyle="#1a1a18"; firmaCtx.lineWidth=2; firmaCtx.lineCap="round";
+  if (datos.firma_cliente) { const fi=new Image(); fi.onload=()=>firmaCtx.drawImage(fi,0,0); fi.src=datos.firma_cliente; }
+
   let firmaDrawing = false;
-  function firmaPos(ev) {
-    const r = firmaCanvas.getBoundingClientRect(), sx = firmaCanvas.width/r.width, sy = firmaCanvas.height/r.height;
-    const src = ev.touches ? ev.touches[0] : ev;
-    return { x:(src.clientX-r.left)*sx, y:(src.clientY-r.top)*sy };
-  }
+  function firmaPos(ev) { const r=firmaCanvas.getBoundingClientRect(),sx=firmaCanvas.width/r.width,sy=firmaCanvas.height/r.height,src=ev.touches?ev.touches[0]:ev; return{x:(src.clientX-r.left)*sx,y:(src.clientY-r.top)*sy}; }
   firmaCanvas.addEventListener("mousedown", e=>{firmaDrawing=true;const p=firmaPos(e);firmaCtx.beginPath();firmaCtx.moveTo(p.x,p.y);});
   firmaCanvas.addEventListener("mousemove", e=>{if(!firmaDrawing)return;const p=firmaPos(e);firmaCtx.lineTo(p.x,p.y);firmaCtx.stroke();});
   firmaCanvas.addEventListener("mouseup", ()=>firmaDrawing=false);
   firmaCanvas.addEventListener("touchstart", e=>{e.preventDefault();firmaDrawing=true;const p=firmaPos(e);firmaCtx.beginPath();firmaCtx.moveTo(p.x,p.y);},{passive:false});
   firmaCanvas.addEventListener("touchmove", e=>{e.preventDefault();if(!firmaDrawing)return;const p=firmaPos(e);firmaCtx.lineTo(p.x,p.y);firmaCtx.stroke();},{passive:false});
   firmaCanvas.addEventListener("touchend", ()=>firmaDrawing=false);
-  document.getElementById("inc-firma-borrar").addEventListener("click", ()=>firmaCtx.clearRect(0,0,firmaCanvas.width,firmaCanvas.height));
 
-  // Close
-  document.getElementById("inc-form-close").addEventListener("click", () => overlay.remove());
-  overlay.addEventListener("click", e => { if (e.target===overlay) overlay.remove(); });
+  const btnBorrarFirma = document.createElement("button");
+  btnBorrarFirma.className = "btn"; btnBorrarFirma.style.cssText = "padding:8px 14px;font-size:13px;margin-bottom:14px";
+  btnBorrarFirma.textContent = "Borrar firma";
+  btnBorrarFirma.addEventListener("click", ()=>firmaCtx.clearRect(0,0,firmaCanvas.width,firmaCanvas.height));
+  box.appendChild(btnBorrarFirma);
 
-  // Save
-  document.getElementById("inc-form-save").addEventListener("click", async () => {
-    const estadoProd = document.getElementById("inc-estado-hidden");
+  // Save button
+  const btnSave = document.createElement("button");
+  btnSave.style.cssText = "width:100%;padding:14px;background:#c0392b;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;touch-action:manipulation;font-family:inherit";
+  btnSave.textContent = "Guardar incidencia";
+  btnSave.addEventListener("click", async () => {
+    if (!elClienteNombre.value.trim()) { showToast("Introduce el nombre del cliente"); return; }
+    if (fotosLocales.length === 0) { showToast("Añade al menos una foto"); return; }
+    btnSave.disabled = true; btnSave.textContent = "Guardando...";
+    const firmaData = firmaCtx.getImageData(0,0,firmaCanvas.width,firmaCanvas.height).data.some(x=>x!==0) ? firmaCanvas.toDataURL("image/png") : (datos.firma_cliente||null);
     const data = {
       id: datos.id,
-      cliente_nombre: document.getElementById("inc-cliente").value.trim(),
-      cliente_tel: document.getElementById("inc-tel").value.trim(),
-      cliente_dir: document.getElementById("inc-dir").value.trim(),
-      tienda: document.getElementById("inc-tienda").value,
-      num_pedido: document.getElementById("inc-pedido").value.trim(),
-      fecha_compra: document.getElementById("inc-fecha-compra").value,
-      descripcion: document.getElementById("inc-descripcion").value.trim(),
-      producto: document.getElementById("inc-producto").value.trim(),
-      fecha_revision: document.getElementById("inc-fecha-rev").value,
-      lugar_inspeccion: document.getElementById("inc-lugar").value.trim(),
-      inspector: document.getElementById("inc-inspector").value.trim(),
-      observaciones: document.getElementById("inc-obs").value.trim(),
-      estado_producto: estadoProd ? estadoProd.value : "",
-      dictamen: document.getElementById("inc-dictamen").value.trim(),
+      inspector: elInspector.value.trim(),
+      fecha_revision: elFechaRev.value,
+      lugar_inspeccion: elLugar.value.trim(),
+      tienda: elTienda.value,
+      cliente_nombre: elClienteNombre.value.trim(),
+      cliente_tel: elClienteTel.value.trim(),
+      cliente_dir: elClienteDir.value.trim(),
+      num_pedido: elPedido.value.trim(),
+      fecha_compra: elFechaCompra.value,
+      producto: elProducto.value.trim(),
       fotos: fotosLocales,
-      firma_cliente: (function(){ const c=document.getElementById("inc-firma-canvas"); if(!c)return datos.firma_cliente||null; const d=c.getContext("2d").getImageData(0,0,c.width,c.height).data; return d.some(x=>x!==0)?c.toDataURL("image/png"):(datos.firma_cliente||null); })(),
+      dictamen: elDictamen.value.trim(),
+      firma_cliente: firmaData,
       estado: datos.estado || "abierta",
       creado: datos.creado || today(),
       vendedor: currentUser
     };
-    if (!data.cliente_nombre) { showToast("Introduce el nombre del cliente"); return; }
     try {
       await setDoc(doc(db,"incidencias",data.id), data);
-      showToast("Incidencia guardada");
+      showToast("Incidencia guardada ✓");
       overlay.remove();
       initIncidencias();
-    } catch(err) { showToast("Error: " + err.message); }
+    } catch(err) {
+      showToast("Error: "+err.message);
+      btnSave.disabled=false; btnSave.textContent="Guardar incidencia";
+    }
   });
+  box.appendChild(btnSave);
 }
 
 function generarInformeIncidencia(inc) {
   const st = STORES[inc.tienda] || STORES["Muebles La Factoría"];
   const c = st.color || "#c0392b";
+  const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  function fd(s) { if(!s)return"—"; const d=new Date(s+"T12:00:00"); return d.getDate()+" de "+MESES[d.getMonth()]+" de "+d.getFullYear(); }
 
-  let fotosHtml = "";
-  (inc.fotos||[]).forEach((f, i) => {
-    fotosHtml += "<div style='break-inside:avoid;margin-bottom:1rem'>"
-      + "<div style='font-size:10px;color:#888;margin-bottom:4px;font-weight:600'>Fotografía " + (i+1) + "</div>"
-      + "<img src='" + f.img + "' style='width:100%;max-height:280px;object-fit:contain;border:1px solid #ddd;border-radius:6px'>"
-      + (f.comentario ? "<div style='margin-top:4px;font-size:11px;color:#444;padding:6px 8px;background:#f8f8f6;border-radius:4px;border-left:3px solid " + c + "'>" + f.comentario + "</div>" : "")
-      + "</div>";
-  });
-
-  const printHtml = "<!DOCTYPE html><html lang='es'><head><meta charset='UTF-8'>"
+  // Datos generales
+  let html = "<!DOCTYPE html><html lang='es'><head><meta charset='UTF-8'>"
     + "<title>Informe Incidencia — " + (inc.cliente_nombre||"") + "</title>"
-    + "<style>@page{size:A4;margin:2cm} body{font-family:Arial,sans-serif;font-size:11px;color:#222;line-height:1.5} "
-    + "h1{font-size:18px;margin-bottom:4px} h2{font-size:13px;color:" + c + ";text-transform:uppercase;letter-spacing:.05em;margin:1.2rem 0 .5rem;padding-bottom:4px;border-bottom:2px solid " + c + "} "
-    + ".grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px} .field{margin-bottom:6px} .field-label{font-size:9px;text-transform:uppercase;color:#888;letter-spacing:.05em} "
-    + ".field-value{font-size:11px;font-weight:600;border-bottom:1px solid #ddd;padding-bottom:2px;min-height:16px} "
-    + ".foto-grid-print{display:grid;grid-template-columns:1fr 1fr;gap:1rem} "
-    + "@media print{body{margin:0} * {-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>"
-    + "</head><body>"
+    + "<style>"
+    + "@page{size:A4;margin:1.8cm}"
+    + "body{font-family:Arial,sans-serif;font-size:11px;color:#222;line-height:1.5}"
+    + "h2{font-size:12px;color:"+c+";text-transform:uppercase;letter-spacing:.05em;margin:1rem 0 .4rem;padding-bottom:3px;border-bottom:2px solid "+c+"}"
+    + ".grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px}"
+    + ".f{margin-bottom:5px} .fl{font-size:9px;text-transform:uppercase;color:#aaa;letter-spacing:.05em}"
+    + ".fv{font-size:11px;font-weight:600;border-bottom:1px solid #eee;padding-bottom:2px;min-height:15px}"
+    + ".foto-block{page-break-inside:avoid;margin-bottom:1.5rem;border:1px solid #ddd;border-radius:6px;overflow:hidden}"
+    + ".foto-header{background:"+c+"18;padding:8px 12px;border-bottom:1px solid #ddd;font-weight:700;font-size:11px;color:"+c+"}"
+    + ".foto-body{display:grid;grid-template-columns:200px 1fr;gap:12px;padding:12px;align-items:start}"
+    + ".foto-body img{width:200px;height:160px;object-fit:cover;border-radius:4px;border:1px solid #ddd}"
+    + ".estado-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:12px;font-size:10px;font-weight:700;margin-bottom:6px}"
+    + "@media print{body{margin:0} *{-webkit-print-color-adjust:exact;print-color-adjust:exact}}"
+    + "</style></head><body>";
 
-    // Header
-    + "<div style='border-bottom:3px solid " + c + ";margin-bottom:1.5rem;padding-bottom:.75rem;display:flex;justify-content:space-between;align-items:flex-start'>"
-    + "<div>"
-    + "<img src='" + (st.logo||"") + "' style='max-height:50px;max-width:180px;object-fit:contain;margin-bottom:6px'>"
+  // Header empresa
+  html += "<div style='border-bottom:3px solid "+c+";margin-bottom:1.2rem;padding-bottom:.75rem;display:flex;justify-content:space-between;align-items:flex-start'>"
+    + "<div><div style='font-size:22px;font-weight:800;color:"+c+"'>" + (inc.tienda||"Muebles La Factoría") + "</div>"
     + "<div style='font-size:10px;color:#aaa'>Meres Central de Compras S.L. | CIF: B74102807</div>"
-    + "<div style='font-size:10px;color:#aaa'>" + st.address + "</div>"
-    + "</div>"
+    + "<div style='font-size:10px;color:#aaa'>" + st.address + "</div></div>"
     + "<div style='text-align:right'>"
     + "<div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.1em'>Informe de incidencia</div>"
-    + "<div style='font-size:22px;font-weight:800;color:" + c + "'>REF: " + inc.id.slice(-6).toUpperCase() + "</div>"
-    + "<div style='font-size:10px;color:#888'>Generado: " + fmtDate(today()) + "</div>"
-    + "</div></div>"
+    + "<div style='font-size:20px;font-weight:800;color:"+c+"'>REF: " + inc.id.slice(-6).toUpperCase() + "</div>"
+    + "<div style='font-size:10px;color:#888'>Generado: " + fd(today()) + "</div>"
+    + "</div></div>";
 
-    // 1. Datos cliente
-    + "<h2>1. Datos del cliente</h2>"
+  // Datos generales
+  html += "<h2>1. Datos generales</h2>"
     + "<div class='grid2'>"
-    + "<div class='field'><div class='field-label'>Nombre</div><div class='field-value'>" + (inc.cliente_nombre||"") + "</div></div>"
-    + "<div class='field'><div class='field-label'>Telefono</div><div class='field-value'>" + (inc.cliente_tel||"") + "</div></div>"
-    + "<div class='field'><div class='field-label'>Direccion</div><div class='field-value'>" + (inc.cliente_dir||"") + "</div></div>"
-    + "<div class='field'><div class='field-label'>Tienda</div><div class='field-value'>" + (inc.tienda||"") + "</div></div>"
-    + "<div class='field'><div class='field-label'>N° Pedido / Presupuesto</div><div class='field-value'>#" + (inc.num_pedido||"—") + "</div></div>"
-    + "<div class='field'><div class='field-label'>Fecha de compra</div><div class='field-value'>" + fmtDate(inc.fecha_compra||"") + "</div></div>"
-    + "</div>"
+    + "<div class='f'><div class='fl'>Cliente</div><div class='fv'>" + (inc.cliente_nombre||"") + "</div></div>"
+    + "<div class='f'><div class='fl'>Teléfono</div><div class='fv'>" + (inc.cliente_tel||"") + "</div></div>"
+    + "<div class='f'><div class='fl'>Dirección</div><div class='fv'>" + (inc.cliente_dir||"") + "</div></div>"
+    + "<div class='f'><div class='fl'>Tienda</div><div class='fv'>" + (inc.tienda||"") + "</div></div>"
+    + "<div class='f'><div class='fl'>N° Pedido</div><div class='fv'>#" + (inc.num_pedido||"—") + "</div></div>"
+    + "<div class='f'><div class='fl'>Fecha de compra</div><div class='fv'>" + fd(inc.fecha_compra) + "</div></div>"
+    + "<div class='f'><div class='fl'>Inspector</div><div class='fv'>" + (inc.inspector||"") + "</div></div>"
+    + "<div class='f'><div class='fl'>Fecha inspección</div><div class='fv'>" + fd(inc.fecha_revision) + "</div></div>"
+    + "<div class='f'><div class='fl'>Lugar inspección</div><div class='fv'>" + (inc.lugar_inspeccion||"") + "</div></div>"
+    + "<div class='f'><div class='fl'>Producto reclamado</div><div class='fv'>" + (inc.producto||"") + "</div></div>"
+    + "</div>";
 
-    // 2. Descripcion
-    + "<h2>2. Descripción de la reclamación</h2>"
-    + "<div class='field'><div class='field-label'>Producto reclamado</div><div class='field-value'>" + (inc.producto||"") + "</div></div>"
-    + "<div style='background:#fdf0f0;border-left:3px solid " + c + ";padding:8px 12px;border-radius:4px;font-size:11px;margin-top:6px'>" + (inc.descripcion||"") + "</div>"
+  // Fotos con su ficha
+  if (inc.fotos && inc.fotos.length) {
+    html += "<h2 style='page-break-before:always'>2. Reportaje fotográfico (" + inc.fotos.length + " fotos)</h2>";
+    inc.fotos.forEach((f, i) => {
+      const estOp = ESTADOS_PRODUCTO.find(e => e.label === f.estado_producto) || null;
+      html += "<div class='foto-block'>"
+        + "<div class='foto-header'>📷 Foto " + (i+1) + (f.estado_producto ? " — " + f.estado_producto : "") + "</div>"
+        + "<div class='foto-body'>"
+        + "<img src='" + f.img + "'>"
+        + "<div>"
+        + (estOp ? "<div class='estado-badge' style='background:" + estOp.bg + ";color:" + estOp.col + "'>" + estOp.icon + " " + estOp.label + "</div>" : "")
+        + (f.descripcion ? "<div style='margin-bottom:8px'><div style='font-size:9px;text-transform:uppercase;color:#aaa;margin-bottom:2px'>Descripción de la reclamación</div><div style='font-size:11px'>" + f.descripcion + "</div></div>" : "")
+        + (f.observaciones ? "<div><div style='font-size:9px;text-transform:uppercase;color:#aaa;margin-bottom:2px'>Observaciones técnicas</div><div style='font-size:11px'>" + f.observaciones + "</div></div>" : "")
+        + "</div></div></div>";
+    });
+  }
 
-    // 3. Inspeccion
-    + "<h2>3. Inspección realizada</h2>"
-    + "<div class='grid2'>"
-    + "<div class='field'><div class='field-label'>Fecha de inspeccion</div><div class='field-value'>" + fmtDate(inc.fecha_revision||"") + "</div></div>"
-    + "<div class='field'><div class='field-label'>Persona que realiza la inspeccion</div><div class='field-value'>" + (inc.inspector||"") + "</div></div>"
-    + "<div class='field'><div class='field-label'>Lugar de inspeccion</div><div class='field-value'>" + (inc.lugar_inspeccion||"") + "</div></div>"
-    + "</div>"
-    + "<div style='margin-top:6px'><div class='field-label'>Observaciones tecnicas</div>"
-    + "<div style='border:1px solid #ddd;border-radius:4px;padding:8px 10px;min-height:60px;font-size:11px;margin-top:4px'>" + (inc.observaciones||"") + "</div></div>"
+  // Dictamen final
+  html += "<h2>3. Valoración técnica y dictamen final</h2>"
+    + "<div style='border:1px solid #ddd;border-radius:4px;padding:10px;min-height:60px;font-size:11px'>" + (inc.dictamen||"") + "</div>";
 
-    // 4. Estado producto
-    + "<h2>4. Estado del producto</h2>"
-    + "<div style='display:flex;flex-direction:column;gap:6px'>"
-    + ["Correcto / dentro de tolerancias normales de uso","Desgaste normal por uso","Posible mal uso del producto","Defecto de fabricacion","Defecto de montaje","Otros"].map(op =>
-        "<div style='display:flex;align-items:center;gap:8px;font-size:11px'>"
-        + "<div style='width:14px;height:14px;border:1.5px solid #333;border-radius:2px;flex-shrink:0;background:" + (inc.estado_producto===op?"#222":"#fff") + ";display:flex;align-items:center;justify-content:center'>"
-        + (inc.estado_producto===op?"<span style='color:#fff;font-size:10px'>✓</span>":"")
-        + "</div>" + op + "</div>"
-      ).join("")
-    + "</div>"
-
-    // 5. Dictamen
-    + "<h2>5. Valoración técnica y dictamen</h2>"
-    + "<div style='border:1px solid #ddd;border-radius:4px;padding:10px 12px;min-height:70px;font-size:11px'>" + (inc.dictamen||"") + "</div>"
-
-    // 6. Fotos
-    + (fotosHtml ? "<h2 style='page-break-before:always'>6. Reportaje fotográfico</h2><div class='foto-grid-print'>" + fotosHtml + "</div>" : "")
-
-    // Firmas
-    + "<div style='page-break-before:always;margin-top:2rem'>"
-    + "<div style='display:grid;grid-template-columns:1fr 1fr;gap:3rem'>"
+  // Firmas
+  html += "<div style='display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:2rem'>"
     + "<div style='text-align:center'>"
-    + "<div style='border:1px solid #333;height:80px;margin-bottom:8px'></div>"
-    + "<div style='font-size:10px;font-weight:700;text-transform:uppercase'>Firma del inspector / tecnico</div>"
-    + "<div style='font-size:10px;color:#666;margin-top:4px'>" + (inc.inspector||"") + "</div>"
+    + "<div style='border:1px solid #333;height:70px;margin-bottom:6px'></div>"
+    + "<div style='font-size:10px;font-weight:700;text-transform:uppercase'>Firma del inspector / técnico</div>"
+    + "<div style='font-size:10px;color:#666;margin-top:2px'>" + (inc.inspector||"") + "</div>"
     + "</div>"
     + "<div style='text-align:center'>"
     + (inc.firma_cliente
-        ? "<img src='" + inc.firma_cliente + "' style='height:80px;max-width:100%;object-fit:contain;border:1px solid #ccc;border-radius:4px;display:block;margin:0 auto 8px'>"
-        : "<div style='border:1px solid #333;height:80px;margin-bottom:8px'></div>")
+        ? "<img src='" + inc.firma_cliente + "' style='height:70px;max-width:100%;object-fit:contain;border:1px solid #ccc;border-radius:4px;display:block;margin:0 auto 6px'>"
+        : "<div style='border:1px solid #333;height:70px;margin-bottom:6px'></div>")
     + "<div style='font-size:10px;font-weight:700;text-transform:uppercase'>Firma del cliente</div>"
-    + "<div style='font-size:10px;color:#666;margin-top:4px'>" + (inc.cliente_nombre||"") + "</div>"
-    + "</div>"
-    + "</div>"
-    + "<div style='margin-top:1.5rem;padding:10px;background:#f8f8f6;border-radius:6px;font-size:9px;color:#888;text-align:center'>"
-    + "Documento generado el " + fmtDate(today()) + " | Meres Central de Compras S.L. | CIF: B74102807<br>"
-    + "Registro Mercantil de Asturias, Tomo 3227, Diario 96, Folio 219, Asiento 5427, Inscripcion 4, AS-30547"
+    + "<div style='font-size:10px;color:#666;margin-top:2px'>" + (inc.cliente_nombre||"") + "</div>"
     + "</div></div>"
+    + "<div style='margin-top:1.5rem;padding:8px;background:#f8f8f6;border-radius:4px;font-size:9px;color:#888;text-align:center'>"
+    + "Meres Central de Compras S.L. | CIF: B74102807 | Registro Mercantil de Asturias, Tomo 3227, Diario 96, Folio 219, Asiento 5427, Inscripcion 4, AS-30547"
+    + "</div>"
     + "<script>window.onload=function(){window.print();};<\/script></body></html>";
 
-  const blob = new Blob([printHtml],{type:"text/html;charset=utf-8"});
+  const blob = new Blob([html],{type:"text/html;charset=utf-8"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href=url; a.target="_blank";
   document.body.appendChild(a); a.click();
-  setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); },1000);
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
 }
 
 // ===== REPARTOS =====
