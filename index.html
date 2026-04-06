@@ -362,6 +362,59 @@ tr:last-child td{border-bottom:none}
       </div>
       <div id="vis-historico"></div>
     </div>
+      <!-- FICHAS HORARIAS - solo para usuarios autorizados -->
+      <div id="vis-fichajes-section" style="display:none;margin-top:1rem">
+        <div id="fichas-print-btns" style="display:none;margin-top:1rem">
+        <div class="card">
+          <p class="card-title">Imprimir fichas horarias</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+            <select id="print-alias" style="padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:#fff;-webkit-appearance:none;flex:1">
+              <option value="all">Todos los vendedores</option>
+            </select>
+            <select id="print-mes-sel" style="padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:#fff;-webkit-appearance:none">
+              <option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option>
+              <option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option>
+              <option value="07">Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option>
+              <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="btn-print-mes" class="btn btn-primary" style="flex:1" onclick="window._btnPrintMes()">Ficha mensual</button>
+            <button id="btn-print-semana" class="btn" style="flex:1" onclick="window._btnPrintSemana()">Ficha semanal</button>
+            <button id="btn-print-dia" class="btn" style="flex:1" onclick="window._btnPrintDia()">Listado del dia</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL CONTROL FICHAJES -->
+      
+        <div id="panel-fichajes" style="display:none;margin-top:1rem">
+        <div class="card">
+          <p class="card-title" style="font-size:15px">📋 Panel de control — Fichajes</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+            <div>
+              <label style="font-size:12px;color:#666;display:block;margin-bottom:3px">Fecha</label>
+              <input type="date" id="panel-fecha" style="padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px;background:#fff;-webkit-appearance:none">
+            </div>
+            <div>
+              <label style="font-size:12px;color:#666;display:block;margin-bottom:3px">Semana / Mes</label>
+              <select id="panel-modo" style="padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:#fff;-webkit-appearance:none">
+                <option value="dia">Ver dia</option>
+                <option value="semana">Ver semana</option>
+                <option value="mes">Ver mes completo</option>
+              </select>
+            </div>
+            <div style="align-self:flex-end">
+              <button id="btn-panel-cargar" class="btn btn-primary" onclick="window._btnCargarPanel()">Cargar</button>
+            </div>
+          </div>
+          <div id="panel-fichajes-tabla" style="overflow-x:auto">
+            <p style="color:#888;font-size:13px;text-align:center;padding:1rem">Selecciona una fecha y pulsa Cargar</p>
+          </div>
+        </div>
+      </div>
+      </div>
+
 
     <!-- FICHAJES -->
     <div id="tab-fichajes" class="section">
@@ -410,54 +463,7 @@ tr:last-child td{border-bottom:none}
         <button class="tab" id="st-tab-vendedores">Vendedores</button>
       </div>
       <div id="stats-content"><div class="spinner">Cargando...</div></div>
-      <div id="fichas-print-btns" style="display:none;margin-top:1rem">
-        <div class="card">
-          <p class="card-title">Imprimir fichas horarias</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-            <select id="print-alias" style="padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:#fff;-webkit-appearance:none;flex:1">
-              <option value="all">Todos los vendedores</option>
-            </select>
-            <select id="print-mes-sel" style="padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:#fff;-webkit-appearance:none">
-              <option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option>
-              <option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option>
-              <option value="07">Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option>
-              <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
-            </select>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button id="btn-print-mes" class="btn btn-primary" style="flex:1" onclick="window._btnPrintMes()">Ficha mensual</button>
-            <button id="btn-print-semana" class="btn" style="flex:1" onclick="window._btnPrintSemana()">Ficha semanal</button>
-            <button id="btn-print-dia" class="btn" style="flex:1" onclick="window._btnPrintDia()">Listado del dia</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- PANEL CONTROL FICHAJES -->
-      <div id="panel-fichajes" style="display:none;margin-top:1rem">
-        <div class="card">
-          <p class="card-title" style="font-size:15px">📋 Panel de control — Fichajes</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-            <div>
-              <label style="font-size:12px;color:#666;display:block;margin-bottom:3px">Fecha</label>
-              <input type="date" id="panel-fecha" style="padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px;background:#fff;-webkit-appearance:none">
-            </div>
-            <div>
-              <label style="font-size:12px;color:#666;display:block;margin-bottom:3px">Semana / Mes</label>
-              <select id="panel-modo" style="padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:#fff;-webkit-appearance:none">
-                <option value="dia">Ver dia</option>
-                <option value="semana">Ver semana</option>
-                <option value="mes">Ver mes completo</option>
-              </select>
-            </div>
-            <div style="align-self:flex-end">
-              <button id="btn-panel-cargar" class="btn btn-primary" onclick="window._btnCargarPanel()">Cargar</button>
-            </div>
-          </div>
-          <div id="panel-fichajes-tabla" style="overflow-x:auto">
-            <p style="color:#888;font-size:13px;text-align:center;padding:1rem">Selecciona una fecha y pulsa Cargar</p>
-          </div>
-        </div>
-      </div>
+      
     </div>
   </div>
 </div>
@@ -566,6 +572,8 @@ function showToast(msg) {
 const vendorGrid = document.getElementById("vendor-grid");
 vendorGrid.innerHTML = "<p style='color:#888;font-size:13px;text-align:center;padding:1rem;grid-column:1/-1'>Cargando vendedores...</p>";
 
+const USERS_FICHAS = ["Marisa","Javi","Jose Angel","Kike"];
+
 function login(name) {
   currentUser = name;
   sessionStorage.setItem("currentUser", name);
@@ -581,6 +589,9 @@ function login(name) {
   // Show floating repartos button
   const fb = document.getElementById("btn-flotante-repartos");
   if (fb) fb.style.display = "flex";
+  // Show fichas section only for authorized users
+  const secFichajes = document.getElementById("vis-fichajes-section");
+  if (secFichajes) secFichajes.style.display = USERS_FICHAS.includes(name) ? "block" : "none";
 }
 
 function logout() {
@@ -696,10 +707,7 @@ function showTab(name) {
     mostrarModalClave(function() {
       renderStats();
 
-      const fichasBtns = document.getElementById("fichas-print-btns");
-      if (fichasBtns) fichasBtns.style.display = "block";
-      const panelFichajes = document.getElementById("panel-fichajes");
-      if (panelFichajes) panelFichajes.style.display = "block";
+      // Fichas and panel are now in Visitas tab
 
       const panelFecha = document.getElementById("panel-fecha");
       if (panelFecha && !panelFecha.value) panelFecha.value = nowMadridFull().fecha;
@@ -1089,6 +1097,28 @@ function initVisitas() {
     selTienda.disabled = true;
   } else {
     selTienda.disabled = false;
+  }
+  // Show fichas section for authorized users
+  const secFichajes = document.getElementById("vis-fichajes-section");
+  if (secFichajes) secFichajes.style.display = USERS_FICHAS.includes(currentUser) ? "block" : "none";
+  // Show fichas buttons and panel if authorized
+  if (USERS_FICHAS.includes(currentUser)) {
+    const fichasBtns = document.getElementById("fichas-print-btns");
+    if (fichasBtns) fichasBtns.style.display = "block";
+    const panelFichajes = document.getElementById("panel-fichajes");
+    if (panelFichajes) panelFichajes.style.display = "block";
+    const panelFecha = document.getElementById("panel-fecha");
+    if (panelFecha && !panelFecha.value) panelFecha.value = nowMadridFull().fecha;
+    const printMes = document.getElementById("print-mes-sel");
+    if (printMes) printMes.value = nowMadridFull().fecha.slice(5,7);
+    const printAlias = document.getElementById("print-alias");
+    if (printAlias) {
+      printAlias.innerHTML = "<option value='all'>Todos los vendedores</option>";
+      VENDORS.forEach(v => {
+        const o = document.createElement("option"); o.value=v; o.textContent=v;
+        printAlias.appendChild(o);
+      });
+    }
   }
   loadVisita();
 }
