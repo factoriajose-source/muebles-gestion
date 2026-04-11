@@ -461,6 +461,7 @@ tr:last-child td{border-bottom:none}
         <button class="tab active" id="st-tab-presup">Presupuestos</button>
         <button class="tab" id="st-tab-visitas">Visitas</button>
         <button class="tab" id="st-tab-vendedores">Vendedores</button>
+        <button class="tab" id="st-tab-mensajes" style="background:#fff3cd;color:#856404;border-color:#ffc107;font-weight:600">📬 Mensajes</button>
       </div>
       <div id="stats-content"><div class="spinner">Cargando...</div></div>
       
@@ -1443,6 +1444,10 @@ function renderStats() {
   if (monthList.length > 1) { h += "<div class='card'><p class='card-title'>Evolucion mensual</p>"; monthList.forEach(([m,d])=>{ const pct=Math.round(d.total/maxM*100); h+="<div class='bar-row'><span class='bar-name'>"+MESES_N[parseInt(m.slice(5,7))]+" "+m.slice(0,4)+"</span><div class='bar-wrap'><div class='bar-blue' style='width:"+pct+"%'></div></div><span style='font-size:12px;min-width:24px;text-align:right'>"+d.total+"</span><span style='font-size:11px;color:#3b6d11;min-width:60px;text-align:right'>"+d.pedidos+" pedidos</span><span style='font-size:11px;color:#888;min-width:36px;text-align:right'>"+Math.round(d.pedidos/d.total*100)+"%</span></div>"; }); h += "</div>"; }
   // Add excel button at bottom
   h += "<div style='margin-top:1rem;text-align:center'><button onclick=\"window._abrirExcelPresup()\" style='padding:10px 20px;background:#185fa5;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer'>📊 Ver tabla Excel por vendedor y mes</button></div>";
+  if (currentStatsTab === "mensajes") {
+    renderMensajes();
+    return;
+  }
   document.getElementById("stats-content").innerHTML = h;
 }
 
@@ -1816,6 +1821,8 @@ function abrirFirmaRapida(vendedor, fichajeHoyV, turno, hor, geo) {
     try {
       await setDoc(doc(db,"fichajes",fichajeKey(vendedor.alias,fecha)),fichajeHoyV);
       showToast("Fichaje registrado: " + horaARegistrar);
+      // Check weekly hours after every fichaje
+      verificarHorasSemana(vendedor, fecha);
       overlay.remove();
     } catch(err) { showToast("Error: "+err.message); bOk.disabled=false; bOk.textContent="Confirmar fichaje"; }
   });
@@ -1828,6 +1835,139 @@ function abrirFirmaRapida(vendedor, fichajeHoyV, turno, hor, geo) {
   box.appendChild(row);
   overlay.appendChild(box);
   document.body.appendChild(overlay);
+}
+
+
+// ===== SISTEMA DE MENSAJES/ALERTAS =====
+
+async function guardarMensaje(tipo, texto) {
+  try {
+    const id = "msg_" + Date.now();
+    await setDoc(doc(db, "mensajes", id), {
+      id, tipo, texto,
+      fecha: today(),
+      hora: nowMadridFull().horaCorta,
+      leido: false,
+      creado: new Date().toISOString()
+    });
+  } catch(e) { console.log("Error guardando mensaje:", e); }
+}
+
+async function renderMensajes() {
+  const cont = document.getElementById("stats-content");
+  cont.innerHTML = "<div class='spinner'>Cargando mensajes...</div>";
+
+  try {
+    const sn = await getDocs(collection(db, "mensajes"));
+    const msgs = [];
+    sn.forEach(d => msgs.push(d.data()));
+    msgs.sort((a,b) => b.creado.localeCompare(a.creado));
+
+    let h = "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:8px'>"
+      + "<div style='font-size:17px;font-weight:600'>📬 Mensajes y alertas del sistema</div>"
+      + "<div style='display:flex;gap:8px'>"
+      + "<span style='font-size:13px;color:#888;align-self:center'>" + msgs.length + " mensajes</span>"
+      + "<button id='btn-borrar-todos' style='padding:8px 14px;border:1px solid #ccc;border-radius:8px;font-size:13px;cursor:pointer;background:#fff'>🗑 Borrar leídos</button>"
+      + "</div></div>";
+
+    if (!msgs.length) {
+      h += "<div class='card'><p class='empty'>✅ Sin mensajes. Todo correcto.</p></div>";
+    } else {
+      msgs.forEach(m => {
+        const esAlerta = m.tipo === "alerta";
+        const color = esAlerta ? "#c0392b" : "#185fa5";
+        const bg = esAlerta ? "#fdf0f0" : "#e8f0fe";
+        const icon = esAlerta ? "⚠️" : "ℹ️";
+        h += "<div style='background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:12px 16px;margin-bottom:8px;border-left:4px solid " + color + ";display:flex;justify-content:space-between;align-items:flex-start;gap:10px'>"
+          + "<div style='flex:1'>"
+          + "<div style='font-size:12px;color:#888;margin-bottom:4px'>" + icon + " " + m.fecha + " " + (m.hora||"") + " &nbsp;·&nbsp; " + m.tipo.toUpperCase() + "</div>"
+          + "<div style='font-size:14px;color:#222;line-height:1.5'>" + m.texto + "</div>"
+          + "</div>"
+          + "<button class='btn-del-msg' data-msgid='" + m.id + "'Borrar</button>"
+          + "</div>";
+      });
+    }
+
+    cont.innerHTML = h;
+
+    // Wire buttons after render
+    const btnTodos = document.getElementById("btn-borrar-todos");
+    if (btnTodos) btnTodos.addEventListener("click", window._borrarMensajesLeidos);
+    document.querySelectorAll(".btn-del-msg").forEach(btn => {
+      btn.addEventListener("click", function() {
+        window._borrarMensaje(this.getAttribute("data-msgid"));
+      });
+    });
+
+  } catch(err) {
+    cont.innerHTML = "<div class='card'><p class='empty'>Error: " + err.message + "</p></div>";
+  }
+}
+
+window._borrarMensaje = async function(id) {
+  await deleteDoc(doc(db, "mensajes", id));
+  renderMensajes();
+};
+
+window._borrarMensajesLeidos = async function() {
+  if (!confirm("Borrar todos los mensajes?")) return;
+  const sn = await getDocs(collection(db, "mensajes"));
+  const batch_ids = [];
+  sn.forEach(d => batch_ids.push(d.id));
+  for (const id of batch_ids) await deleteDoc(doc(db, "mensajes", id));
+  renderMensajes();
+};
+
+// ===== VERIFICAR HORAS AL FICHAR =====
+async function verificarHorasSemana(vendedor, fechaFichaje) {
+  if (!vendedor.horas) return; // sin contrato definido
+  const horasContrato = parseInt(vendedor.horas);
+  if (!horasContrato) return;
+
+  // Get day of week and calculate week start (Monday)
+  const d = new Date(fechaFichaje + "T12:00:00");
+  const diaSemana = d.getDay(); // 0=Dom, 1=Lun...
+  const diasDesdeL = diaSemana === 0 ? 6 : diaSemana - 1;
+  const lunes = new Date(d);
+  lunes.setDate(d.getDate() - diasDesdeL);
+  const domingo = new Date(lunes);
+  domingo.setDate(lunes.getDate() + 6);
+
+  function toISO(dt) { return dt.toISOString().split("T")[0]; }
+
+  // Get all fichajes of this week
+  const lunesStr = toISO(lunes);
+  const domingoStr = toISO(domingo);
+
+  let totalMins = 0;
+  const fechas = [];
+  let d2 = new Date(lunes);
+  for (let i = 0; i < 7; i++) {
+    fechas.push(toISO(d2));
+    d2.setDate(d2.getDate() + 1);
+  }
+
+  for (const f of fechas) {
+    try {
+      const snap = await getDoc(doc(db, "fichajes", fichajeKey(vendedor.alias, f)));
+      if (!snap.exists()) continue;
+      const r = snap.data();
+      function toMins(t) { if(!t)return 0; const p=t.split(":"); return parseInt(p[0])*60+parseInt(p[1]); }
+      if (r.ini_m && r.fin_m) totalMins += toMins(r.fin_m) - toMins(r.ini_m);
+      if (r.ini_t && r.fin_t) totalMins += toMins(r.fin_t) - toMins(r.ini_t);
+    } catch(e) {}
+  }
+
+  const totalHoras = totalMins / 60;
+  if (totalHoras > horasContrato) {
+    const exceso = (totalHoras - horasContrato).toFixed(1);
+    const texto = vendedor.alias + " ha superado sus horas semanales contratadas ("
+      + horasContrato + "h). Total registrado esta semana: "
+      + totalHoras.toFixed(1) + "h. Exceso: " + exceso + "h. Semana del "
+      + fmtDate(lunesStr) + " al " + fmtDate(domingoStr) + ".";
+    await guardarMensaje("alerta", texto);
+    showToast("⚠️ Alerta: " + vendedor.alias + " supera horas semanales");
+  }
 }
 
 // ===== FICHAJES =====
@@ -2314,7 +2454,7 @@ function generarPDFFicha(v, registros, tipo, anio, mes) {
     if (r.ini_t && r.fin_t) { const [hI,mI] = r.ini_t.split(":").map(Number); const [hF,mF] = r.fin_t.split(":").map(Number); totalMins += (hF*60+mF)-(hI*60+mI); }
   });
   const totalHoras = Math.floor(totalMins/60) + "h " + (totalMins%60) + "m";
-  const horasContrato = v.horas ? (parseInt(v.horas) * (tipo==="mes"?4:1)) + "h semanales x" + (tipo==="mes"?"4 semanas":"1 semana") : "No definido";
+  const horasContrato = v.horas ? parseInt(v.horas) + "h semanales" : "No definido";
 
   const printHtml = "<!DOCTYPE html><html lang='es'><head><meta charset='UTF-8'><title>Ficha horaria - " + v.alias + "</title>"
     + "<style>@page{size:A4 landscape;margin:1.5cm} body{font-family:Arial,sans-serif;font-size:11px;color:#222} h1{font-size:16px;margin-bottom:4px} .sub{font-size:11px;color:#666;margin-bottom:1rem} table{width:100%;border-collapse:collapse;font-size:10px} th{background:#1a6b2a;color:#fff;padding:6px 4px;text-align:center;font-size:10px} td{padding:5px 4px;border-bottom:1px solid #e0e0d8;vertical-align:middle} tr:nth-child(even){background:#f9f9f7} .firma-box{border:1px solid #ccc;border-radius:4px;height:40px;min-width:80px;display:flex;align-items:center;justify-content:center} .total-box{margin-top:1rem;padding:10px 14px;background:#f0f7f0;border:1px solid #1a6b2a;border-radius:6px;display:inline-block} @media print{body{margin:0}}</style>"
@@ -2334,7 +2474,7 @@ function generarPDFFicha(v, registros, tipo, anio, mes) {
     + filas
     + "</tbody></table>"
     + "<div style='display:flex;justify-content:space-between;align-items:flex-end;margin-top:1.5rem'>"
-    + "<div class='total-box'><strong>Total horas registradas: " + totalHoras + "</strong> &nbsp;|&nbsp; Contrato: " + horasContrato + "</div>"
+    + "<div class='total-box'>Contrato: " + horasContrato + "</div>"
     + "<div style='text-align:center'><div style='border:1px solid #333;height:50px;width:200px;margin-bottom:4px'></div><div style='font-size:10px;color:#666'>Firma y sello de la empresa</div></div>"
     + "<div style='text-align:center'><div style='border:1px solid #333;height:50px;width:160px;margin-bottom:4px'></div><div style='font-size:10px;color:#666'>Firma del trabajador/a</div></div>"
     + "</div>"
