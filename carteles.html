@@ -102,8 +102,8 @@ hr{border:none;border-top:1px solid var(--borde);margin:.85rem 0;}
         <button class="ebtn active" data-etiq="¡¡ SALDO !!">¡¡ SALDO !!</button>
         <button class="ebtn" data-etiq="¡¡ OFERTA !!">¡¡ OFERTA !!</button>
         <button class="ebtn" data-etiq="¡¡ ULTIMO !!">¡¡ ULTIMO !!</button>
-        <button class="ebtn" data-etiq="¡¡ PROMOCION !!">¡¡ PROMOCION !!</button>
-        <button class="ebtn" data-etiq="¡¡ LIQUIDACION !!">¡¡ LIQUIDACION !!</button>
+        <button class="ebtn" data-etiq="¡ PROMOCION !">¡ PROMOCION !</button>
+        <button class="ebtn" data-etiq="¡ LIQUIDACION !">¡ LIQUIDACION !</button>
       </div>
     </div>
 
@@ -271,9 +271,9 @@ function generarCartelHTML(tipo) {
     ? (producto.length > 14 ? 62 : producto.length > 10 ? 76 : 90)
     : (producto.length > 14 ? 38 : producto.length > 10 ? 46 : 56);
   const descFS    = esA4 ? 38 : 24;
-  const antesFS   = esA4 ? 48 : 30;
-  const lAntesFS  = esA4 ? 34 : 21;
-  const saldoFS   = esA4 ? 40 : 25;
+  const antesFS   = esA4 ? 145 : 90;
+  const lAntesFS  = esA4 ? 70 : 44;
+  const saldoFS   = esA4 ? 82 : 52;
   const pctFS     = esA4 ? 100 : 62;
   const lAhoraFS  = esA4 ? 38 : 24;
   const footerFS  = esA4 ? 20 : 14;
@@ -366,9 +366,9 @@ function imprimir(tipo) {
 
   const prodFS    = esA4 ? (producto.length>14?'18mm':producto.length>10?'22mm':'26mm') : (producto.length>14?'11mm':producto.length>10?'14mm':'17mm');
   const descFS    = esA4 ? '11mm' : '7mm';
-  const antesFS   = esA4 ? '14mm' : '9mm';
-  const lAntesFS  = esA4 ? '10mm' : '6.5mm';
-  const saldoFS   = esA4 ? '12mm' : '7.5mm';
+  const antesFS   = esA4 ? '42mm' : '27mm';
+  const lAntesFS  = esA4 ? '21mm' : '13mm';
+  const saldoFS   = esA4 ? '24mm' : '15mm';
   const pctFS     = esA4 ? '30mm' : '19mm';
   const lAhoraFS  = esA4 ? '11mm' : '7mm';
   const ahoraFS   = ahoraFSmm + 'mm';
