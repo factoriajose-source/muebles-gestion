@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Importar Proveedores · Firebase</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Archivo', sans-serif;
+    background: #f4f1ec;
+    color: #1a1714;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 40px;
+    width: 100%;
+    max-width: 600px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  }
+  h1 {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 22px;
+    margin-bottom: 6px;
+  }
+  .subtitle { color: #888; font-size: 13px; margin-bottom: 28px; }
+
+  /* LOGIN */
+  #loginBox { display: block; }
+  #importBox { display: none; }
+
+  label.lbl {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: #888;
+    margin-bottom: 6px;
+  }
+  input[type=email], input[type=password] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid #e0dbd4;
+    border-radius: 7px;
+    font-family: 'Archivo', sans-serif;
+    font-size: 14px;
+    margin-bottom: 14px;
+  }
+  input:focus { outline: none; border-color: #c4571a; }
+
+  .btn {
+    width: 100%;
+    padding: 13px;
+    background: #c4571a;
+    color: white;
+    border: none;
+    border-radius: 7px;
+    font-family: 'Archivo', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background .2s;
+    margin-top: 4px;
+  }
+  .btn:hover { background: #e8793e; }
+  .btn:disabled { background: #ccc; cursor: not-allowed; }
+  .btn-green { background: #2d7a4f; }
+  .btn-green:hover { background: #3a9962; }
+
+  #loginError { color: #c0392b; font-size: 13px; margin-top: 10px; display: none; }
+
+  /* ZONA FICHERO */
+  .drop-zone {
+    border: 2px dashed #e0dbd4;
+    border-radius: 10px;
+    padding: 36px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    margin-bottom: 20px;
+  }
+  .drop-zone:hover, .drop-zone.over { border-color: #c4571a; background: #fff8f4; }
+  .drop-zone svg { margin-bottom: 10px; color: #c4571a; }
+  .drop-zone p { font-size: 14px; color: #888; }
+  .drop-zone strong { color: #1a1714; }
+  #fileInput { display: none; }
+
+  /* PREVIEW */
+  #previewBox { display: none; margin-bottom: 20px; }
+  .preview-header {
+    background: #1a1714;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 7px 7px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .preview-header span { color: #e8793e; font-family: 'Archivo Black', sans-serif; }
+  .preview-scroll {
+    border: 1px solid #e0dbd4;
+    border-top: none;
+    border-radius: 0 0 7px 7px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  table.prev { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.prev th { background: #f4f1ec; padding: 7px 10px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .07em; color: #888; position: sticky; top: 0; }
+  table.prev td { padding: 6px 10px; border-bottom: 1px solid #f0ece6; }
+  table.prev tr:last-child td { border-bottom: none; }
+
+  /* LOG */
+  #logBox { display: none; margin-top: 16px; }
+  #logScroll {
+    background: #1a1714;
+    color: #e8e0d8;
+    border-radius: 7px;
+    padding: 14px;
+    height: 200px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .log-ok  { color: #4ade80; }
+  .log-err { color: #f87171; }
+  .log-info{ color: #93c5fd; }
+
+  /* PROGRESO */
+  #progressBox { display: none; margin-bottom: 16px; }
+  .prog-bar-wrap { background: #f0ece6; border-radius: 20px; height: 10px; overflow: hidden; margin-top: 6px; }
+  .prog-bar { background: #c4571a; height: 100%; width: 0%; transition: width .3s; border-radius: 20px; }
+  .prog-text { font-size: 12px; color: #888; margin-top: 4px; text-align: right; }
+
+  .alert {
+    padding: 12px 14px;
+    border-radius: 7px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+  .alert-warn { background: #fff8e8; border-left: 4px solid #e8a020; color: #7a5020; }
+  .alert-ok   { background: #e8f5ee; border-left: 4px solid #2d7a4f; color: #1a4f30; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>📦 Importar Proveedores</h1>
+  <p class="subtitle">Sube tu CSV de Airtable a Firebase · Meres Central de Compras</p>
+
+  <!-- LOGIN -->
+  <div id="loginBox">
+    <label class="lbl">Email</label>
+    <input type="email" id="loginEmail" placeholder="tu@email.com" autocomplete="email">
+    <label class="lbl">Contraseña</label>
+    <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+    <button class="btn" onclick="doLogin()">Entrar para importar</button>
+    <div id="loginError">Email o contraseña incorrectos</div>
+  </div>
+
+  <!-- IMPORTAR -->
+  <div id="importBox">
+    <div class="alert alert-warn">
+      ⚠️ <strong>Solo usar una vez.</strong> Este importador sube todos los registros del CSV a Firebase. Si ya tienes datos, se añadirán como nuevos (no duplica si usas el mismo fichero dos veces seguidas — comprueba antes).
+    </div>
+
+    <!-- DROP ZONE -->
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <p><strong>Haz clic aquí</strong> o arrastra el fichero CSV</p>
+      <p style="font-size:12px;margin-top:4px">Hoja1-TODOS_FABRICAS_VENTAS.csv</p>
+    </div>
+    <input type="file" id="fileInput" accept=".csv" onchange="onFileSelected(this.files[0])">
+
+    <!-- PREVIEW -->
+    <div id="previewBox">
+      <div class="preview-header">
+        Vista previa — primeros 5 registros
+        <span id="totalCount"></span>
+      </div>
+      <div class="preview-scroll">
+        <table class="prev">
+          <thead><tr><th>Código</th><th>Nombre</th><th>Modelo</th><th>Puntos</th><th>Familia</th><th>Estado</th></tr></thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PROGRESO -->
+    <div id="progressBox">
+      <div class="prog-bar-wrap"><div class="prog-bar" id="progBar"></div></div>
+      <div class="prog-text" id="progText">0 / 0</div>
+    </div>
+
+    <!-- LOG -->
+    <div id="logBox">
+      <div id="logScroll"></div>
+    </div>
+
+    <button class="btn btn-green" id="btnImport" onclick="startImport()" disabled>
+      ⬆️ Subir a Firebase
+    </button>
+    <div id="doneAlert" style="display:none"></div>
+  </div>
+</div>
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
+  authDomain: "muebles-presupuestos.firebaseapp.com",
+  projectId: "muebles-presupuestos",
+  storageBucket: "muebles-presupuestos.firebasestorage.app",
+  messagingSenderId: "37365883872",
+  appId: "1:37365883872:web:842ca4d318c01652684185"
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+let parsedData = [];
+
+// ── Auth
+onAuthStateChanged(auth, user => {
+  if (user) {
+    document.getElementById('loginBox').style.display  = 'none';
+    document.getElementById('importBox').style.display = 'block';
+    log(`✅ Conectado como ${user.email}`, 'ok');
+    document.getElementById('logBox').style.display = 'block';
+  }
+});
+
+window.doLogin = async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  document.getElementById('loginError').style.display = 'none';
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch(e) {
+    document.getElementById('loginError').style.display = 'block';
+  }
+};
+
+document.getElementById('loginPass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') window.doLogin();
+});
+
+// ── Drag & drop
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('over');
+  const file = e.dataTransfer.files[0];
+  if (file) onFileSelected(file);
+});
+
+// ── Leer CSV
+window.onFileSelected = (file) => {
+  if (!file || !file.name.endsWith('.csv')) {
+    alert('Por favor selecciona un fichero .csv');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = e.target.result;
+    parsedData = parseCSV(text);
+    showPreview(parsedData);
+    document.getElementById('btnImport').disabled = parsedData.length === 0;
+    log(`📄 Fichero leído: ${file.name} — ${parsedData.length} registros encontrados`, 'info');
+  };
+  reader.readAsText(file, 'UTF-8');
+};
+
+// ── Parser CSV robusto (maneja comillas, saltos de línea dentro de campos)
+function parseCSV(text) {
+  // Normalizar saltos de línea
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  const rows = [];
+  let i = 0;
+  let headers = null;
+
+  while (i < text.length) {
+    const row = readRow();
+    if (row === null) break;
+    if (row.every(c => c === '')) continue; // fila vacía
+
+    if (!headers) {
+      // Primera fila = cabeceras, limpiar BOM si existe
+      headers = row.map(h => h.replace(/^\uFEFF/, '').trim());
+    } else {
+      const obj = {};
+      headers.forEach((h, idx) => {
+        obj[h] = (row[idx] || '').trim();
+      });
+      // Solo incluir si tiene al menos Nombre
+      if (obj['Nombre'] && obj['Nombre'].length > 0) {
+        rows.push(mapRow(obj));
+      }
+    }
+  }
+  return rows;
+
+  function readRow() {
+    if (i >= text.length) return null;
+    const cells = [];
+    while (i < text.length) {
+      cells.push(readCell());
+      if (i >= text.length || text[i] === '\n') { i++; break; }
+      if (text[i] === ',') i++; // separador
+    }
+    return cells;
+  }
+
+  function readCell() {
+    if (i >= text.length) return '';
+    if (text[i] === '"') {
+      i++; // saltar comilla inicial
+      let val = '';
+      while (i < text.length) {
+        if (text[i] === '"') {
+          if (text[i+1] === '"') { val += '"'; i += 2; }
+          else { i++; break; }
+        } else {
+          val += text[i++];
+        }
+      }
+      return val;
+    } else {
+      let val = '';
+      while (i < text.length && text[i] !== ',' && text[i] !== '\n') {
+        val += text[i++];
+      }
+      return val;
+    }
+  }
+}
+
+// ── Mapear columnas CSV → campos Firebase
+function mapRow(r) {
+  return {
+    Codigo:        (r['Codigo']        || r['Código']       || '').trim(),
+    Nombre:        (r['Nombre']                              || '').trim(),
+    Modelo:        (r['Modelo']                              || '').trim(),
+    PUNTOS:        (r['PUNTOS']                              || '').trim(),
+    MAX_DTO:       (r['MAX_DTO']                             || '').trim(),
+    Año:           (r['Año']           || r['A\xf1o']        || '').trim(),
+    Familia:       (r['Familia']                             || '').trim(),
+    Estado:        (r['Estado Prov.']  || r['Estado']        || 'ACTIVO').trim() || 'ACTIVO',
+    PORTES:        (r['PORTES']                              || '').trim(),
+    ESTILO:        (r['ESTILO']                              || '').trim(),
+    P_COSTE:       (r['`P_COSTE']      || r['P_COSTE']       || '').trim(),
+    Email:         (r['Email']                               || '').trim(),
+    Telefono:      (r['Teléfono']      || r['Telefono']      || '').trim(),
+    TelefonoMovil: (r['Teléfono Movil']|| r['TelefonoMovil'] || '').trim(),
+    URL:           (r['URL']                                 || '').trim(),
+    Varios:        (r['Varios']                              || '').trim(),
+    DC_PCT:        (r['D.C.%']         || r['DC_PCT']        || '').trim(),
+  };
+}
+
+// ── Preview
+function showPreview(data) {
+  const box  = document.getElementById('previewBox');
+  const body = document.getElementById('previewBody');
+  document.getElementById('totalCount').textContent = `${data.length} registros en total`;
+  body.innerHTML = '';
+  data.slice(0, 5).forEach(p => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${esc(p.Codigo)}</td>
+      <td><strong>${esc(p.Nombre)}</strong></td>
+      <td>${esc(p.Modelo)}</td>
+      <td>${esc(p.PUNTOS)}</td>
+      <td>${esc(p.Familia)}</td>
+      <td>${esc(p.Estado)}</td>
+    `;
+    body.appendChild(tr);
+  });
+  box.style.display = 'block';
+}
+
+// ── Importar a Firebase
+window.startImport = async () => {
+  if (!parsedData.length) return;
+  const btn = document.getElementById('btnImport');
+  btn.disabled = true;
+  btn.textContent = '⏳ Subiendo…';
+
+  document.getElementById('progressBox').style.display = 'block';
+  const progBar  = document.getElementById('progBar');
+  const progText = document.getElementById('progText');
+
+  let ok = 0, err = 0;
+  const total = parsedData.length;
+
+  log(`🚀 Iniciando importación de ${total} registros…`, 'info');
+
+  for (let idx = 0; idx < total; idx++) {
+    const p = parsedData[idx];
+    try {
+      await addDoc(collection(db, 'proveedores'), p);
+      ok++;
+      if (idx < 5 || idx % 20 === 0) {
+        log(`✅ [${idx+1}/${total}] ${p.Nombre}`, 'ok');
+      }
+    } catch(e) {
+      err++;
+      log(`❌ Error en ${p.Nombre}: ${e.message}`, 'err');
+    }
+    // Actualizar barra
+    const pct = Math.round(((idx+1) / total) * 100);
+    progBar.style.width = pct + '%';
+    progText.textContent = `${idx+1} / ${total} (${pct}%)`;
+
+    // Pequeña pausa para no saturar Firebase
+    if (idx % 10 === 9) await sleep(300);
+  }
+
+  log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`, 'info');
+  log(`🏁 Importación terminada: ${ok} OK · ${err} errores`, ok > 0 ? 'ok' : 'err');
+
+  btn.textContent = '✅ Importación completada';
+
+  const doneAlert = document.getElementById('doneAlert');
+  doneAlert.style.display = 'block';
+  doneAlert.className = 'alert alert-ok';
+  doneAlert.innerHTML = `
+    ✅ <strong>¡Listo!</strong> Se han importado <strong>${ok} proveedores</strong> a Firebase.
+    Ahora abre el fichero <strong>proveedores.html</strong> y verás todos los datos.
+  `;
+};
+
+// ── Helpers
+function log(msg, type='info') {
+  const box = document.getElementById('logScroll');
+  box.style.display = 'block';
+  document.getElementById('logBox').style.display = 'block';
+  const line = document.createElement('div');
+  line.className = `log-${type}`;
+  line.textContent = msg;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+</script>
+</body>
+</html>

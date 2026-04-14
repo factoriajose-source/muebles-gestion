@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proveedores · Meres Central de Compras</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f1ec;
+    --surface: #ffffff;
+    --surface2: #faf8f4;
+    --border: #e2ddd6;
+    --text: #1a1714;
+    --text2: #6b6560;
+    --accent: #c4571a;
+    --accent2: #e8793e;
+    --green: #2d7a4f;
+    --green-light: #e8f5ee;
+    --red: #c0392b;
+    --red-light: #fdecea;
+    --yellow: #e8a020;
+    --yellow-light: #fef8e8;
+    --shadow: 0 2px 12px rgba(26,23,20,0.08);
+    --shadow-lg: 0 8px 32px rgba(26,23,20,0.12);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Archivo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--text);
+    color: white;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-brand {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 15px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .header-brand span { color: var(--accent2); }
+  .header-right { display: flex; gap: 10px; align-items: center; }
+  #btnAddNew {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-family: 'Archivo', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+  }
+  #btnAddNew:hover { background: var(--accent2); }
+  #userInfo {
+    font-size: 12px;
+    color: #aaa;
+    display: none;
+  }
+
+  /* ── LOGIN ── */
+  #loginScreen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 56px);
+    padding: 24px;
+  }
+  .login-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 40px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: var(--shadow-lg);
+    text-align: center;
+  }
+  .login-card h2 {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 22px;
+    margin-bottom: 6px;
+  }
+  .login-card p { color: var(--text2); margin-bottom: 28px; font-size: 13px; }
+  .form-group { margin-bottom: 16px; text-align: left; }
+  .form-group label { display: block; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; color: var(--text2); }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: 'Archivo', sans-serif;
+    font-size: 14px;
+    background: var(--surface);
+    color: var(--text);
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .btn-primary {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Archivo', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 8px;
+  }
+  .btn-primary:hover { background: var(--accent2); }
+  #loginError { color: var(--red); font-size: 13px; margin-top: 12px; display: none; }
+
+  /* ── MAIN APP ── */
+  #appScreen { display: none; }
+
+  /* ── TOOLBAR ── */
+  .toolbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    max-width: 360px;
+  }
+  .search-wrap svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text2);
+  }
+  #searchInput {
+    width: 100%;
+    padding: 9px 12px 9px 34px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: 'Archivo', sans-serif;
+    font-size: 14px;
+    background: var(--surface2);
+  }
+  #searchInput:focus { outline: none; border-color: var(--accent); background: white; }
+  #filterFamilia, #filterEstado {
+    padding: 9px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: 'Archivo', sans-serif;
+    font-size: 13px;
+    background: var(--surface2);
+    cursor: pointer;
+  }
+  .stats-bar {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text2);
+    background: var(--surface2);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+
+  /* ── TABLE ── */
+  .table-wrap {
+    padding: 20px 24px;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  thead tr { background: var(--text); color: white; }
+  thead th {
+    padding: 12px 14px;
+    text-align: left;
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  thead th:hover { background: #2d2a27; }
+  thead th.sorted { color: var(--accent2); }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #fef8f4; }
+  tbody td {
+    padding: 11px 14px;
+    vertical-align: middle;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  td.codigo { font-weight: 700; font-size: 13px; color: var(--text2); font-family: 'Archivo Black', sans-serif; }
+  td.nombre { font-weight: 600; font-size: 13px; }
+  td.modelo { font-size: 12px; color: var(--text2); }
+  td.puntos { font-weight: 700; color: var(--accent); font-size: 14px; }
+  td.pcoste { font-size: 12px; color: var(--text2); }
+  .tag-familia {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .tag-Tapiceria { background: #fff0e8; color: #c4571a; }
+  .tag-Dormitorios { background: #e8f0ff; color: #2856c8; }
+  .tag-Salones { background: #e8f5ee; color: #2d7a4f; }
+  .tag-Auxiliares { background: #f5f0ff; color: #6b4fc8; }
+  .tag-Descanso { background: #fff8e8; color: #b87020; }
+  .tag-Juveniles { background: #ffe8f0; color: #c82868; }
+  .tag-MADERA { background: #f0ece8; color: #7a5a3a; }
+  .tag-Rustico { background: #f0ece8; color: #7a5a3a; }
+  .tag-Almacenista { background: #f0f0f0; color: #555; }
+  .tag-default { background: #f0f0f0; color: #555; }
+  .badge-activo { background: var(--green-light); color: var(--green); padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .badge-inactivo { background: var(--red-light); color: var(--red); padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text2);
+  }
+  .empty-state svg { margin-bottom: 12px; opacity: 0.3; }
+  .empty-state p { font-size: 15px; }
+
+  /* ── PANEL LATERAL FICHA ── */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(26,23,20,0.45);
+    z-index: 200;
+    display: none;
+    animation: fadeIn 0.2s ease;
+  }
+  .overlay.open { display: block; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .side-panel {
+    position: fixed;
+    top: 0;
+    right: -560px;
+    width: 560px;
+    max-width: 100vw;
+    height: 100vh;
+    background: var(--surface);
+    z-index: 201;
+    display: flex;
+    flex-direction: column;
+    transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: -8px 0 40px rgba(26,23,20,0.15);
+  }
+  .side-panel.open { right: 0; }
+  .panel-header {
+    padding: 18px 20px;
+    background: var(--text);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .panel-header h3 {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .panel-header .badge { font-size: 11px; color: #aaa; margin-top: 2px; }
+  .btn-close {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 4px;
+    opacity: 0.7;
+    font-size: 22px;
+    line-height: 1;
+  }
+  .btn-close:hover { opacity: 1; }
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+  }
+  /* TABS DENTRO DEL PANEL */
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--surface2); border-radius: var(--radius-sm); padding: 4px; }
+  .tab-btn {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    background: transparent;
+    border-radius: 5px;
+    font-family: 'Archivo', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    color: var(--text2);
+    transition: all 0.2s;
+  }
+  .tab-btn.active { background: white; color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* SECCIONES FICHA */
+  .info-section { margin-bottom: 20px; }
+  .info-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+    margin-bottom: 12px;
+  }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .info-item label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text2);
+    margin-bottom: 3px;
+  }
+  .info-item .val {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    word-break: break-word;
+  }
+  .info-item .val.big {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 22px;
+    color: var(--accent);
+  }
+  .info-item .val a { color: var(--accent); text-decoration: none; }
+  .info-item .val a:hover { text-decoration: underline; }
+  .info-item.full { grid-column: 1 / -1; }
+  .varios-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    font-size: 13px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+
+  /* CALCULADORA */
+  .calc-box {
+    background: linear-gradient(135deg, #1a1714 0%, #2d2a27 100%);
+    border-radius: var(--radius);
+    padding: 20px;
+    color: white;
+    margin-bottom: 20px;
+  }
+  .calc-box h4 {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    color: var(--accent2);
+  }
+  .calc-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .calc-row label { font-size: 12px; color: #aaa; width: 110px; flex-shrink: 0; font-weight: 600; }
+  .calc-row input {
+    flex: 1;
+    padding: 9px 12px;
+    background: rgba(255,255,255,0.1);
+    border: 1.5px solid rgba(255,255,255,0.15);
+    border-radius: var(--radius-sm);
+    color: white;
+    font-family: 'Archivo', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .calc-row input:focus { outline: none; border-color: var(--accent2); background: rgba(255,255,255,0.15); }
+  .calc-divider { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 14px 0; }
+  .calc-result {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+  .result-item {
+    background: rgba(255,255,255,0.07);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    text-align: center;
+  }
+  .result-item .r-label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .result-item .r-val {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 18px;
+    color: white;
+  }
+  .result-item.highlight { background: var(--accent); }
+  .result-item.highlight .r-val { font-size: 22px; }
+  .result-item .r-val.green { color: #4ade80; }
+  .calc-nota { font-size: 11px; color: #888; margin-top: 12px; line-height: 1.5; }
+
+  /* FORMULARIO EDICIÓN */
+  .edit-form .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .edit-form .form-group { margin-bottom: 14px; }
+  .edit-form textarea { resize: vertical; min-height: 80px; }
+  .panel-footer {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+  .btn-save {
+    flex: 1;
+    padding: 11px;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Archivo', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .btn-save:hover { opacity: 0.85; }
+  .btn-delete {
+    padding: 11px 16px;
+    background: var(--red-light);
+    color: var(--red);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Archivo', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .btn-delete:hover { opacity: 0.75; }
+  .btn-edit {
+    flex: 1;
+    padding: 11px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Archivo', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .btn-edit:hover { opacity: 0.85; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--text);
+    color: white;
+    padding: 12px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 9999;
+    display: none;
+    animation: slideUp 0.3s ease;
+    max-width: 320px;
+  }
+  .toast.ok { border-left: 4px solid var(--green); }
+  .toast.err { border-left: 4px solid var(--red); }
+  @keyframes slideUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
+
+  /* LOADING */
+  #loadingBar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: var(--accent);
+    width: 0;
+    z-index: 9999;
+    transition: width 0.3s;
+  }
+
+  @media (max-width: 640px) {
+    .side-panel { width: 100vw; }
+    .toolbar { padding: 12px 14px; }
+    .table-wrap { padding: 12px 8px; }
+    tbody td { padding: 9px 8px; }
+    .info-grid { grid-template-columns: 1fr; }
+    .calc-result { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loadingBar"></div>
+<div class="toast" id="toast"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-brand">Meres · <span>Proveedores</span></div>
+  <div class="header-right">
+    <span id="userInfo"></span>
+    <button id="btnAddNew" onclick="openNew()" style="display:none">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nuevo proveedor
+    </button>
+  </div>
+</header>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <h2>Proveedores</h2>
+    <p>Acceso restringido · Meres Central de Compras</p>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="tu@email.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Contraseña</label>
+      <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Entrar</button>
+    <div id="loginError">Email o contraseña incorrectos</div>
+  </div>
+</div>
+
+<!-- APP PRINCIPAL -->
+<div id="appScreen">
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="search" id="searchInput" placeholder="Buscar por nombre, código, modelo…" oninput="renderTable()">
+    </div>
+    <select id="filterFamilia" onchange="renderTable()">
+      <option value="">Todas las familias</option>
+    </select>
+    <select id="filterEstado" onchange="renderTable()">
+      <option value="">Todos los estados</option>
+      <option value="ACTIVO">Activo</option>
+      <option value="INACTIVO">Inactivo</option>
+    </select>
+    <div class="stats-bar" id="statsBar">Cargando…</div>
+  </div>
+
+  <!-- TABLA -->
+  <div class="table-wrap">
+    <table id="mainTable">
+      <thead>
+        <tr>
+          <th onclick="sortBy('Codigo')">Cód.</th>
+          <th onclick="sortBy('Nombre')">Nombre / Fábrica</th>
+          <th onclick="sortBy('Modelo')">Modelo</th>
+          <th onclick="sortBy('Familia')">Familia</th>
+          <th onclick="sortBy('PUNTOS')">Puntos</th>
+          <th onclick="sortBy('P_COSTE')">P.Coste</th>
+          <th onclick="sortBy('MAX_DTO')">Max.Dto</th>
+          <th onclick="sortBy('Estado')">Estado</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none">
+      <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3H8L6 7h12z"/></svg>
+      <p>No se encontraron proveedores</p>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY + PANEL LATERAL -->
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+<div class="side-panel" id="sidePanel">
+  <div class="panel-header">
+    <div>
+      <h3 id="panelTitle">Ficha Proveedor</h3>
+      <div class="badge" id="panelBadge"></div>
+    </div>
+    <button class="btn-close" onclick="closePanel()">×</button>
+  </div>
+  <div class="panel-body" id="panelBody"></div>
+  <div class="panel-footer" id="panelFooter"></div>
+</div>
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, getDocs, doc, setDoc, addDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ══════════════════════════════════════════
+//  ⚠️  CONFIGURA AQUÍ TU FIREBASE
+//  (mismos datos que en tu app de gestión)
+// ══════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
+  authDomain: "muebles-presupuestos.firebaseapp.com",
+  projectId: "muebles-presupuestos",
+  storageBucket: "muebles-presupuestos.firebasestorage.app",
+  messagingSenderId: "37365883872",
+  appId: "1:37365883872:web:842ca4d318c01652684185"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ── Estado global
+let allProveedores = [];
+let sortField = 'Nombre';
+let sortAsc = true;
+let currentDoc = null; // doc seleccionado
+let isNew = false;
+
+// ── Exponer funciones al scope global
+window.doLogin = async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  document.getElementById('loginError').style.display = 'none';
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch(e) {
+    document.getElementById('loginError').style.display = 'block';
+  }
+};
+
+window.sortBy = (field) => {
+  if (sortField === field) sortAsc = !sortAsc;
+  else { sortField = field; sortAsc = true; }
+  document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
+  renderTable();
+};
+
+window.openNew = () => {
+  isNew = true;
+  currentDoc = {};
+  showEditPanel(null, true);
+};
+
+window.openRow = (id) => {
+  const item = allProveedores.find(p => p._id === id);
+  if (!item) return;
+  currentDoc = item;
+  isNew = false;
+  showViewPanel(item);
+};
+
+window.closePanel = () => {
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('sidePanel').classList.remove('open');
+};
+
+window.switchTab = (tabId) => {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+};
+
+window.calcularPrecio = () => {
+  const puntos  = parseFloat(document.getElementById('calcPuntos').value) || 0;
+  const pcoste  = parseFloat(document.getElementById('calcPCoste').value) || 0;
+  const coef    = parseFloat(document.getElementById('calcCoef').value)   || 2.2;
+  const maxDto  = parseFloat(document.getElementById('calcMaxDto').value) || 0;
+
+  const coste   = puntos * pcoste;
+  const pvp     = coste * coef;
+  const minPvp  = pvp * (1 - maxDto / 100);
+
+  document.getElementById('rCoste').textContent  = coste  > 0 ? coste.toFixed(2)  + ' €' : '—';
+  document.getElementById('rPvp').textContent    = pvp    > 0 ? pvp.toFixed(2)    + ' €' : '—';
+  document.getElementById('rMinPvp').textContent = minPvp > 0 ? minPvp.toFixed(2) + ' €' : '—';
+};
+
+window.saveProveedor = async () => {
+  const data = getFormData();
+  if (!data.Nombre) { showToast('El nombre es obligatorio', 'err'); return; }
+  loading(true);
+  try {
+    if (isNew) {
+      await addDoc(collection(db, 'proveedores'), data);
+      showToast('Proveedor creado ✓', 'ok');
+    } else {
+      await setDoc(doc(db, 'proveedores', currentDoc._id), data, { merge: true });
+      showToast('Cambios guardados ✓', 'ok');
+    }
+    closePanel();
+  } catch(e) {
+    showToast('Error al guardar: ' + e.message, 'err');
+  }
+  loading(false);
+};
+
+window.deleteProveedor = async () => {
+  if (!currentDoc?._id) return;
+  if (!confirm(`¿Eliminar "${currentDoc.Nombre}"? Esta acción no se puede deshacer.`)) return;
+  loading(true);
+  try {
+    await deleteDoc(doc(db, 'proveedores', currentDoc._id));
+    showToast('Proveedor eliminado', 'ok');
+    closePanel();
+  } catch(e) {
+    showToast('Error al eliminar', 'err');
+  }
+  loading(false);
+};
+
+window.editFromView = () => {
+  showEditPanel(currentDoc, false);
+};
+
+// ── Auth listener
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    document.getElementById('loginScreen').style.display  = 'none';
+    document.getElementById('appScreen').style.display    = 'block';
+    document.getElementById('btnAddNew').style.display    = 'flex';
+    document.getElementById('userInfo').style.display     = 'block';
+    document.getElementById('userInfo').textContent       = user.email;
+    loadProveedores();
+  } else {
+    document.getElementById('loginScreen').style.display  = 'flex';
+    document.getElementById('appScreen').style.display    = 'none';
+    document.getElementById('btnAddNew').style.display    = 'none';
+  }
+});
+
+// Enter en login
+document.getElementById('loginPass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') window.doLogin();
+});
+
+// ── Cargar proveedores en tiempo real
+function loadProveedores() {
+  loading(true);
+  onSnapshot(collection(db, 'proveedores'), (snap) => {
+    allProveedores = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+    populateFamiliaFilter();
+    renderTable();
+    loading(false);
+  });
+}
+
+// ── Render tabla
+window.renderTable = () => {
+  const search    = document.getElementById('searchInput').value.toLowerCase();
+  const familia   = document.getElementById('filterFamilia').value;
+  const estado    = document.getElementById('filterEstado').value;
+
+  let data = allProveedores.filter(p => {
+    const texto = [p.Codigo, p.Nombre, p.Modelo, p.Familia, p.Email, p.Varios]
+      .join(' ').toLowerCase();
+    const matchSearch  = !search  || texto.includes(search);
+    const matchFamilia = !familia || (p.Familia || '').includes(familia);
+    const matchEstado  = !estado  || (p.Estado || 'ACTIVO') === estado;
+    return matchSearch && matchFamilia && matchEstado;
+  });
+
+  // Ordenar
+  data.sort((a, b) => {
+    let va = a[sortField] ?? '';
+    let vb = b[sortField] ?? '';
+    if (sortField === 'PUNTOS' || sortField === 'P_COSTE') {
+      va = parseFloat(String(va).replace(',', '.')) || 0;
+      vb = parseFloat(String(vb).replace(',', '.')) || 0;
+      return sortAsc ? va - vb : vb - va;
+    }
+    return sortAsc
+      ? String(va).localeCompare(String(vb), 'es')
+      : String(vb).localeCompare(String(va), 'es');
+  });
+
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  document.getElementById('emptyState').style.display = data.length ? 'none' : 'block';
+  document.getElementById('mainTable').style.display  = data.length ? 'table' : 'none';
+
+  data.forEach(p => {
+    const estado = p.Estado || 'ACTIVO';
+    const familia1 = (p.Familia || '').split(',')[0].trim();
+    const tagClass = ['Tapiceria','Dormitorios','Salones','Auxiliares','Descanso','Juveniles','MADERA','Rustico','Almacenista'].includes(familia1)
+      ? `tag-${familia1}` : 'tag-default';
+    const puntos = parseFloat(String(p.PUNTOS || '').replace(',','.')) || null;
+    const pcoste = parseFloat(String(p.P_COSTE || '').replace(',','.')) || null;
+    const tr = document.createElement('tr');
+    tr.onclick = () => window.openRow(p._id);
+    tr.innerHTML = `
+      <td class="codigo">${p.Codigo || '—'}</td>
+      <td class="nombre">${escHtml(p.Nombre || '—')}</td>
+      <td class="modelo">${escHtml(p.Modelo || '')}</td>
+      <td>${familia1 ? `<span class="tag-familia ${tagClass}">${familia1}</span>` : '—'}</td>
+      <td class="puntos">${puntos !== null ? puntos.toFixed(2) : '—'}</td>
+      <td class="pcoste">${pcoste !== null ? pcoste.toFixed(3) + ' €' : '—'}</td>
+      <td>${p.MAX_DTO ? p.MAX_DTO : '—'}</td>
+      <td><span class="${estado === 'ACTIVO' ? 'badge-activo' : 'badge-inactivo'}">${estado}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('statsBar').textContent =
+    `${data.length} de ${allProveedores.length} proveedores`;
+};
+
+// ── Vista (ficha)
+function showViewPanel(p) {
+  document.getElementById('panelTitle').textContent = p.Nombre || 'Proveedor';
+  document.getElementById('panelBadge').textContent = `Código: ${p.Codigo || '—'} ${p.Modelo ? '· ' + p.Modelo : ''}`;
+
+  const puntos = parseFloat(String(p.PUNTOS || '').replace(',','.')) || 0;
+  const pcoste = parseFloat(String(p.P_COSTE || '').replace(',','.')) || 0;
+  const maxDto = parseFloat(String(p.MAX_DTO || '').replace('%','').replace(',','.')) || 0;
+
+  const familia1 = (p.Familia || '').split(',')[0].trim();
+  const tagClass = ['Tapiceria','Dormitorios','Salones','Auxiliares','Descanso','Juveniles','MADERA','Rustico','Almacenista'].includes(familia1)
+    ? `tag-${familia1}` : 'tag-default';
+
+  document.getElementById('panelBody').innerHTML = `
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tabInfo" onclick="switchTab('tabInfo')">📋 Ficha</button>
+      <button class="tab-btn" data-tab="tabCalc" onclick="switchTab('tabCalc')">🧮 Calculadora</button>
+    </div>
+
+    <!-- TAB FICHA -->
+    <div class="tab-content active" id="tabInfo">
+      <div class="info-section">
+        <div class="info-grid">
+          <div class="info-item">
+            <label>Código</label>
+            <div class="val">${escHtml(p.Codigo || '—')}</div>
+          </div>
+          <div class="info-item">
+            <label>Estado</label>
+            <div class="val"><span class="${(p.Estado||'ACTIVO')==='ACTIVO'?'badge-activo':'badge-inactivo'}">${p.Estado||'ACTIVO'}</span></div>
+          </div>
+          <div class="info-item full">
+            <label>Nombre / Fábrica</label>
+            <div class="val" style="font-size:16px;font-weight:700">${escHtml(p.Nombre||'—')}</div>
+          </div>
+          ${p.Modelo ? `<div class="info-item full"><label>Modelo</label><div class="val">${escHtml(p.Modelo)}</div></div>` : ''}
+          <div class="info-item">
+            <label>Familia</label>
+            <div class="val">${familia1 ? `<span class="tag-familia ${tagClass}">${familia1}</span>` : '—'}</div>
+          </div>
+          <div class="info-item">
+            <label>Año tarifa</label>
+            <div class="val">${escHtml(p.Año||'—')}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-section-title">Condiciones comerciales</div>
+        <div class="info-grid">
+          <div class="info-item">
+            <label>Puntos</label>
+            <div class="val big">${puntos > 0 ? puntos.toFixed(2) : '—'}</div>
+          </div>
+          <div class="info-item">
+            <label>Precio × Punto (P.Coste)</label>
+            <div class="val big" style="color:var(--green)">${pcoste > 0 ? pcoste.toFixed(3) + ' €' : '—'}</div>
+          </div>
+          <div class="info-item">
+            <label>Dto. máx. vendedores</label>
+            <div class="val" style="font-size:20px;font-weight:700;color:var(--yellow)">${p.MAX_DTO||'—'}</div>
+          </div>
+          <div class="info-item">
+            <label>Portes</label>
+            <div class="val">${escHtml(p.PORTES||'—')}</div>
+          </div>
+          <div class="info-item">
+            <label>Estilo</label>
+            <div class="val">${escHtml(p.ESTILO||'—')}</div>
+          </div>
+          <div class="info-item">
+            <label>Dto. Comercial %</label>
+            <div class="val">${escHtml(p.DC_PCT||'—')}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-section-title">Contacto</div>
+        <div class="info-grid">
+          <div class="info-item">
+            <label>Email</label>
+            <div class="val">${p.Email ? `<a href="mailto:${p.Email}">${escHtml(p.Email)}</a>` : '—'}</div>
+          </div>
+          <div class="info-item">
+            <label>Teléfono</label>
+            <div class="val">${p.Telefono ? `<a href="tel:${p.Telefono}">${escHtml(p.Telefono)}</a>` : '—'}</div>
+          </div>
+          <div class="info-item">
+            <label>Móvil</label>
+            <div class="val">${p.TelefonoMovil ? `<a href="tel:${p.TelefonoMovil}">${escHtml(p.TelefonoMovil)}</a>` : '—'}</div>
+          </div>
+          <div class="info-item">
+            <label>Web</label>
+            <div class="val">${p.URL ? `<a href="${p.URL}" target="_blank">Ver web ↗</a>` : '—'}</div>
+          </div>
+          ${p.Varios ? `<div class="info-item full"><label>Notas / Varios</label><div class="varios-box">${escHtml(p.Varios)}</div></div>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB CALCULADORA -->
+    <div class="tab-content" id="tabCalc">
+      <div class="calc-box">
+        <h4>🧮 Calculadora de precios</h4>
+        <div class="calc-row">
+          <label>Puntos artículo</label>
+          <input type="number" id="calcPuntos" step="0.01" value="${puntos||''}" oninput="calcularPrecio()" placeholder="Ej: 2.00">
+        </div>
+        <div class="calc-row">
+          <label>Precio × Punto</label>
+          <input type="number" id="calcPCoste" step="0.001" value="${pcoste||''}" oninput="calcularPrecio()" placeholder="Ej: 0.680">
+        </div>
+        <div class="calc-row">
+          <label>Coeficiente PVP</label>
+          <input type="number" id="calcCoef" step="0.1" value="2.2" oninput="calcularPrecio()" placeholder="2.2">
+        </div>
+        <div class="calc-row">
+          <label>Dto. máx. vendedor</label>
+          <input type="number" id="calcMaxDto" step="1" value="${maxDto||''}" oninput="calcularPrecio()" placeholder="Ej: 25">
+        </div>
+        <hr class="calc-divider">
+        <div class="calc-result">
+          <div class="result-item">
+            <div class="r-label">Precio Coste</div>
+            <div class="r-val" id="rCoste">—</div>
+          </div>
+          <div class="result-item highlight">
+            <div class="r-label">PVP Recomendado</div>
+            <div class="r-val" id="rPvp">—</div>
+          </div>
+          <div class="result-item">
+            <div class="r-label">Precio mín. venta</div>
+            <div class="r-val green" id="rMinPvp">—</div>
+          </div>
+        </div>
+        <div class="calc-nota">
+          Precio Coste = Puntos × P.Coste &nbsp;|&nbsp;
+          PVP = Precio Coste × Coef. &nbsp;|&nbsp;
+          Precio mín. = PVP × (1 − Dto.%)
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text2);line-height:1.6">
+        💡 Puedes cambiar el <strong>Coeficiente PVP</strong> libremente para este cálculo. El valor por defecto es <strong>2,2</strong> pero puedes ajustarlo por proveedor o familia.
+      </p>
+    </div>
+  `;
+
+  document.getElementById('panelFooter').innerHTML = `
+    <button class="btn-edit" onclick="editFromView()">✏️ Editar proveedor</button>
+  `;
+
+  openPanel();
+  // Auto-calcular si hay datos
+  if (puntos > 0 && pcoste > 0) window.calcularPrecio();
+}
+
+// ── Formulario edición/creación
+window.showEditPanel = (p, isNuevo) => {
+  const t = p || {};
+  document.getElementById('panelTitle').textContent = isNuevo ? 'Nuevo proveedor' : 'Editar: ' + (t.Nombre||'');
+  document.getElementById('panelBadge').textContent = isNuevo ? 'Rellenar datos y guardar' : `Código: ${t.Codigo||'—'}`;
+
+  const familias = ['Tapiceria','Dormitorios','Salones','Auxiliares','Descanso','Juveniles','MADERA','Rustico','Almacenista','Cocina','Baños','Oficinas'];
+  const famOpts = familias.map(f => `<option value="${f}" ${(t.Familia||'').includes(f)?'selected':''}>${f}</option>`).join('');
+
+  document.getElementById('panelBody').innerHTML = `
+    <div class="edit-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Código</label>
+          <input type="text" id="fCodigo" value="${escHtml(t.Codigo||'')}">
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="fEstado">
+            <option value="ACTIVO" ${(t.Estado||'ACTIVO')==='ACTIVO'?'selected':''}>ACTIVO</option>
+            <option value="INACTIVO" ${t.Estado==='INACTIVO'?'selected':''}>INACTIVO</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Nombre / Fábrica *</label>
+        <input type="text" id="fNombre" value="${escHtml(t.Nombre||'')}">
+      </div>
+      <div class="form-group">
+        <label>Modelo</label>
+        <input type="text" id="fModelo" value="${escHtml(t.Modelo||'')}">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Familia</label>
+          <select id="fFamilia">${famOpts}</select>
+        </div>
+        <div class="form-group">
+          <label>Año tarifa</label>
+          <input type="text" id="fAño" value="${escHtml(t.Año||'')}">
+        </div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:8px 0 16px">
+      <p style="font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:.08em;color:var(--text2);margin-bottom:12px">Condiciones comerciales</p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Puntos</label>
+          <input type="number" step="0.01" id="fPuntos" value="${t.PUNTOS||''}">
+        </div>
+        <div class="form-group">
+          <label>Precio × Punto (P.Coste €)</label>
+          <input type="number" step="0.001" id="fPCoste" value="${t.P_COSTE||''}">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Dto. máx. vendedores (%)</label>
+          <input type="text" id="fMaxDto" value="${escHtml(t.MAX_DTO||'')}">
+        </div>
+        <div class="form-group">
+          <label>Dto. Comercial %</label>
+          <input type="text" id="fDcPct" value="${escHtml(t.DC_PCT||'')}">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Portes</label>
+          <input type="text" id="fPortes" value="${escHtml(t.PORTES||'')}">
+        </div>
+        <div class="form-group">
+          <label>Estilo</label>
+          <input type="text" id="fEstilo" value="${escHtml(t.ESTILO||'')}">
+        </div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:8px 0 16px">
+      <p style="font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:.08em;color:var(--text2);margin-bottom:12px">Contacto</p>
+
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="fEmail" value="${escHtml(t.Email||'')}">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input type="tel" id="fTelefono" value="${escHtml(t.Telefono||'')}">
+        </div>
+        <div class="form-group">
+          <label>Teléfono Móvil</label>
+          <input type="tel" id="fTelefonoMovil" value="${escHtml(t.TelefonoMovil||'')}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Web (URL)</label>
+        <input type="url" id="fURL" value="${escHtml(t.URL||'')}">
+      </div>
+      <div class="form-group">
+        <label>Notas / Varios</label>
+        <textarea id="fVarios">${escHtml(t.Varios||'')}</textarea>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('panelFooter').innerHTML = `
+    <button class="btn-save" onclick="saveProveedor()">💾 Guardar</button>
+    ${!isNuevo ? `<button class="btn-delete" onclick="deleteProveedor()">🗑 Eliminar</button>` : ''}
+  `;
+
+  openPanel();
+};
+
+// ── Helpers
+function openPanel() {
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('sidePanel').classList.add('open');
+}
+
+function getFormData() {
+  return {
+    Codigo:       document.getElementById('fCodigo').value.trim(),
+    Nombre:       document.getElementById('fNombre').value.trim(),
+    Modelo:       document.getElementById('fModelo').value.trim(),
+    Familia:      document.getElementById('fFamilia').value,
+    Año:          document.getElementById('fAño').value.trim(),
+    PUNTOS:       document.getElementById('fPuntos').value.trim(),
+    P_COSTE:      document.getElementById('fPCoste').value.trim(),
+    MAX_DTO:      document.getElementById('fMaxDto').value.trim(),
+    DC_PCT:       document.getElementById('fDcPct').value.trim(),
+    PORTES:       document.getElementById('fPortes').value.trim(),
+    ESTILO:       document.getElementById('fEstilo').value.trim(),
+    Email:        document.getElementById('fEmail').value.trim(),
+    Telefono:     document.getElementById('fTelefono').value.trim(),
+    TelefonoMovil:document.getElementById('fTelefonoMovil').value.trim(),
+    URL:          document.getElementById('fURL').value.trim(),
+    Varios:       document.getElementById('fVarios').value.trim(),
+    Estado:       document.getElementById('fEstado').value,
+  };
+}
+
+function populateFamiliaFilter() {
+  const set = new Set();
+  allProveedores.forEach(p => {
+    (p.Familia||'').split(',').forEach(f => { const t = f.trim(); if(t) set.add(t); });
+  });
+  const sel = document.getElementById('filterFamilia');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Todas las familias</option>';
+  [...set].sort().forEach(f => {
+    sel.innerHTML += `<option value="${f}" ${f===prev?'selected':''}>${f}</option>`;
+  });
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+
+function loading(on) {
+  const bar = document.getElementById('loadingBar');
+  bar.style.width = on ? '60%' : '100%';
+  if (!on) setTimeout(() => { bar.style.width = '0'; }, 400);
+}
+
+</script>
+</body>
+</html>
