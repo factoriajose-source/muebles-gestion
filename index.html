@@ -8,12 +8,13 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:system-ui,-apple-system,sans-serif;background:#f5f4f0;color:#1a1a18;font-size:16px}
 .app{max-width:960px;margin:0 auto;padding:1rem}
-#login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem;background:#f5f4f0}
+#login-screen{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;min-height:100vh;padding:2rem;background:#f5f4f0}
 .login-card{background:#fff;border:1px solid #e0dfd8;border-radius:16px;padding:2rem;width:100%;max-width:380px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.06)}
 .login-logo{font-size:44px;margin-bottom:1rem}
 .login-title{font-size:22px;font-weight:600;margin-bottom:6px}
 .login-sub{font-size:13px;color:#888;margin-bottom:1.5rem}
-.vendor-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.2rem}
+.vendor-grid{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;gap:10px;margin-bottom:1.2rem}
+.vendor-grid > *{-webkit-flex:1 1 calc(50% - 5px);flex:1 1 calc(50% - 5px);min-width:120px}
 .vendor-btn{padding:12px 8px;border:1px solid #e0dfd8;border-radius:10px;background:#fff;cursor:pointer;font-size:14px;font-weight:500;color:#1a1a18;touch-action:manipulation;transition:all .15s;-webkit-appearance:none}
 .vendor-btn:hover,.vendor-btn:active{background:#e6f1fb;border-color:#185fa5;color:#185fa5}
 .resumen-btn{width:100%;padding:13px;background:#25D366;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation;-webkit-appearance:none;display:flex;align-items:center;justify-content:center;gap:8px}
@@ -22,14 +23,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f5f4f0;color:#1a
 .header-title{font-size:16px;font-weight:600}
 .user-badge{background:#e6f1fb;color:#185fa5;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:500}
 .logout-btn{padding:5px 12px;border:1px solid #ccc;border-radius:8px;background:#fff;font-size:12px;cursor:pointer;touch-action:manipulation;-webkit-appearance:none}
-.tabs{display:flex;gap:6px;margin-bottom:1.5rem;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+.tabs{display:-webkit-flex;display:flex;gap:6px;margin-bottom:1.5rem;-webkit-flex-wrap:nowrap;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
 .tab{padding:10px 14px;border:1px solid #ccc;border-radius:8px;background:#fff;color:#666;cursor:pointer;font-size:13px;white-space:nowrap;touch-action:manipulation;flex-shrink:0;-webkit-appearance:none}
 .tab.active{background:#e6f1fb;color:#185fa5;border-color:#185fa5;font-weight:500}
 .section{display:none}.section.active{display:block}
 .card{background:#fff;border:1px solid #e0dfd8;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem}
 .card-title{font-size:14px;font-weight:500;margin-bottom:12px}
-.field-row{display:grid;gap:10px;margin-bottom:10px}
-.cols2{grid-template-columns:1fr 1fr}.cols3{grid-template-columns:1fr 1fr 1fr}
+.field-row{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.cols2 > *{-webkit-flex:1 1 calc(50% - 5px);flex:1 1 calc(50% - 5px);min-width:140px}
+.cols3 > *{-webkit-flex:1 1 calc(33% - 7px);flex:1 1 calc(33% - 7px);min-width:100px}
 label{font-size:12px;color:#666;display:block;margin-bottom:3px}
 input,select,textarea{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:16px;background:#fff;color:#1a1a18;font-family:inherit;-webkit-appearance:none}
 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
@@ -512,10 +514,26 @@ tr:last-child td{border-bottom:none}
   </div>
 </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, getDocs, onSnapshot, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+<!-- Firebase compatible con navegadores antiguos (iPad 2013, Safari viejo) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script>
+// -- Adaptadores para que el código existente funcione igual --
+const initializeApp   = (cfg) => firebase.initializeApp(cfg);
+const getFirestore    = (app) => firebase.firestore();
+const getAuth         = (app) => firebase.auth();
+const collection      = (db, name) => db.collection(name);
+const doc             = (db, col, id) => db.collection(col).doc(id);
+const getDocs         = (ref) => ref.get().then(s => ({ docs: s.docs.map(d => ({ id: d.id, data: () => d.data() })) }));
+const getDoc          = (ref) => ref.get().then(d => ({ id: d.id, exists: () => d.exists, data: () => d.data() }));
+const setDoc          = (ref, data, opts) => opts && opts.merge ? ref.set(data, { merge: true }) : ref.set(data);
+const addDoc          = (ref, data) => ref.add(data);
+const deleteDoc       = (ref) => ref.delete();
+const onSnapshot      = (ref, cb) => ref.onSnapshot(snap => cb({ docs: snap.docs.map(d => ({ id: d.id, data: () => d.data() })) }));
+const signInWithEmailAndPassword = (auth, email, pass) => auth.signInWithEmailAndPassword(email, pass);
+const signOut         = (auth) => auth.signOut();
+const onAuthStateChanged = (auth, cb) => auth.onAuthStateChanged(cb);
 
 const firebaseConfig = {
   apiKey: "AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
