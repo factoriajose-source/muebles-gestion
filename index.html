@@ -889,11 +889,14 @@ window.cargarFirmaAnterior = async function() {
 
     if (mejorDoc) {
       // Guardar las firmas encontradas
+      // Buscar la mejor firma disponible de cualquier turno como comodín
+      const cualquierFirma = mejorDoc.firma_fin_t || mejorDoc.firma_ini_t
+        || mejorDoc.firma_fin_m || mejorDoc.firma_ini_m || null;
       _firmaGuardada = {
-        firma_ini_m: mejorDoc.firma_ini_m || null,
-        firma_fin_m: mejorDoc.firma_fin_m || null,
-        firma_ini_t: mejorDoc.firma_ini_t || null,
-        firma_fin_t: mejorDoc.firma_fin_t || null,
+        firma_ini_m: mejorDoc.firma_ini_m || cualquierFirma,
+        firma_fin_m: mejorDoc.firma_fin_m || cualquierFirma,
+        firma_ini_t: mejorDoc.firma_ini_t || cualquierFirma,
+        firma_fin_t: mejorDoc.firma_fin_t || cualquierFirma,
       };
       estadoEl.style.background = "#e8f5ee";
       estadoEl.style.color = "#2d7a4f";
@@ -941,19 +944,34 @@ window.guardarFichajeManual = async function() {
     const base     = existing.exists() ? existing.data() : {};
 
     // Construir objeto: mezclar lo existente con lo nuevo
+    // Para cada turno: si hay hora (nueva o existente), poner firma
+    // Prioridad firma: 1) la que ya tenía ese día, 2) cualquiera del histórico
+    const firmaHistorica = _firmaGuardada.firma_fin_t
+      || _firmaGuardada.firma_ini_t
+      || _firmaGuardada.firma_fin_m
+      || _firmaGuardada.firma_ini_m
+      || null;
+
+    function firmaParaTurno(campoFirmaBase, horaFinal) {
+      // Si ya tiene firma ese día, la mantenemos
+      if (campoFirmaBase) return campoFirmaBase;
+      // Si hay hora para ese turno, asignamos la firma histórica
+      if (horaFinal) return firmaHistorica;
+      return null;
+    }
+
     const nuevoFichaje = {
       alias,
       fecha,
-      ini_m:    ini_m  || base.ini_m  || null,
-      fin_m:    fin_m  || base.fin_m  || null,
-      ini_t:    ini_t  || base.ini_t  || null,
-      fin_t:    fin_t  || base.fin_t  || null,
-      // Firmas: usar las del día existente si las hay, si no las del histórico
-      firma_ini_m: base.firma_ini_m || _firmaGuardada.firma_ini_m || null,
-      firma_fin_m: base.firma_fin_m || _firmaGuardada.firma_fin_m || null,
-      firma_ini_t: base.firma_ini_t || _firmaGuardada.firma_ini_t || null,
-      firma_fin_t: base.firma_fin_t || _firmaGuardada.firma_fin_t || null,
-      manual: true, // marcar como fichaje manual
+      ini_m: ini_m  || base.ini_m  || null,
+      fin_m: fin_m  || base.fin_m  || null,
+      ini_t: ini_t  || base.ini_t  || null,
+      fin_t: fin_t  || base.fin_t  || null,
+      firma_ini_m: firmaParaTurno(base.firma_ini_m, ini_m  || base.ini_m),
+      firma_fin_m: firmaParaTurno(base.firma_fin_m, fin_m  || base.fin_m),
+      firma_ini_t: firmaParaTurno(base.firma_ini_t, ini_t  || base.ini_t),
+      firma_fin_t: firmaParaTurno(base.firma_fin_t, fin_t  || base.fin_t),
+      manual: true,
       manual_por: "Jose Angel",
       manual_ts: new Date().toISOString(),
     };
