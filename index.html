@@ -528,10 +528,6 @@ tr:last-child td{border-bottom:none}
       <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:5px">Trabajador</label>
       <select id="fm-trabajador" onchange="cargarFirmaAnterior()" style="width:100%;padding:10px;border:1.5px solid #ccc;border-radius:8px;font-size:15px;font-family:inherit">
         <option value="">-- Selecciona --</option>
-        <option>Marisa</option>
-        <option>Javi</option>
-        <option>Kike</option>
-        <option>Jose Angel</option>
       </select>
     </div>
 
@@ -838,6 +834,14 @@ let _firmaGuardada = {}; // firma copiada del último fichaje encontrado
 window.abrirFichajeManual = function() {
   const overlay = document.getElementById("fichaje-manual-overlay");
   overlay.style.display = "flex";
+  // Rellenar select con todos los trabajadores de la app
+  const sel = document.getElementById("fm-trabajador");
+  sel.innerHTML = "<option value=''>-- Selecciona --</option>";
+  (VENDORS || []).forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v; opt.textContent = v;
+    sel.appendChild(opt);
+  });
   // Fecha de hoy por defecto
   const hoy = new Date();
   const yyyy = hoy.getFullYear();
