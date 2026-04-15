@@ -482,6 +482,7 @@ tr:last-child td{border-bottom:none}
         <button class="tab" id="st-tab-visitas">Visitas</button>
         <button class="tab" id="st-tab-vendedores">Vendedores</button>
         <button class="tab" id="st-tab-mensajes" style="background:#fff3cd;color:#856404;border-color:#ffc107;font-weight:600">📬 Mensajes</button>
+        <button class="tab" id="st-tab-fichaje-manual" style="background:#1a1714;color:#fff;border-color:#1a1714;font-weight:600;display:none" onclick="abrirFichajeManual()">🖊️ Fichaje Manual</button>
       </div>
       <div id="stats-content"><div class="spinner">Cargando...</div></div>
       
@@ -509,6 +510,65 @@ tr:last-child td{border-bottom:none}
       <button id="stats-pwd-cancel" style="flex:1;padding:11px;border:1px solid #ccc;border-radius:8px;background:#fff;font-size:14px;cursor:pointer">Cancelar</button>
       <button id="stats-pwd-ok" style="flex:2;padding:11px;background:#1a6b2a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Entrar</button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL FICHAJE MANUAL -->
+<div id="fichaje-manual-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;padding:1rem">
+  <div style="background:#fff;border-radius:16px;padding:1.5rem;max-width:420px;width:100%;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div>
+        <div style="font-size:18px;font-weight:700">🖊️ Fichaje Manual</div>
+        <div style="font-size:12px;color:#888;margin-top:2px">Solo José Ángel · Usar firma guardada de día anterior</div>
+      </div>
+      <button onclick="cerrarFichajeManual()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#888;line-height:1">×</button>
+    </div>
+
+    <div style="margin-bottom:12px">
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:5px">Trabajador</label>
+      <select id="fm-trabajador" onchange="cargarFirmaAnterior()" style="width:100%;padding:10px;border:1.5px solid #ccc;border-radius:8px;font-size:15px;font-family:inherit">
+        <option value="">-- Selecciona --</option>
+        <option>Marisa</option>
+        <option>Javi</option>
+        <option>Kike</option>
+        <option>Jose Angel</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom:12px">
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:5px">Fecha del fichaje</label>
+      <input type="date" id="fm-fecha" style="width:100%;padding:10px;border:1.5px solid #ccc;border-radius:8px;font-size:15px;font-family:inherit">
+    </div>
+
+    <div id="fm-firma-estado" style="background:#f5f4f0;border-radius:8px;padding:10px;font-size:13px;color:#666;margin-bottom:12px;display:none"></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:5px">🌅 Entrada mañana</label>
+        <input type="time" id="fm-ini-m" style="width:100%;padding:10px;border:1.5px solid #ccc;border-radius:8px;font-size:15px;font-family:inherit">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:5px">🌇 Salida mañana</label>
+        <input type="time" id="fm-fin-m" style="width:100%;padding:10px;border:1.5px solid #ccc;border-radius:8px;font-size:15px;font-family:inherit">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:5px">☀️ Entrada tarde</label>
+        <input type="time" id="fm-ini-t" style="width:100%;padding:10px;border:1.5px solid #ccc;border-radius:8px;font-size:15px;font-family:inherit">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:5px">🌙 Salida tarde</label>
+        <input type="time" id="fm-fin-t" style="width:100%;padding:10px;border:1.5px solid #ccc;border-radius:8px;font-size:15px;font-family:inherit">
+      </div>
+    </div>
+
+    <div id="fm-error" style="background:#fdecea;color:#c0392b;border-radius:8px;padding:10px;font-size:13px;margin-bottom:12px;display:none"></div>
+    <div id="fm-ok" style="background:#e8f5ee;color:#2d7a4f;border-radius:8px;padding:10px;font-size:13px;margin-bottom:12px;display:none"></div>
+
+    <button onclick="guardarFichajeManual()" id="fm-btn-guardar"
+      style="width:100%;padding:13px;background:#1a6b2a;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">
+      💾 Guardar fichaje
+    </button>
+    <p style="font-size:11px;color:#aaa;text-align:center;margin-top:8px">La firma se copia del último día disponible del trabajador</p>
   </div>
 </div>
 
@@ -770,6 +830,153 @@ window.abrirProveedores = function(e) {
   e.preventDefault();
   if (!currentUser) { showToast("Identificate primero seleccionando tu nombre"); return; }
   window.open("proveedores.html?usuario=" + encodeURIComponent(currentUser), "_blank");
+};
+
+// ── FICHAJE MANUAL (solo Jose Angel) ──────────────────────────────────────
+let _firmaGuardada = {}; // firma copiada del último fichaje encontrado
+
+window.abrirFichajeManual = function() {
+  const overlay = document.getElementById("fichaje-manual-overlay");
+  overlay.style.display = "flex";
+  // Fecha de hoy por defecto
+  const hoy = new Date();
+  const yyyy = hoy.getFullYear();
+  const mm   = String(hoy.getMonth()+1).padStart(2,"0");
+  const dd   = String(hoy.getDate()).padStart(2,"0");
+  document.getElementById("fm-fecha").value = `${yyyy}-${mm}-${dd}`;
+  document.getElementById("fm-trabajador").value = "";
+  document.getElementById("fm-ini-m").value = "";
+  document.getElementById("fm-fin-m").value = "";
+  document.getElementById("fm-ini-t").value = "";
+  document.getElementById("fm-fin-t").value = "";
+  document.getElementById("fm-firma-estado").style.display = "none";
+  document.getElementById("fm-error").style.display = "none";
+  document.getElementById("fm-ok").style.display = "none";
+  _firmaGuardada = {};
+};
+
+window.cerrarFichajeManual = function() {
+  document.getElementById("fichaje-manual-overlay").style.display = "none";
+};
+
+window.cargarFirmaAnterior = async function() {
+  const alias = document.getElementById("fm-trabajador").value;
+  const estadoEl = document.getElementById("fm-firma-estado");
+  if (!alias) { estadoEl.style.display = "none"; return; }
+
+  estadoEl.style.display = "block";
+  estadoEl.style.background = "#f5f4f0";
+  estadoEl.style.color = "#666";
+  estadoEl.textContent = "🔍 Buscando firma anterior de " + alias + "...";
+  _firmaGuardada = {};
+
+  try {
+    // Buscar todos los fichajes de este trabajador y coger el más reciente
+    const sn = await getDocs(collection(db, "fichajes"));
+    let mejorFecha = "";
+    let mejorDoc   = null;
+    sn.forEach(d => {
+      const datos = d.data();
+      if ((datos.alias || "").toLowerCase() === alias.toLowerCase()) {
+        // Buscar uno que tenga al menos una firma
+        const tieneFirma = datos.firma_ini_m || datos.firma_fin_m || datos.firma_ini_t || datos.firma_fin_t;
+        if (tieneFirma && datos.fecha > mejorFecha) {
+          mejorFecha = datos.fecha;
+          mejorDoc   = datos;
+        }
+      }
+    });
+
+    if (mejorDoc) {
+      // Guardar las firmas encontradas
+      _firmaGuardada = {
+        firma_ini_m: mejorDoc.firma_ini_m || null,
+        firma_fin_m: mejorDoc.firma_fin_m || null,
+        firma_ini_t: mejorDoc.firma_ini_t || null,
+        firma_fin_t: mejorDoc.firma_fin_t || null,
+      };
+      estadoEl.style.background = "#e8f5ee";
+      estadoEl.style.color = "#2d7a4f";
+      estadoEl.textContent = "✅ Firma encontrada del " + mejorFecha + " — se usará para este fichaje";
+    } else {
+      estadoEl.style.background = "#fef8e8";
+      estadoEl.style.color = "#856404";
+      estadoEl.textContent = "⚠️ No se encontró ningún fichaje anterior con firma para " + alias + ". Se guardará sin firma.";
+    }
+  } catch(e) {
+    estadoEl.style.background = "#fdecea";
+    estadoEl.style.color = "#c0392b";
+    estadoEl.textContent = "❌ Error buscando firma: " + e.message;
+  }
+};
+
+window.guardarFichajeManual = async function() {
+  const alias    = document.getElementById("fm-trabajador").value;
+  const fecha    = document.getElementById("fm-fecha").value;
+  const ini_m    = document.getElementById("fm-ini-m").value || null;
+  const fin_m    = document.getElementById("fm-fin-m").value || null;
+  const ini_t    = document.getElementById("fm-ini-t").value || null;
+  const fin_t    = document.getElementById("fm-fin-t").value || null;
+  const errEl    = document.getElementById("fm-error");
+  const okEl     = document.getElementById("fm-ok");
+  const btn      = document.getElementById("fm-btn-guardar");
+
+  errEl.style.display = "none";
+  okEl.style.display  = "none";
+
+  if (!alias) { errEl.textContent = "Selecciona un trabajador"; errEl.style.display = "block"; return; }
+  if (!fecha) { errEl.textContent = "Selecciona una fecha";     errEl.style.display = "block"; return; }
+  if (!ini_m && !fin_m && !ini_t && !fin_t) {
+    errEl.textContent = "Introduce al menos una hora";
+    errEl.style.display = "block"; return;
+  }
+
+  btn.disabled    = true;
+  btn.textContent = "⏳ Guardando...";
+
+  try {
+    // Leer el fichaje existente de ese día (si existe) para no borrar horas ya guardadas
+    const key      = "fichaje_" + alias.split(" ").join("_") + "_" + fecha;
+    const existing = await getDoc(doc(db, "fichajes", key));
+    const base     = existing.exists() ? existing.data() : {};
+
+    // Construir objeto: mezclar lo existente con lo nuevo
+    const nuevoFichaje = {
+      alias,
+      fecha,
+      ini_m:    ini_m  || base.ini_m  || null,
+      fin_m:    fin_m  || base.fin_m  || null,
+      ini_t:    ini_t  || base.ini_t  || null,
+      fin_t:    fin_t  || base.fin_t  || null,
+      // Firmas: usar las del día existente si las hay, si no las del histórico
+      firma_ini_m: base.firma_ini_m || _firmaGuardada.firma_ini_m || null,
+      firma_fin_m: base.firma_fin_m || _firmaGuardada.firma_fin_m || null,
+      firma_ini_t: base.firma_ini_t || _firmaGuardada.firma_ini_t || null,
+      firma_fin_t: base.firma_fin_t || _firmaGuardada.firma_fin_t || null,
+      manual: true, // marcar como fichaje manual
+      manual_por: "Jose Angel",
+      manual_ts: new Date().toISOString(),
+    };
+
+    await setDoc(doc(db, "fichajes", key), nuevoFichaje);
+
+    okEl.textContent = "✅ Fichaje guardado correctamente para " + alias + " el " + fecha;
+    okEl.style.display = "block";
+    btn.textContent  = "💾 Guardar fichaje";
+    btn.disabled     = false;
+
+    // Limpiar horas para poder hacer otro sin cerrar
+    document.getElementById("fm-ini-m").value = "";
+    document.getElementById("fm-fin-m").value = "";
+    document.getElementById("fm-ini-t").value = "";
+    document.getElementById("fm-fin-t").value = "";
+
+  } catch(e) {
+    errEl.textContent = "❌ Error al guardar: " + e.message;
+    errEl.style.display = "block";
+    btn.textContent  = "💾 Guardar fichaje";
+    btn.disabled     = false;
+  }
 };
 
 window._abrirRepartos = function() {
@@ -4579,6 +4786,9 @@ function mostrarModalClave(onSuccess) {
     const val = document.getElementById("stats-pwd-input").value;
     if (val === "7557") {
       overlay.style.display = "none";
+      // Mostrar botón fichaje manual solo si es Jose Angel
+      const btnFM = document.getElementById("st-tab-fichaje-manual");
+      if (btnFM) btnFM.style.display = (currentUser === "Jose Angel") ? "inline-flex" : "none";
       onSuccess();
     } else {
       document.getElementById("stats-pwd-error").style.display = "block";
