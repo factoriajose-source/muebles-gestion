@@ -709,7 +709,8 @@ let sortField = 'Nombre';
 let sortAsc = true;
 let currentDoc = null;
 let isNew = false;
-let canVerPCoste = false; // solo Kike, Javi, Jose Angel, Marisa
+let canVerPCoste = false;
+window._currentDoc = null; // versión global accesible desde onclick HTML
 
 const USUARIOS_PCOSTE = ["Kike","Javi","Jose Angel","Marisa"];
 
@@ -762,6 +763,7 @@ window.openRow = (id) => {
   const item = allProveedores.find(p => p._id === id);
   if (!item) return;
   currentDoc = item;
+  window._currentDoc = item;
   isNew = false;
   showViewPanel(item);
 };
@@ -831,41 +833,26 @@ window.editFromView = () => {
 };
 
 // ── Auth listener
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    document.getElementById('loginScreen').style.display  = 'none';
-    document.getElementById('appScreen').style.display    = 'block';
-    document.getElementById('btnAddNew').style.display    = 'flex';
-    document.getElementById('userInfo').style.display     = 'block';
+// ── Leer usuario de la URL (?usuario=NombreVendedor)
+const urlParams   = new URLSearchParams(window.location.search);
+const usuarioURL  = urlParams.get('usuario') || '';
 
-    // Buscar alias del usuario en Firestore (igual que en la app principal)
-    let alias = '';
-    try {
-      const snap = await getDocs(collection(db, 'vendedores'));
-      snap.forEach(d => {
-        const v = d.data();
-        if ((v.email||'').toLowerCase() === user.email.toLowerCase()) alias = v.nombre || v.alias || '';
-      });
-    } catch(e) {}
-    // Si no encontramos alias en vendedores, usamos la parte del email
-    if (!alias) alias = user.email.split('@')[0];
+canVerPCoste = USUARIOS_PCOSTE.some(n =>
+  usuarioURL.toLowerCase().includes(n.toLowerCase())
+);
 
-    canVerPCoste = USUARIOS_PCOSTE.some(n => alias.toLowerCase().includes(n.toLowerCase())
-      || user.email.toLowerCase().includes(n.toLowerCase()));
+document.getElementById('loginScreen').style.display = 'none';
+document.getElementById('appScreen').style.display   = 'block';
+document.getElementById('btnAddNew').style.display   = 'flex';
+document.getElementById('userInfo').style.display    = 'block';
+document.getElementById('userInfo').textContent      = usuarioURL || 'Invitado';
 
-    document.getElementById('userInfo').textContent = alias || user.email;
-    loadProveedores();
-  } else {
-    document.getElementById('loginScreen').style.display  = 'flex';
-    document.getElementById('appScreen').style.display    = 'none';
-    document.getElementById('btnAddNew').style.display    = 'none';
-    canVerPCoste = false;
-  }
-});
-
-// Enter en login
-document.getElementById('loginPass').addEventListener('keydown', e => {
-  if (e.key === 'Enter') window.doLogin();
+// Conectar a Firebase sin login (acceso público a la colección proveedores)
+// La seguridad la gestiona el index.html principal
+onAuthStateChanged(auth, (user) => {
+  // Solo necesitamos estar autenticados para escribir (guardar/eliminar)
+  // La lectura la abrimos; si no hay sesión aún, esperamos
+  loadProveedores();
 });
 
 // ── Cargar proveedores en tiempo real
@@ -1091,7 +1078,7 @@ function showViewPanel(p) {
   `;
 
   document.getElementById('panelFooter').innerHTML = `
-    <button class="btn-print-label" onclick="imprimirEtiqueta(currentDoc)">🖨️ Etiqueta catálogo</button>
+    <button class="btn-print-label" onclick="imprimirEtiqueta(window._currentDoc)">🖨️ Etiqueta catálogo</button>
     <button class="btn-edit" onclick="editFromView()">✏️ Editar</button>
   `;
 
