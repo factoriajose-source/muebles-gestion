@@ -119,6 +119,7 @@ header { background: #1a1714; color: white; padding: 0 24px; height: 54px; displ
       <input type="number" id="selYear" value="2026" min="2024" max="2035" style="width:90px" onchange="cargarVista()">
     </div>
     <button class="btn btn-green no-print" style="margin-bottom:1px" onclick="abrirModal()">+ Añadir vacaciones / baja</button>
+    <button class="btn btn-dark no-print" style="margin-bottom:1px" onclick="abrirModalTrabajador()">👤 Gestionar trabajadores</button>
   </div>
 
   <div class="app">
@@ -128,9 +129,8 @@ header { background: #1a1714; color: white; padding: 0 24px; height: 54px; displ
       <div style="color:#888;font-size:13px" id="printSub"></div>
     </div>
 
-    <div id="vVacia" style="text-align:center;padding:60px 20px;color:#888">
-      <div style="font-size:48px;margin-bottom:12px">🏖️</div>
-      <p style="font-size:16px">Selecciona un trabajador y un año</p>
+    <div id="vVacia">
+      <div id="resumenGeneral"></div>
     </div>
 
     <div id="vPrincipal" style="display:none">
@@ -200,15 +200,42 @@ header { background: #1a1714; color: white; padding: 0 24px; height: 54px; displ
   </div>
 </div>
 
+<!-- MODAL TRABAJADORES EXTRA -->
+<div class="overlay" id="mTrabOverlay">
+  <div class="modal" style="max-width:480px">
+    <h3>👤 Trabajadores Almacén / Reparto</h3>
+    <p style="font-size:13px;color:#888;margin-bottom:16px">Trabajadores que no son vendedores pero tienen vacaciones registradas</p>
+    <div id="listaExtra" style="margin-bottom:16px"></div>
+    <div style="border-top:1px solid #eee;padding-top:14px;margin-top:6px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px">Añadir nuevo trabajador</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div class="fg" style="margin-bottom:0"><label>Alias</label><input type="text" id="teAlias" placeholder="Ej: Alex"></div>
+        <div class="fg" style="margin-bottom:0"><label>Nombre completo</label><input type="text" id="teNombre" placeholder="Ej: Alejandro García"></div>
+      </div>
+      <div class="fg"><label>Tipo</label>
+        <select id="teTipo">
+          <option value="almacen">📦 Almacén</option>
+          <option value="reparto">🚚 Reparto</option>
+          <option value="limpieza">🧹 Limpieza</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div id="teErr" style="color:#c0392b;font-size:13px;margin-bottom:8px;display:none"></div>
+      <button class="btn btn-green" style="width:100%" onclick="guardarTrabajadorExtra()">+ Añadir trabajador</button>
+    </div>
+    <button class="btn btn-gray" style="width:100%;margin-top:10px" onclick="cerrarModalTrabajador()">Cerrar</button>
+  </div>
+</div>
+
 <script>
 var PROJECT  = "muebles-presupuestos";
 var API_KEY  = "AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c";
 var BASE     = "https://firestore.googleapis.com/v1/projects/"+PROJECT+"/databases/(default)/documents";
 var AUTH_URL = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key="+API_KEY;
 var PERMITIDOS = ["jose angel","marisa","javi"];
-var token = null, currentAlias = null, vendedores = [], registros = [], tipoSel = "vacacion";
+var token = null, currentAlias = null, vendedores = [], trabajadoresExtra = [], registros = [], tipoSel = "vacacion";
 
-// FESTIVOS ASTURIAS
+// FESTIVOS ASTURIAS + SIERO
 function festivos(year) {
   // Pascua (algoritmo Butcher)
   var a=year%19,b=Math.floor(year/100),c=year%100,d=Math.floor(b/4),e=b%4;
@@ -219,12 +246,24 @@ function festivos(year) {
   var jue = new Date(pascua); jue.setDate(pascua.getDate()-3);
   var vie = new Date(pascua); vie.setDate(pascua.getDate()-2);
   function fd(d){ return year+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()); }
+
+  // Güevos Pintos: primer martes después de Semana Santa (después del Domingo de Pascua)
+  var guevos = new Date(pascua); guevos.setDate(pascua.getDate()+1);
+  while(guevos.getDay()!==2) guevos.setDate(guevos.getDate()+1); // 2=martes
+
+  // El Carmín de La Pola: 16 de julio
+  var carmin = new Date(year,6,16); // julio=6
+  // Si cae en domingo, se celebra el lunes
+  if(carmin.getDay()===0) carmin.setDate(17);
+
   var lista = [
     {f:year+"-01-01",n:"Año Nuevo"},
     {f:year+"-01-06",n:"Reyes Magos"},
     {f:fd(jue),      n:"Jueves Santo"},
     {f:fd(vie),      n:"Viernes Santo"},
     {f:year+"-05-01",n:"Día del Trabajo"},
+    {f:fd(guevos),   n:"🥚 Güevos Pintos · La Pola Siero"},
+    {f:fd(carmin),   n:"💃 El Carmín · La Pola Siero"},
     {f:year+"-08-15",n:"Asunción"},
     {f:year+"-09-08",n:"Covadonga (Asturias)"},
     {f:year+"-10-12",n:"Fiesta Nacional"},
@@ -312,23 +351,36 @@ function doLogin(){
     document.getElementById("loginBox").style.display="none";
     document.getElementById("appBox").style.display="block";
     document.getElementById("hUser").textContent=alias;
-    // Rellenar selectores
-    var selTr=document.getElementById("selTr");
-    var mTr=document.getElementById("mTr");
-    selTr.innerHTML="<option value=''>-- Selecciona --</option>";
-    mTr.innerHTML="";
-    vendedores.filter(function(v){return v.alias!=="Jose Angel";})
-      .sort(function(a,b){return a.alias.localeCompare(b.alias,"es");})
-      .forEach(function(v){
+    // Cargar también trabajadores extra (almacén/reparto)
+    return fsGet("trabajadores_extra").then(function(extras){
+      trabajadoresExtra=extras.filter(function(t){return t.activo!==false&&t.alias;});
+      // Mezclar vendedores + extras, excluir Jose Angel, ordenar
+      var todos=vendedores.concat(trabajadoresExtra)
+        .filter(function(v){return v.alias!=="Jose Angel";})
+        .sort(function(a,b){return a.alias.localeCompare(b.alias,"es");});
+      var selTr=document.getElementById("selTr");
+      var mTr=document.getElementById("mTr");
+      selTr.innerHTML="<option value=''>-- Todos los trabajadores --</option><option value=''>─────────────</option>";
+      mTr.innerHTML="";
+      // Grupo vendedores
+      var optV="<optgroup label='🛋️ Vendedores'>";
+      var optE="<optgroup label='📦 Almacén / Reparto'>";
+      todos.forEach(function(v){
+        var esExtra=trabajadoresExtra.some(function(e){return e.alias===v.alias;});
         var txt=v.alias+(v.nombre?" — "+v.nombre:"");
-        selTr.innerHTML+="<option value='"+v.alias+"'>"+txt+"</option>";
+        var opt="<option value='"+v.alias+"'>"+txt+"</option>";
+        if(esExtra) optE+=opt; else optV+=opt;
         mTr.innerHTML+="<option value='"+v.alias+"'>"+txt+"</option>";
       });
-    document.getElementById("selYear").value=new Date().getFullYear();
-    return fsGet("vacaciones_bajas");
+      optV+="</optgroup>"; optE+="</optgroup>";
+      selTr.innerHTML="<option value=''>-- Ver resumen general --</option>"+optV+optE;
+      document.getElementById("selYear").value=new Date().getFullYear();
+      return fsGet("vacaciones_bajas");
+    });
   })
   .then(function(regs){
     registros=regs||[];
+    mostrarResumenGeneral(parseInt(document.getElementById("selYear").value)||new Date().getFullYear());
   })
   .catch(function(){
     err.textContent="Email o contraseña incorrectos";
@@ -341,8 +393,8 @@ function cargarVista(){
   var alias=document.getElementById("selTr").value;
   var year=parseInt(document.getElementById("selYear").value);
   if(!alias||!year){
-    document.getElementById("vVacia").style.display="block";
     document.getElementById("vPrincipal").style.display="none";
+    mostrarResumenGeneral(year||new Date().getFullYear());
     return;
   }
   document.getElementById("vVacia").style.display="none";
@@ -502,6 +554,152 @@ function eliminar(id){
     registros=registros.filter(function(r){return r._id!==id;});
     toast("Registro eliminado","ok");
     cargarVista();
+  }).catch(function(e){toast("Error: "+e.message,"err");});
+}
+
+// RESUMEN GENERAL (cuando no hay trabajador seleccionado)
+function mostrarResumenGeneral(year){
+  document.getElementById("vVacia").style.display="block";
+  document.getElementById("printHdr").style.display="none";
+  var cont=document.getElementById("resumenGeneral");
+
+  var todos=vendedores.concat(trabajadoresExtra)
+    .filter(function(v){return v.alias!=="Jose Angel";})
+    .sort(function(a,b){return a.alias.localeCompare(b.alias,"es");});
+
+  // Agrupar registros del año por alias
+  var porAlias={};
+  registros.filter(function(r){return parseInt(r.año)===year;}).forEach(function(r){
+    if(!porAlias[r.alias]) porAlias[r.alias]=[];
+    porAlias[r.alias].push(r);
+  });
+
+  // Calcular para cada trabajador
+  var filas=[];
+  todos.forEach(function(v){
+    var mis=porAlias[v.alias]||[];
+    var dVac={}, dBaja={};
+    mis.forEach(function(r){
+      diasRango(r.fechaIni,r.fechaFin).forEach(function(d){
+        if(r.tipo==="vacacion") dVac[d]=true; else dBaja[d]=true;
+      });
+    });
+    var nV=Object.keys(dVac).length;
+    var nB=Object.keys(dBaja).length;
+    var esExtra=trabajadoresExtra.some(function(e){return e.alias===v.alias;});
+    filas.push({alias:v.alias,nombre:[v.nombre,v.apellidos].filter(Boolean).join(" ")||"",nV:nV,nB:nB,pend:30-nV,esExtra:esExtra,tieneRegs:nV>0||nB>0});
+  });
+
+  var conRegs=filas.filter(function(f){return f.tieneRegs;});
+  var sinRegs=filas.filter(function(f){return !f.tieneRegs;});
+
+  var html="<div class='card'>";
+  html+="<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px'>";
+  html+="<div class='card-title' style='margin-bottom:0'>📊 Resumen vacaciones y bajas "+year+"</div>";
+  html+="<div style='font-size:12px;color:#888'>"+filas.length+" trabajadores</div></div>";
+
+  if(!conRegs.length){
+    html+="<div style='text-align:center;padding:30px;color:#888'><div style='font-size:40px'>🏖️</div><p style='margin-top:10px'>Sin registros en "+year+"</p></div>";
+  } else {
+    html+="<table style='width:100%;border-collapse:collapse;font-size:13px'>";
+    html+="<thead><tr style='background:#1a1714;color:white'>";
+    html+="<th style='padding:10px;text-align:left;font-size:11px;letter-spacing:.06em'>TRABAJADOR</th>";
+    html+="<th style='padding:10px;text-align:left;font-size:11px;letter-spacing:.06em'>TIPO</th>";
+    html+="<th style='padding:10px;text-align:center;font-size:11px;letter-spacing:.06em'>VAC. DISFRUTADAS</th>";
+    html+="<th style='padding:10px;text-align:center;font-size:11px;letter-spacing:.06em'>VAC. PENDIENTES</th>";
+    html+="<th style='padding:10px;text-align:center;font-size:11px;letter-spacing:.06em'>DÍAS BAJA</th>";
+    html+="<th style='padding:10px;text-align:center;font-size:11px;letter-spacing:.06em'>ESTADO</th>";
+    html+="</tr></thead><tbody>";
+
+    conRegs.forEach(function(f){
+      var estadoCls=f.pend<=0?"color:#c0392b;font-weight:700":f.pend<10?"color:#c4571a;font-weight:700":"color:#2d7a4f";
+      var estadoTxt=f.pend<=0?"✓ Agotadas":f.pend<5?"⚠️ Casi sin pendientes":f.nV===0?"Sin vacaciones":"✓ Con pendientes";
+      html+="<tr style='border-bottom:1px solid #f0ece6;cursor:pointer' onclick='seleccionarTrabajador(\""+f.alias+"\")'>";
+      html+="<td style='padding:10px'><strong>"+f.alias+"</strong>"+(f.nombre?"<br><span style='font-size:11px;color:#888'>"+f.nombre+"</span>":"")+"</td>";
+      html+="<td style='padding:10px;font-size:12px;color:#888'>"+(f.esExtra?"📦 Almacén/Reparto":"🛋️ Vendedor")+"</td>";
+      html+="<td style='padding:10px;text-align:center'><strong style='font-size:18px;color:#2d7a4f'>"+f.nV+"</strong> <span style='font-size:11px;color:#888'>días</span></td>";
+      html+="<td style='padding:10px;text-align:center'><strong style='font-size:18px;color:#c4571a'>"+f.pend+"</strong> <span style='font-size:11px;color:#888'>días</span></td>";
+      html+="<td style='padding:10px;text-align:center'>"+(f.nB>0?"<strong style='font-size:18px;color:#c0392b'>"+f.nB+"</strong> <span style='font-size:11px;color:#888'>días</span>":"<span style='color:#ccc'>—</span>")+"</td>";
+      html+="<td style='padding:10px;text-align:center'><span style='"+estadoCls+"'>"+estadoTxt+"</span></td>";
+      html+="</tr>";
+    });
+    html+="</tbody></table>";
+
+    if(sinRegs.length){
+      html+="<div style='margin-top:12px;padding:10px;background:#f4f1ec;border-radius:8px;font-size:12px;color:#888'>";
+      html+="Sin registros en "+year+": "+sinRegs.map(function(f){return f.alias;}).join(", ");
+      html+="</div>";
+    }
+  }
+  html+="</div>";
+  cont.innerHTML=html;
+}
+
+function seleccionarTrabajador(alias){
+  document.getElementById("selTr").value=alias;
+  cargarVista();
+}
+
+// MODAL TRABAJADORES EXTRA
+function abrirModalTrabajador(){
+  renderListaExtra();
+  document.getElementById("teAlias").value="";
+  document.getElementById("teNombre").value="";
+  document.getElementById("teErr").style.display="none";
+  document.getElementById("mTrabOverlay").classList.add("open");
+}
+function cerrarModalTrabajador(){ document.getElementById("mTrabOverlay").classList.remove("open"); }
+document.getElementById("mTrabOverlay").addEventListener("click",function(e){if(e.target===this)cerrarModalTrabajador();});
+
+function renderListaExtra(){
+  var cont=document.getElementById("listaExtra");
+  if(!trabajadoresExtra.length){
+    cont.innerHTML="<div style='color:#888;font-size:13px;text-align:center;padding:10px'>Sin trabajadores extra registrados</div>";
+    return;
+  }
+  var tipoLabel={almacen:"📦 Almacén",reparto:"🚚 Reparto",limpieza:"🧹 Limpieza",otro:"Otro"};
+  cont.innerHTML="";
+  trabajadoresExtra.filter(function(t){return t.activo!==false;}).forEach(function(t){
+    var div=document.createElement("div");
+    div.style.cssText="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;background:#f4f1ec;margin-bottom:6px";
+    div.innerHTML="<div><strong>"+t.alias+"</strong>"+(t.nombre?" — "+t.nombre:"")+"<br><span style='font-size:11px;color:#888'>"+(tipoLabel[t.tipo]||t.tipo||"")+"</span></div>"+
+      "<button class='btn btn-red' style='padding:4px 10px;font-size:12px' onclick='eliminarTrabajadorExtra(\""+t._id+"\")'>Eliminar</button>";
+    cont.appendChild(div);
+  });
+}
+
+function guardarTrabajadorExtra(){
+  var alias=document.getElementById("teAlias").value.trim();
+  var nombre=document.getElementById("teNombre").value.trim();
+  var tipo=document.getElementById("teTipo").value;
+  var err=document.getElementById("teErr");
+  err.style.display="none";
+  if(!alias){err.textContent="El alias es obligatorio";err.style.display="block";return;}
+  // Verificar que no existe ya
+  var existe=vendedores.concat(trabajadoresExtra).some(function(v){return (v.alias||"").toLowerCase()===alias.toLowerCase();});
+  if(existe){err.textContent="Ya existe un trabajador con ese alias";err.style.display="block";return;}
+  var data={alias:alias,nombre:nombre,tipo:tipo,activo:true,creadoPor:currentAlias,creadoTs:new Date().toISOString()};
+  fsAdd("trabajadores_extra",data).then(function(resp){
+    if(resp.error) throw new Error(resp.error.message);
+    data._id=(resp.name||"").split("/").pop();
+    trabajadoresExtra.push(data);
+    // Actualizar selectores
+    var txt=alias+(nombre?" — "+nombre:"");
+    document.getElementById("selTr").innerHTML+="<option value='"+alias+"'>"+txt+"</option>";
+    document.getElementById("mTr").innerHTML+="<option value='"+alias+"'>"+txt+"</option>";
+    renderListaExtra();
+    document.getElementById("teAlias").value="";
+    document.getElementById("teNombre").value="";
+    toast("✅ Trabajador añadido","ok");
+  }).catch(function(e){err.textContent="Error: "+e.message;err.style.display="block";});
+}
+
+function eliminarTrabajadorExtra(id){
+  if(!confirm("¿Eliminar este trabajador? Sus registros de vacaciones se mantendrán.")) return;
+  fsDel("trabajadores_extra",id).then(function(){
+    trabajadoresExtra=trabajadoresExtra.filter(function(t){return t._id!==id;});
+    renderListaExtra();
+    toast("Trabajador eliminado","ok");
   }).catch(function(e){toast("Error: "+e.message,"err");});
 }
 </script>
