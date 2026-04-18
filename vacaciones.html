@@ -85,7 +85,7 @@ header { background: #1a1714; color: white; padding: 0 24px; height: 54px; displ
 /* Tabla general */
 .tabla-gen { border-collapse:collapse; min-width:900px; width:100%; }
 .tabla-gen th { font-size:9px; text-transform:uppercase; letter-spacing:.05em; padding:6px 3px; text-align:center; color:#888; font-weight:700; border-bottom:2px solid #eee; white-space:nowrap; }
-.tabla-gen td { padding:0; border:none; height:52px; min-width:24px; }
+.tabla-gen td { padding:0; border:none !important; height:52px; min-width:24px; }
 .tabla-gen .col-alias { font-size:13px; font-weight:700; padding:6px 12px; white-space:nowrap; text-align:left; border-right:2px solid #ddd; position:sticky; left:0; background:white; z-index:1; min-width:120px; }
 .tabla-gen .col-mes { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; padding:6px 8px; text-align:center; border-right:2px solid #ddd; color:#1a1714; }
 .cel-dia { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; cursor:default; }
@@ -847,8 +847,8 @@ function abrirCalendarioGeneral(){
       var esFin=(dow===0||dow===6);
       var esFest=!!fest[fs];
       var letra=(dow===1?"L":dow===3?"M":dow===6?"S":"");
-      var letraCol=letra?"#888":"transparent";
-      var numCol=esFest?"#c4571a":esFin?"#bbb":"#999";
+      var letraCol=letra?"#bbb":"transparent";
+      var numCol=esFest?"#c4571a":"#ccc";
       var th=document.createElement("th");
       th.innerHTML=
         "<div style='font-size:7px;color:"+letraCol+";font-weight:800;line-height:1;height:8px;text-align:center'>"+letra+"</div>"+
@@ -880,6 +880,7 @@ function abrirCalendarioGeneral(){
         var esHoy=(fs===hoy);
         var td=document.createElement("td");
         td.style.cssText=
+          "border:none;"+
           "background:"+(tieneVac?color:FONDO)+";"+ // mismo fondo para todos los días sin vac
           "height:52px;"+
           (d===1?"border-left:3px solid #ddd;":"")+
@@ -918,7 +919,7 @@ function abrirCalendarioGeneral(){
         bg=colorMap[coinc[0]]||FONDO;
         td.title=coinc[0];
       }
-      td.style.cssText="background:"+bg+";height:14px;"+(d===1?"border-left:3px solid #ddd;":"");
+      td.style.cssText="border:none;background:"+bg+";height:14px;"+(d===1?"border-left:3px solid #ddd;":"");
       trSol.appendChild(td);
     }
   }
