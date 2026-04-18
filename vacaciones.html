@@ -881,10 +881,9 @@ function abrirCalendarioGeneral(){
         var td=document.createElement("td");
         td.style.cssText=
           "border:none;"+
-          "background:"+(tieneVac?color:FONDO)+";"+ // mismo fondo para todos los días sin vac
+          "background:"+(tieneVac?color:FONDO)+";"+
           "height:52px;"+
-          (d===1?"border-left:3px solid #ddd;":"")+
-          (esHoy?"outline:2px solid #c4571a;outline-offset:-2px;":"");
+          (d===1?"border-left:3px solid #ddd;":"");
         if(coinc||fest[fs]){
           td.title=(coinc?coinc:"")+( fest[fs]?(coinc?" | ":"")+fest[fs]:"");
         }
