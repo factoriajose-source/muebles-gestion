@@ -827,7 +827,28 @@ function abrirCalendarioGeneral(){
   }
   tabla.appendChild(trMes);
 
-  // Fila 2: números de días
+  // Fila 2: letras día semana (L M X J V S D) encima del número
+  var trLetras=document.createElement("tr");
+  trLetras.innerHTML="<th class='col-alias' style='font-size:9px;color:#ccc;border-right:2px solid #ddd;padding:1px'></th>";
+  for(var m=0;m<12;m++){
+    var diasMes=new Date(year,m+1,0).getDate();
+    for(var d=1;d<=diasMes;d++){
+      var fs=year+"-"+p2(m+1)+"-"+p2(d);
+      var dow=new Date(fs+"T12:00:00").getDay();
+      var LETRAS=["D","L","M","X","J","V","S"];
+      var letra=LETRAS[dow];
+      // Solo mostrar L, M (miércoles=X pero pediste M), S
+      var mostrar=(dow===1?"L":dow===3?"M":dow===6?"S":"");
+      var esFin=(dow===0||dow===6);
+      var esFest=!!fest[fs];
+      var bg=esFin?"#fafafa":esFest?"#f0ece8":"white";
+      var col=mostrar?(dow===6?"#c4571a":"#1a1714"):"transparent";
+      trLetras.innerHTML+="<th style='background:"+bg+";color:"+col+";font-size:8px;font-weight:800;padding:1px 0;text-align:center;"+(d===1?"border-left:2px solid #ddd":"")+"'>"+mostrar+"</th>";
+    }
+  }
+  tabla.appendChild(trLetras);
+
+  // Fila 3: números de días
   var trDias=document.createElement("tr");
   trDias.innerHTML="<th class='col-alias' style='font-size:9px;color:#ccc;border-right:2px solid #ddd'></th>";
   for(var m=0;m<12;m++){
@@ -837,9 +858,9 @@ function abrirCalendarioGeneral(){
       var dow=new Date(fs+"T12:00:00").getDay();
       var esFin=(dow===0||dow===6);
       var esFest=!!fest[fs];
-      var bg=esFest?"#f0f0f0":esFin?"#fafafa":"white";
-      var col=esFest?"#bbb":esFin?"#ccc":"#bbb";
-      trDias.innerHTML+="<th style='background:"+bg+";color:"+col+";padding:2px 1px;"+(d===1?"border-left:2px solid #ddd":"")+"'>"+d+"</th>";
+      var bg=esFin?"#fafafa":esFest?"#f0ece8":"white";
+      var col=esFest?"#c4571a":esFin?"#ccc":"#bbb";
+      trDias.innerHTML+="<th style='background:"+bg+";color:"+col+";padding:2px 1px;font-weight:"+(esFest?"800":"700")+";"+(d===1?"border-left:2px solid #ddd":"")+">"+d+"</th>";
     }
   }
   tabla.appendChild(trDias);
@@ -866,28 +887,30 @@ function abrirCalendarioGeneral(){
         var coinc=diasMap[fs]?Object.keys(diasMap[fs]):[]; // aliases con vacaciones
 
         var bgCell;
-        if(esFest){
-          bgCell="#f0f0f0";
+        // VACACIONES tienen prioridad sobre festivos y fines de semana
+        if(tipo==="vacacion"){
+          bgCell=color;
+        } else if(esFest){
+          bgCell="#f0ece8"; // festivo sin vacaciones
         } else if(esFin){
           bgCell="#fafafa";
-        } else if(tipo==="vacacion"){
-          bgCell=color;
         } else {
           bgCell="white";
         }
 
+        // Borde adicional si es festivo pero tiene vacaciones (indicar con borde interior)
+        var festBorde=(esFest&&tipo==="vacacion")?"border-bottom:3px solid rgba(0,0,0,.25);":"";
+
         // Tooltip con todos los que coinciden ese día
         var title="";
-        if(coinc.length){
-          title=coinc.join(", ");
-        }
+        if(coinc.length) title=coinc.join(", ");
         if(esFest) title=(title?title+" | ":"")+fest[fs];
 
         var esHoy=(fs===hoy);
         var bordL=d===1?"border-left:2px solid #ddd;":"";
         var bordH=esHoy?"outline:2px solid #c4571a;outline-offset:-2px;":"";
 
-        html+="<td style='background:"+bgCell+";"+bordL+"height:52px;"+bordH+"'"+(title?" title='"+title+"'":"")+"></td>";
+        html+="<td style='background:"+bgCell+";"+festBorde+bordL+"height:52px;"+bordH+"'"+(title?" title='"+title+"'":"")+"></td>";
       }
     }
     tr.innerHTML=html;
