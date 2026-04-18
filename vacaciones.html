@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏖️ Vacaciones y Bajas · Meres</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: #f4f1ec; color: #1a1714; font-size: 14px; }
+.app { max-width: 1100px; margin: 0 auto; padding: 20px; }
+.login-wrap { background: #f4f1ec; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.login-card { background: white; border-radius: 14px; padding: 32px; max-width: 380px; width: 100%; box-shadow: 0 4px 24px rgba(0,0,0,.1); text-align: center; }
+.login-card h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+.login-card p  { color: #888; font-size: 13px; margin-bottom: 24px; }
+.fg { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; text-align: left; }
+.fg label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #888; }
+.fg input, .fg select, .fg textarea { padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 14px; width: 100%; }
+.fg input:focus, .fg select:focus { outline: none; border-color: #2d7a4f; }
+.fg textarea { resize: vertical; min-height: 70px; }
+.btn { padding: 10px 20px; border: none; border-radius: 8px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity .2s; }
+.btn:hover { opacity: .85; } .btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-green  { background: #2d7a4f; color: white; }
+.btn-dark   { background: #1a1714; color: white; }
+.btn-red    { background: #c0392b; color: white; }
+.btn-gray   { background: #f0ece6; color: #555; }
+.btn-full   { width: 100%; padding: 13px; }
+header { background: #1a1714; color: white; padding: 0 24px; height: 54px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.header-brand { font-weight: 800; font-size: 15px; letter-spacing: .04em; }
+.header-brand span { color: #e8793e; }
+.toolbar { background: white; border-bottom: 1px solid #e8e4de; padding: 14px 24px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.toolbar select, .toolbar input[type=number] { padding: 9px 12px; border: 1.5px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 14px; background: white; }
+.card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+.card-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+.res-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+.res-item { border-radius: 10px; padding: 16px; text-align: center; }
+.res-item .num { font-size: 36px; font-weight: 800; line-height: 1; }
+.res-item .lbl { font-size: 12px; margin-top: 5px; }
+.res-vac  { background: #e8f5ee; } .res-vac  .num { color: #2d7a4f; }
+.res-pend { background: #fff0e8; } .res-pend .num { color: #c4571a; }
+.res-baja { background: #fdecea; } .res-baja .num { color: #c0392b; }
+.cal-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+@media(max-width:700px){ .cal-grid{grid-template-columns:repeat(2,1fr);} }
+.mes-nombre { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#888; margin-bottom:5px; text-align:center; }
+.dias-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+.dia-cab { font-size:9px; font-weight:700; text-align:center; color:#bbb; padding:2px 0; }
+.dia { font-size:11px; text-align:center; padding:3px 1px; border-radius:4px; line-height:1.5; }
+.dia.vacio { visibility:hidden; }
+.dia.normal { color:#1a1714; }
+.dia.finde  { color:#ccc; }
+.dia.festivo{ background:#f0f0f0; color:#999; font-weight:600; }
+.dia.vac    { background:#2d7a4f; color:white; font-weight:700; }
+.dia.baja   { background:#c0392b; color:white; font-weight:700; }
+.dia.hoy    { box-shadow:0 0 0 2px #c4571a; }
+.leyenda { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; align-items:center; margin-top:12px; }
+.ley-item { display:flex; align-items:center; gap:5px; }
+.ley-dot  { width:14px; height:14px; border-radius:3px; flex-shrink:0; }
+.reg-item { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-radius:8px; border:1px solid #eee; margin-bottom:8px; }
+.reg-item.rv { border-left:4px solid #2d7a4f; background:#f8fdf9; }
+.reg-item.rb { border-left:4px solid #c0392b; background:#fdf8f8; }
+.reg-info .rf { font-weight:700; font-size:13px; }
+.reg-info .rd { font-size:12px; color:#888; margin-top:2px; }
+.reg-info .rn { font-size:12px; color:#666; font-style:italic; margin-top:2px; }
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:200; display:none; align-items:center; justify-content:center; padding:16px; }
+.overlay.open { display:flex; }
+.modal { background:white; border-radius:14px; padding:24px; width:100%; max-width:420px; max-height:90vh; overflow-y:auto; }
+.modal h3 { font-size:17px; font-weight:800; margin-bottom:16px; }
+.tipo-btn { flex:1; padding:12px; border:2px solid #ddd; border-radius:8px; background:white; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; transition:all .2s; }
+.tipo-btn.sv { border-color:#2d7a4f; background:#e8f5ee; color:#2d7a4f; }
+.tipo-btn.sb { border-color:#c0392b; background:#fdecea; color:#c0392b; }
+.toast { position:fixed; bottom:24px; right:24px; background:#1a1714; color:white; padding:12px 20px; border-radius:8px; font-size:14px; z-index:9999; display:none; max-width:300px; }
+.toast.ok  { border-left:4px solid #2d7a4f; }
+.toast.err { border-left:4px solid #c0392b; }
+.fest-chip { display:inline-block; background:#f0f0f0; border-radius:20px; padding:2px 8px; font-size:11px; color:#666; margin:2px; }
+@media print {
+  header,.toolbar,.no-print { display:none!important; }
+  body { background:white; }
+  .app { padding:0; max-width:100%; }
+  .card { box-shadow:none; border:1px solid #ddd; page-break-inside:avoid; margin-bottom:10px; }
+  .cal-grid { grid-template-columns:repeat(4,1fr); gap:10px; }
+  .print-header { display:block!important; }
+}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<!-- LOGIN -->
+<div id="loginBox" class="login-wrap">
+  <div class="login-card">
+    <div style="font-size:48px;margin-bottom:10px">🏖️</div>
+    <h2>Vacaciones y Bajas</h2>
+    <p>Meres Central de Compras · Acceso restringido</p>
+    <div class="fg"><label>Email</label><input type="email" id="lEmail" placeholder="tu@email.com" autocomplete="email"></div>
+    <div class="fg"><label>Contraseña</label><input type="password" id="lPass" placeholder="••••••••" autocomplete="current-password"></div>
+    <button class="btn btn-green btn-full" onclick="doLogin()">Entrar</button>
+    <div id="lErr" style="color:#c0392b;font-size:13px;margin-top:10px;display:none"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appBox" style="display:none">
+  <header>
+    <div class="header-brand">MERES · <span>Vacaciones & Bajas</span></div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="font-size:12px;color:#aaa" id="hUser"></span>
+      <button class="btn btn-gray no-print" style="padding:6px 14px;font-size:12px" onclick="window.print()">🖨️ Imprimir</button>
+    </div>
+  </header>
+
+  <div class="toolbar no-print">
+    <div>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:4px">Trabajador</label>
+      <select id="selTr" onchange="cargarVista()">
+        <option value="">-- Selecciona --</option>
+      </select>
+    </div>
+    <div>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:4px">Año</label>
+      <input type="number" id="selYear" value="2026" min="2024" max="2035" style="width:90px" onchange="cargarVista()">
+    </div>
+    <button class="btn btn-green no-print" style="margin-bottom:1px" onclick="abrirModal()">+ Añadir vacaciones / baja</button>
+  </div>
+
+  <div class="app">
+    <!-- PRINT HEADER -->
+    <div id="printHdr" style="display:none;margin-bottom:16px">
+      <div style="font-size:20px;font-weight:800" id="printTitle"></div>
+      <div style="color:#888;font-size:13px" id="printSub"></div>
+    </div>
+
+    <div id="vVacia" style="text-align:center;padding:60px 20px;color:#888">
+      <div style="font-size:48px;margin-bottom:12px">🏖️</div>
+      <p style="font-size:16px">Selecciona un trabajador y un año</p>
+    </div>
+
+    <div id="vPrincipal" style="display:none">
+      <!-- RESUMEN -->
+      <div class="card">
+        <div class="res-grid">
+          <div class="res-item res-vac">
+            <div class="num" id="nVac">0</div>
+            <div class="lbl">Días de vacaciones<br>disfrutados</div>
+          </div>
+          <div class="res-item res-pend">
+            <div class="num" id="nPend">30</div>
+            <div class="lbl">Vacaciones pendientes<br>(30 − disfrutados)</div>
+          </div>
+          <div class="res-item res-baja">
+            <div class="num" id="nBaja">0</div>
+            <div class="lbl">Días de baja<br>laboral</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CALENDARIO -->
+      <div class="card">
+        <div class="card-title" id="calTit">Calendario</div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="leyenda">
+          <div class="ley-item"><div class="ley-dot" style="background:#2d7a4f"></div>Vacaciones</div>
+          <div class="ley-item"><div class="ley-dot" style="background:#c0392b"></div>Baja laboral</div>
+          <div class="ley-item"><div class="ley-dot" style="background:#f0f0f0;border:1px solid #ddd"></div>Festivo Asturias</div>
+          <div class="ley-item"><div class="ley-dot" style="background:#e8e8e8"></div>Fin de semana</div>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:#888;line-height:1.8" id="festInfo"></div>
+      </div>
+
+      <!-- REGISTROS -->
+      <div class="card">
+        <div class="card-title">Registros del año</div>
+        <div id="regList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="mOverlay">
+  <div class="modal">
+    <h3>Añadir registro</h3>
+    <div class="fg" style="margin-bottom:14px">
+      <label>Tipo</label>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="tipo-btn sv" id="btnV" onclick="selTipo('vacacion')">🏖️ Vacaciones</button>
+        <button class="tipo-btn"   id="btnB" onclick="selTipo('baja')">🤒 Baja laboral</button>
+      </div>
+    </div>
+    <div class="fg"><label>Trabajador</label><select id="mTr"></select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="fg"><label>Fecha inicio</label><input type="date" id="mIni" onchange="calcDias()"></div>
+      <div class="fg"><label>Fecha fin</label><input type="date" id="mFin" onchange="calcDias()"></div>
+    </div>
+    <div id="mDias" style="background:#f4f1ec;border-radius:8px;padding:10px;font-size:13px;margin:10px 0;display:none"></div>
+    <div class="fg"><label>Nota (opcional)</label><textarea id="mNota" placeholder="Ej: Semana de Semana Santa"></textarea></div>
+    <div id="mErr" style="background:#fdecea;color:#c0392b;border-radius:8px;padding:10px;font-size:13px;margin-bottom:10px;display:none"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-green" style="flex:1" onclick="guardar()">💾 Guardar</button>
+      <button class="btn btn-gray" onclick="cerrarModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var PROJECT  = "muebles-presupuestos";
+var API_KEY  = "AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c";
+var BASE     = "https://firestore.googleapis.com/v1/projects/"+PROJECT+"/databases/(default)/documents";
+var AUTH_URL = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key="+API_KEY;
+var PERMITIDOS = ["jose angel","marisa","javi"];
+var token = null, currentAlias = null, vendedores = [], registros = [], tipoSel = "vacacion";
+
+// FESTIVOS ASTURIAS
+function festivos(year) {
+  // Pascua (algoritmo Butcher)
+  var a=year%19,b=Math.floor(year/100),c=year%100,d=Math.floor(b/4),e=b%4;
+  var f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30;
+  var i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+  var mes=Math.floor((h+l-7*m+114)/31), dia=(h+l-7*m+114)%31+1;
+  var pascua = new Date(year,mes-1,dia);
+  var jue = new Date(pascua); jue.setDate(pascua.getDate()-3);
+  var vie = new Date(pascua); vie.setDate(pascua.getDate()-2);
+  function fd(d){ return year+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()); }
+  var lista = [
+    {f:year+"-01-01",n:"Año Nuevo"},
+    {f:year+"-01-06",n:"Reyes Magos"},
+    {f:fd(jue),      n:"Jueves Santo"},
+    {f:fd(vie),      n:"Viernes Santo"},
+    {f:year+"-05-01",n:"Día del Trabajo"},
+    {f:year+"-08-15",n:"Asunción"},
+    {f:year+"-09-08",n:"Covadonga (Asturias)"},
+    {f:year+"-10-12",n:"Fiesta Nacional"},
+    {f:year+"-11-01",n:"Todos los Santos"},
+    {f:year+"-12-06",n:"Constitución"},
+    {f:year+"-12-08",n:"Inmaculada"},
+    {f:year+"-12-25",n:"Navidad"}
+  ];
+  var map = {};
+  lista.forEach(function(x){ map[x.f]=x.n; });
+  return map;
+}
+
+function p2(n){ return ("0"+n).slice(-2); }
+function fStr(d){ return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()); }
+function diasRango(ini,fin){
+  var d1=new Date(ini+"T12:00:00"), d2=new Date(fin+"T12:00:00"), out=[], cur=new Date(d1);
+  while(cur<=d2){ out.push(fStr(cur)); cur.setDate(cur.getDate()+1); }
+  return out;
+}
+function toast(msg,tipo){ var t=document.getElementById("toast"); t.textContent=msg; t.className="toast "+(tipo||"ok"); t.style.display="block"; setTimeout(function(){t.style.display="none";},3000); }
+
+// FIRESTORE REST
+function parseDoc(doc){
+  if(!doc.fields) return {};
+  var o={};
+  Object.keys(doc.fields).forEach(function(k){
+    var v=doc.fields[k];
+    if(v.stringValue!==undefined) o[k]=v.stringValue;
+    else if(v.integerValue!==undefined) o[k]=parseInt(v.integerValue);
+    else if(v.doubleValue!==undefined) o[k]=v.doubleValue;
+    else if(v.booleanValue!==undefined) o[k]=v.booleanValue;
+    else if(v.mapValue) o[k]=parseDoc(v.mapValue);
+    else o[k]=null;
+  });
+  return o;
+}
+function fsGet(col){
+  return fetch(BASE+"/"+col+"?pageSize=500",{headers:{Authorization:"Bearer "+token}})
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(!data.documents) return [];
+      return data.documents.map(function(d){return Object.assign({_id:d.name.split("/").pop()},parseDoc(d));});
+    });
+}
+function fsAdd(col,data){
+  var fields={};
+  Object.keys(data).forEach(function(k){
+    var v=data[k];
+    if(typeof v==="number") fields[k]={integerValue:v};
+    else if(typeof v==="boolean") fields[k]={booleanValue:v};
+    else fields[k]={stringValue:String(v||"")};
+  });
+  return fetch(BASE+"/"+col,{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({fields:fields})}).then(function(r){return r.json();});
+}
+function fsDel(col,id){
+  return fetch(BASE+"/"+col+"/"+id,{method:"DELETE",headers:{Authorization:"Bearer "+token}});
+}
+
+// LOGIN
+document.getElementById("lPass").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
+function doLogin(){
+  var email=document.getElementById("lEmail").value.trim();
+  var pass=document.getElementById("lPass").value;
+  var err=document.getElementById("lErr");
+  err.style.display="none";
+  fetch(AUTH_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:email,password:pass,returnSecureToken:true})})
+  .then(function(r){return r.json();})
+  .then(function(data){
+    if(data.error) throw new Error();
+    token=data.idToken;
+    return fsGet("vendedores");
+  })
+  .then(function(vends){
+    vendedores=vends.filter(function(v){return v.activo!==false&&v.alias;});
+    var miV=vendedores.find(function(v){return (v.email||"").toLowerCase().trim()===document.getElementById("lEmail").value.trim().toLowerCase();});
+    var alias=miV?miV.alias:"";
+    if(PERMITIDOS.indexOf((alias||"").toLowerCase())===-1){
+      token=null;
+      err.textContent="No tienes permiso para acceder a este módulo";
+      err.style.display="block";
+      return;
+    }
+    currentAlias=alias;
+    document.getElementById("loginBox").style.display="none";
+    document.getElementById("appBox").style.display="block";
+    document.getElementById("hUser").textContent=alias;
+    // Rellenar selectores
+    var selTr=document.getElementById("selTr");
+    var mTr=document.getElementById("mTr");
+    selTr.innerHTML="<option value=''>-- Selecciona --</option>";
+    mTr.innerHTML="";
+    vendedores.filter(function(v){return v.alias!=="Jose Angel";})
+      .sort(function(a,b){return a.alias.localeCompare(b.alias,"es");})
+      .forEach(function(v){
+        var txt=v.alias+(v.nombre?" — "+v.nombre:"");
+        selTr.innerHTML+="<option value='"+v.alias+"'>"+txt+"</option>";
+        mTr.innerHTML+="<option value='"+v.alias+"'>"+txt+"</option>";
+      });
+    document.getElementById("selYear").value=new Date().getFullYear();
+    return fsGet("vacaciones_bajas");
+  })
+  .then(function(regs){
+    registros=regs||[];
+  })
+  .catch(function(){
+    err.textContent="Email o contraseña incorrectos";
+    err.style.display="block";
+  });
+}
+
+// VISTA
+function cargarVista(){
+  var alias=document.getElementById("selTr").value;
+  var year=parseInt(document.getElementById("selYear").value);
+  if(!alias||!year){
+    document.getElementById("vVacia").style.display="block";
+    document.getElementById("vPrincipal").style.display="none";
+    return;
+  }
+  document.getElementById("vVacia").style.display="none";
+  document.getElementById("vPrincipal").style.display="block";
+
+  var misRegs=registros.filter(function(r){return r.alias===alias&&parseInt(r.año)===year;})
+    .sort(function(a,b){return (a.fechaIni||"").localeCompare(b.fechaIni||"");});
+
+  var dVac={}, dBaja={};
+  misRegs.forEach(function(r){
+    diasRango(r.fechaIni,r.fechaFin).forEach(function(d){
+      if(r.tipo==="vacacion") dVac[d]=true;
+      else dBaja[d]=true;
+    });
+  });
+
+  var nV=Object.keys(dVac).length;
+  var nB=Object.keys(dBaja).length;
+  document.getElementById("nVac").textContent=nV;
+  document.getElementById("nPend").textContent=30-nV;
+  document.getElementById("nBaja").textContent=nB;
+
+  var v=vendedores.find(function(x){return x.alias===alias;});
+  var nombre=v?[v.nombre,v.apellidos].filter(Boolean).join(" ")||alias:alias;
+  document.getElementById("calTit").textContent="Calendario "+year+" · "+alias;
+  document.getElementById("printTitle").textContent="Vacaciones y Bajas "+year+" · "+alias;
+  document.getElementById("printSub").textContent=nombre+" | Meres Central de Compras S.L. | CIF: B74102807";
+  document.getElementById("printHdr").style.display="block";
+
+  var fest=festivos(year);
+  // Info festivos
+  var chips=Object.keys(fest).map(function(f){
+    var d=new Date(f+"T12:00:00");
+    var dow=["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"][d.getDay()];
+    var parts=f.split("-");
+    return "<span class='fest-chip'>"+dow+" "+parts[2]+"/"+parts[1]+" · "+fest[f]+"</span>";
+  }).join(" ");
+  document.getElementById("festInfo").innerHTML="<strong style='font-size:12px'>📅 Festivos Asturias "+year+":</strong><br>"+chips;
+
+  renderCal(year,dVac,dBaja,fest);
+  renderRegs(misRegs,alias,year);
+}
+
+function renderCal(year,dVac,dBaja,fest){
+  var grid=document.getElementById("calGrid");
+  var hoy=fStr(new Date());
+  var MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  grid.innerHTML="";
+  for(var m=0;m<12;m++){
+    var primero=new Date(year,m,1);
+    var ultimo=new Date(year,m+1,0).getDate();
+    var dow1=primero.getDay();
+    var offset=dow1===0?6:dow1-1;
+    var html="<div class='mes-nombre'>"+MESES[m]+"</div><div class='dias-grid'>";
+    ["L","M","X","J","V","S","D"].forEach(function(c){html+="<div class='dia-cab'>"+c+"</div>";});
+    for(var o=0;o<offset;o++) html+="<div class='dia vacio'></div>";
+    for(var dia=1;dia<=ultimo;dia++){
+      var fs=year+"-"+p2(m+1)+"-"+p2(dia);
+      var d=new Date(year,m,dia);
+      var dow=d.getDay();
+      var cls="dia";
+      if(dVac[fs])       cls+=" vac";
+      else if(dBaja[fs]) cls+=" baja";
+      else if(fest[fs])  cls+=" festivo";
+      else if(dow===0||dow===6) cls+=" finde";
+      else cls+=" normal";
+      if(fs===hoy) cls+=" hoy";
+      var tt=dVac[fs]?"Vacaciones":dBaja[fs]?"Baja laboral":fest[fs]?fest[fs]:"";
+      html+="<div class='"+cls+"'"+(tt?" title='"+tt+"'":"")+">"+dia+"</div>";
+    }
+    html+="</div>";
+    var b=document.createElement("div"); b.innerHTML=html;
+    grid.appendChild(b);
+  }
+}
+
+function renderRegs(regs,alias,year){
+  var cont=document.getElementById("regList");
+  if(!regs.length){
+    cont.innerHTML="<div style='color:#888;font-size:13px;text-align:center;padding:20px'>Sin registros para "+alias+" en "+year+"</div>";
+    return;
+  }
+  cont.innerHTML="";
+  regs.forEach(function(r){
+    var dias=diasRango(r.fechaIni,r.fechaFin).length;
+    var esVac=r.tipo==="vacacion";
+    var div=document.createElement("div");
+    div.className="reg-item "+(esVac?"rv":"rb");
+    div.innerHTML=
+      "<div class='reg-info'>"+
+        "<div class='rf'>"+(esVac?"🏖️ Vacaciones":"🤒 Baja laboral")+" &nbsp;·&nbsp; "+r.fechaIni+(r.fechaIni!==r.fechaFin?" → "+r.fechaFin:"")+"</div>"+
+        "<div class='rd'>"+dias+" día"+(dias!==1?"s":"")+" naturales</div>"+
+        (r.nota?"<div class='rn'>\""+r.nota+"\"</div>":"")+
+      "</div>"+
+      "<button class='btn btn-red no-print' style='padding:6px 12px;font-size:12px;flex-shrink:0' onclick='eliminar(\""+r._id+"\")'>Eliminar</button>";
+    cont.appendChild(div);
+  });
+}
+
+// MODAL
+function abrirModal(){
+  var alias=document.getElementById("selTr").value;
+  if(alias) document.getElementById("mTr").value=alias;
+  var hoy=fStr(new Date());
+  document.getElementById("mIni").value=hoy;
+  document.getElementById("mFin").value=hoy;
+  document.getElementById("mNota").value="";
+  document.getElementById("mErr").style.display="none";
+  document.getElementById("mDias").style.display="none";
+  selTipo("vacacion");
+  calcDias();
+  document.getElementById("mOverlay").classList.add("open");
+}
+function cerrarModal(){ document.getElementById("mOverlay").classList.remove("open"); }
+function selTipo(t){
+  tipoSel=t;
+  document.getElementById("btnV").className="tipo-btn"+(t==="vacacion"?" sv":"");
+  document.getElementById("btnB").className="tipo-btn"+(t==="baja"?" sb":"");
+}
+function calcDias(){
+  var ini=document.getElementById("mIni").value;
+  var fin=document.getElementById("mFin").value;
+  var el=document.getElementById("mDias");
+  if(!ini||!fin||ini>fin){el.style.display="none";return;}
+  var n=diasRango(ini,fin).length;
+  el.style.display="block";
+  el.textContent="📅 "+n+" día"+(n!==1?"s":"")+" naturales ("+ini+" → "+fin+")";
+}
+document.getElementById("mOverlay").addEventListener("click",function(e){if(e.target===this)cerrarModal();});
+
+function guardar(){
+  var alias=document.getElementById("mTr").value;
+  var ini=document.getElementById("mIni").value;
+  var fin=document.getElementById("mFin").value;
+  var nota=document.getElementById("mNota").value.trim();
+  var err=document.getElementById("mErr");
+  err.style.display="none";
+  if(!alias){err.textContent="Selecciona un trabajador";err.style.display="block";return;}
+  if(!ini){err.textContent="Selecciona fecha de inicio";err.style.display="block";return;}
+  if(!fin){err.textContent="Selecciona fecha de fin";err.style.display="block";return;}
+  if(ini>fin){err.textContent="La fecha inicio debe ser anterior al fin";err.style.display="block";return;}
+  var año=parseInt(ini.split("-")[0]);
+  var data={alias:alias,tipo:tipoSel,fechaIni:ini,fechaFin:fin,año:año,nota:nota,creadoPor:currentAlias,creadoTs:new Date().toISOString()};
+  fsAdd("vacaciones_bajas",data).then(function(resp){
+    if(resp.error) throw new Error(resp.error.message);
+    data._id=(resp.name||"").split("/").pop();
+    registros.push(data);
+    cerrarModal();
+    toast("✅ Registro guardado","ok");
+    cargarVista();
+  }).catch(function(e){err.textContent="Error: "+e.message;err.style.display="block";});
+}
+
+function eliminar(id){
+  if(!confirm("¿Eliminar este registro? No se puede deshacer.")) return;
+  fsDel("vacaciones_bajas",id).then(function(){
+    registros=registros.filter(function(r){return r._id!==id;});
+    toast("Registro eliminado","ok");
+    cargarVista();
+  }).catch(function(e){toast("Error: "+e.message,"err");});
+}
+</script>
+</body>
+</html>
