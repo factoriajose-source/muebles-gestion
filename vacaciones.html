@@ -71,6 +71,36 @@ header { background: #1a1714; color: white; padding: 0 24px; height: 54px; displ
 .toast.ok  { border-left:4px solid #2d7a4f; }
 .toast.err { border-left:4px solid #c0392b; }
 .fest-chip { display:inline-block; background:#f0f0f0; border-radius:20px; padding:2px 8px; font-size:11px; color:#666; margin:2px; }
+/* CALENDARIO GENERAL */
+.cal-gen-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:300; display:none; align-items:flex-start; justify-content:center; overflow-y:auto; padding:20px; }
+.cal-gen-overlay.open { display:flex; }
+.cal-gen-modal { background:white; border-radius:14px; width:100%; max-width:1200px; margin:auto; overflow:hidden; }
+.cal-gen-header { background:#1a1714; color:white; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; }
+.cal-gen-header h3 { font-size:16px; font-weight:800; }
+.cal-gen-body { padding:20px; overflow-x:auto; }
+/* Leyenda colores */
+.leyenda-gen { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+.ley-gen { display:flex; align-items:center; gap:5px; font-size:12px; font-weight:600; }
+.ley-gen-dot { width:16px; height:16px; border-radius:3px; flex-shrink:0; }
+/* Tabla general */
+.tabla-gen { border-collapse:collapse; min-width:900px; width:100%; }
+.tabla-gen th { font-size:9px; text-transform:uppercase; letter-spacing:.05em; padding:4px 3px; text-align:center; color:#888; font-weight:700; border-bottom:2px solid #eee; white-space:nowrap; }
+.tabla-gen td { padding:0; border:1px solid #f4f1ec; height:28px; min-width:22px; }
+.tabla-gen .col-alias { font-size:12px; font-weight:700; padding:4px 10px; white-space:nowrap; text-align:left; border-right:2px solid #ddd; position:sticky; left:0; background:white; z-index:1; }
+.tabla-gen .col-mes { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; padding:4px 8px; text-align:center; border-right:2px solid #ddd; color:#1a1714; }
+.cel-dia { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; cursor:default; }
+.cel-vac  { } /* color por trabajador */
+.cel-baja { background: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,.15) 3px, rgba(0,0,0,.15) 4px); }
+.cel-fest { background:#f0f0f0 !important; }
+.cel-finde { background:#fafafa; }
+.cel-hoy  { outline:2px solid #c4571a; outline-offset:-1px; }
+/* Solapamiento — múltiples trabajadores en un día */
+.cel-multi { background:repeating-linear-gradient(90deg,var(--c1) 0,var(--c1) 50%,var(--c2) 50%,var(--c2) 100%) !important; }
+@media print {
+  .cal-gen-overlay { display:block!important; position:static!important; background:none!important; padding:0!important; }
+  .cal-gen-modal { box-shadow:none; border-radius:0; }
+  .cal-gen-header .no-print { display:none!important; }
+}
 @media print {
   header,.toolbar,.no-print { display:none!important; }
   body { background:white; }
@@ -120,6 +150,7 @@ header { background: #1a1714; color: white; padding: 0 24px; height: 54px; displ
     </div>
     <button class="btn btn-green no-print" style="margin-bottom:1px" onclick="abrirModal()">+ Añadir vacaciones / baja</button>
     <button class="btn btn-dark no-print" style="margin-bottom:1px" onclick="abrirModalTrabajador()">👤 Gestionar trabajadores</button>
+    <button class="btn no-print" style="margin-bottom:1px;background:#6b4fc8;color:white" onclick="abrirCalendarioGeneral()">📆 Ver todos juntos</button>
   </div>
 
   <div class="app">
@@ -224,6 +255,34 @@ header { background: #1a1714; color: white; padding: 0 24px; height: 54px; displ
       <button class="btn btn-green" style="width:100%" onclick="guardarTrabajadorExtra()">+ Añadir trabajador</button>
     </div>
     <button class="btn btn-gray" style="width:100%;margin-top:10px" onclick="cerrarModalTrabajador()">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL CALENDARIO GENERAL -->
+<div class="cal-gen-overlay" id="calGenOverlay">
+  <div class="cal-gen-modal">
+    <div class="cal-gen-header">
+      <div>
+        <h3>📆 Calendario general de vacaciones</h3>
+        <div style="font-size:12px;color:#aaa;margin-top:2px" id="calGenSub"></div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="btn btn-gray no-print" style="padding:6px 14px;font-size:12px" onclick="window.print()">🖨️ Imprimir</button>
+        <button onclick="cerrarCalendarioGeneral()" style="background:none;border:none;color:white;font-size:26px;cursor:pointer;line-height:1">×</button>
+      </div>
+    </div>
+    <div class="cal-gen-body">
+      <div class="leyenda-gen" id="calGenLeyenda"></div>
+      <div style="overflow-x:auto">
+        <table class="tabla-gen" id="calGenTabla"></table>
+      </div>
+      <div style="margin-top:12px;font-size:11px;color:#888;display:flex;gap:16px;flex-wrap:wrap">
+        <span>⬛ Color sólido = Vacaciones</span>
+        <span>▨ Rayado = Baja laboral</span>
+        <span>Gris = Festivo</span>
+        <span>💡 Pasa el ratón sobre un día para ver quién está</span>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -702,6 +761,178 @@ function eliminarTrabajadorExtra(id){
     toast("Trabajador eliminado","ok");
   }).catch(function(e){toast("Error: "+e.message,"err");});
 }
+
+// ── CALENDARIO GENERAL ────────────────────────────────────────────────────────
+// Paleta de colores para trabajadores
+var COLORES = [
+  "#2d7a4f","#c4571a","#2856c8","#8e44ad","#d4ac0d",
+  "#16a085","#c0392b","#1a5276","#6e2fa0","#b7950b",
+  "#1abc9c","#e67e22","#2980b9","#9b59b6","#f39c12",
+  "#27ae60","#e74c3c","#3498db","#8e44ad","#f1c40f"
+];
+
+function abrirCalendarioGeneral(){
+  var year=parseInt(document.getElementById("selYear").value)||new Date().getFullYear();
+  document.getElementById("calGenSub").textContent="Año "+year+" · Solo lectura";
+
+  var todos=vendedores.concat(trabajadoresExtra)
+    .filter(function(v){return v.alias!=="Jose Angel"&&v.activo!==false;})
+    .sort(function(a,b){return a.alias.localeCompare(b.alias,"es");});
+
+  // Solo los que tienen registros en el año
+  var conRegs=todos.filter(function(v){
+    return registros.some(function(r){return r.alias===v.alias&&parseInt(r.año)===year;});
+  });
+  if(!conRegs.length) conRegs=todos; // si no hay ninguno, mostrar todos
+
+  // Asignar color a cada trabajador
+  var colorMap={};
+  conRegs.forEach(function(v,i){ colorMap[v.alias]=COLORES[i%COLORES.length]; });
+
+  // Calcular días marcados por alias
+  var diasMap={}; // diasMap[fecha][alias] = tipo ('vacacion'|'baja')
+  registros.filter(function(r){return parseInt(r.año)===year;}).forEach(function(r){
+    if(!colorMap[r.alias]) return; // ignorar si no está en la lista
+    diasRango(r.fechaIni,r.fechaFin).forEach(function(d){
+      if(!diasMap[d]) diasMap[d]={};
+      diasMap[d][r.alias]=r.tipo;
+    });
+  });
+
+  var fest=festivos(year);
+  var hoy=fStr(new Date());
+  var MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
+  // Leyenda
+  var leyDiv=document.getElementById("calGenLeyenda");
+  leyDiv.innerHTML="";
+  conRegs.forEach(function(v){
+    var d=document.createElement("div");
+    d.className="ley-gen";
+    d.innerHTML="<div class='ley-gen-dot' style='background:"+colorMap[v.alias]+"'></div>"+v.alias;
+    leyDiv.appendChild(d);
+  });
+
+  // Construir tabla: filas = trabajadores, columnas = días del año
+  // Formato: Mes | D1 D2 D3... | Mes | D1 D2...
+  var tabla=document.getElementById("calGenTabla");
+  tabla.innerHTML="";
+
+  // Cabecera: meses y días
+  // Fila 1: nombre meses
+  var trMes=document.createElement("tr");
+  trMes.innerHTML="<th class='col-alias' style='border-bottom:2px solid #ddd'>Trabajador</th>";
+  for(var m=0;m<12;m++){
+    var diasMes=new Date(year,m+1,0).getDate();
+    trMes.innerHTML+="<th colspan='"+diasMes+"' class='col-mes' style='background:#f4f1ec;border-left:2px solid #ddd'>"+MESES[m]+"</th>";
+  }
+  tabla.appendChild(trMes);
+
+  // Fila 2: números de días
+  var trDias=document.createElement("tr");
+  trDias.innerHTML="<th class='col-alias' style='font-size:9px;color:#ccc;border-right:2px solid #ddd'></th>";
+  for(var m=0;m<12;m++){
+    var diasMes=new Date(year,m+1,0).getDate();
+    for(var d=1;d<=diasMes;d++){
+      var fs=year+"-"+p2(m+1)+"-"+p2(d);
+      var dow=new Date(fs+"T12:00:00").getDay();
+      var esFin=(dow===0||dow===6);
+      var esFest=!!fest[fs];
+      var bg=esFest?"#f0f0f0":esFin?"#fafafa":"white";
+      var col=esFest?"#bbb":esFin?"#ccc":"#bbb";
+      trDias.innerHTML+="<th style='background:"+bg+";color:"+col+";padding:2px 1px;"+(d===1?"border-left:2px solid #ddd":"")+"'>"+d+"</th>";
+    }
+  }
+  tabla.appendChild(trDias);
+
+  // Filas de trabajadores
+  conRegs.forEach(function(v){
+    var tr=document.createElement("tr");
+    var color=colorMap[v.alias];
+    var html="<td class='col-alias' style='color:"+color+"'>"+
+      "<div style='display:flex;align-items:center;gap:6px'>"+
+      "<div style='width:10px;height:10px;border-radius:2px;background:"+color+";flex-shrink:0'></div>"+
+      v.alias+"</div></td>";
+
+    for(var m=0;m<12;m++){
+      var diasMes=new Date(year,m+1,0).getDate();
+      for(var d=1;d<=diasMes;d++){
+        var fs=year+"-"+p2(m+1)+"-"+p2(d);
+        var dow=new Date(fs+"T12:00:00").getDay();
+        var esFin=(dow===0||dow===6);
+        var esFest=!!fest[fs];
+        var tipo=diasMap[fs]&&diasMap[fs][v.alias]?diasMap[fs][v.alias]:null;
+
+        // Calcular cuántos trabajadores coinciden en este día
+        var coinc=diasMap[fs]?Object.keys(diasMap[fs]):[]; // aliases con registro
+
+        var bgCell;
+        if(esFest){
+          bgCell="#f0f0f0";
+        } else if(esFin){
+          bgCell="#fafafa";
+        } else if(tipo==="vacacion"){
+          bgCell=color;
+        } else if(tipo==="baja"){
+          bgCell=color; // color del trabajador con patrón rayado
+        } else {
+          bgCell="white";
+        }
+
+        // Tooltip con todos los que coinciden ese día
+        var title="";
+        if(coinc.length){
+          title=coinc.map(function(a){return a+(diasMap[fs][a]==="baja"?" (baja)":"");}).join(", ");
+        }
+        if(esFest) title=(title?title+" | ":"")+fest[fs];
+
+        var esHoy=(fs===hoy);
+        var bordL=d===1?"border-left:2px solid #ddd;":"";
+        var bordH=esHoy?"outline:2px solid #c4571a;outline-offset:-2px;":"";
+        var rayado=tipo==="baja"?"background-image:repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(0,0,0,.2) 3px,rgba(0,0,0,.2) 4px);":"";
+
+        html+="<td style='background:"+bgCell+";"+rayado+bordL+"height:26px;"+bordH+"'"+(title?" title='"+title+"'":"")+"></td>";
+      }
+    }
+    tr.innerHTML=html;
+    tabla.appendChild(tr);
+  });
+
+  // Fila de solapamientos (abajo del todo)
+  var trSol=document.createElement("tr");
+  trSol.innerHTML="<td class='col-alias' style='font-size:10px;color:#888;font-style:italic'>Coincidencias</td>";
+  for(var m=0;m<12;m++){
+    var diasMes=new Date(year,m+1,0).getDate();
+    for(var d=1;d<=diasMes;d++){
+      var fs=year+"-"+p2(m+1)+"-"+p2(d);
+      var coinc=diasMap[fs]?Object.keys(diasMap[fs]).filter(function(a){return diasMap[fs][a]==="vacacion";}):[]; 
+      var bordL=d===1?"border-left:2px solid #ddd;":"";
+      if(coinc.length>=2){
+        // Mostrar número de solapamientos con fondo degradado
+        var grad="linear-gradient(to bottom";
+        coinc.slice(0,4).forEach(function(a){ grad+=","+colorMap[a]; });
+        grad+=")";
+        trSol.innerHTML+="<td style='background:"+grad+";"+bordL+"height:10px;' title='"+coinc.join(", ")+"'></td>";
+      } else if(coinc.length===1){
+        trSol.innerHTML+="<td style='background:"+colorMap[coinc[0]]+";"+bordL+"height:10px;'></td>";
+      } else {
+        var dow=new Date(fs+"T12:00:00").getDay();
+        var bg=(dow===0||dow===6)?"#fafafa":fest[fs]?"#f0f0f0":"white";
+        trSol.innerHTML+="<td style='background:"+bg+";"+bordL+"height:10px;'></td>";
+      }
+    }
+  }
+  tabla.appendChild(trSol);
+
+  document.getElementById("calGenOverlay").classList.add("open");
+}
+
+function cerrarCalendarioGeneral(){
+  document.getElementById("calGenOverlay").classList.remove("open");
+}
+document.getElementById("calGenOverlay").addEventListener("click",function(e){
+  if(e.target===this) cerrarCalendarioGeneral();
+});
 </script>
 </body>
 </html>
