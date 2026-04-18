@@ -840,7 +840,7 @@ function abrirCalendarioGeneral(){
       var bg=esFin?"#f5f5f5":"white";
       // Letra encima: L=lunes, M=miércoles, S=sábado
       var letra=(dow===1?"L":dow===3?"M":dow===6?"S":"");
-      var letraColor=dow===6?"#c4571a":dow===1||dow===3?"#555":"transparent";
+      var letraColor=dow===6?"#999":dow===1||dow===3?"#555":"transparent";
       var numColor=esFest?"#c4571a":esFin?"#bbb":"#aaa";
       var numWeight=esFest?"800":"600";
       // Celda con letra en gris pequeño encima y número abajo
@@ -874,17 +874,15 @@ function abrirCalendarioGeneral(){
         var coinc=diasMap[fs]?Object.keys(diasMap[fs]):[]; // aliases con vacaciones
 
         var bgCell;
-        // VACACIONES tienen prioridad sobre festivos y fines de semana
+        // VACACIONES tienen prioridad sobre todo
         if(tipo==="vacacion"){
           bgCell=color;
-        } else if(esFest && esFin){
-          bgCell="#f5f5f5";
-        } else if(esFest){
-          bgCell="#fef6f0"; // festivo laborable sin vacaciones — tono muy suave
         } else if(esFin){
-          bgCell="#f5f5f5";
+          bgCell="#f7f7f7";
+        } else if(esFest){
+          bgCell="#fff8f4";
         } else {
-          bgCell="white";
+          bgCell="#fafafa";
         }
 
         // Borde adicional si es festivo pero tiene vacaciones (indicar con borde interior)
