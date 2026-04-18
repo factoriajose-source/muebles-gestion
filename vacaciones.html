@@ -74,7 +74,7 @@ header { background: #1a1714; color: white; padding: 0 24px; height: 54px; displ
 /* CALENDARIO GENERAL */
 .cal-gen-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:300; display:none; align-items:flex-start; justify-content:center; overflow-y:auto; padding:20px; }
 .cal-gen-overlay.open { display:flex; }
-.cal-gen-modal { background:white; border-radius:14px; width:100%; max-width:1200px; margin:auto; overflow:hidden; }
+.cal-gen-modal { background:white; border-radius:14px; width:100%; max-width:1400px; margin:auto; overflow:hidden; }
 .cal-gen-header { background:#1a1714; color:white; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; }
 .cal-gen-header h3 { font-size:16px; font-weight:800; }
 .cal-gen-body { padding:20px; overflow-x:auto; }
@@ -84,10 +84,10 @@ header { background: #1a1714; color: white; padding: 0 24px; height: 54px; displ
 .ley-gen-dot { width:16px; height:16px; border-radius:3px; flex-shrink:0; }
 /* Tabla general */
 .tabla-gen { border-collapse:collapse; min-width:900px; width:100%; }
-.tabla-gen th { font-size:9px; text-transform:uppercase; letter-spacing:.05em; padding:4px 3px; text-align:center; color:#888; font-weight:700; border-bottom:2px solid #eee; white-space:nowrap; }
-.tabla-gen td { padding:0; border:1px solid #f4f1ec; height:28px; min-width:22px; }
-.tabla-gen .col-alias { font-size:12px; font-weight:700; padding:4px 10px; white-space:nowrap; text-align:left; border-right:2px solid #ddd; position:sticky; left:0; background:white; z-index:1; }
-.tabla-gen .col-mes { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; padding:4px 8px; text-align:center; border-right:2px solid #ddd; color:#1a1714; }
+.tabla-gen th { font-size:9px; text-transform:uppercase; letter-spacing:.05em; padding:6px 3px; text-align:center; color:#888; font-weight:700; border-bottom:2px solid #eee; white-space:nowrap; }
+.tabla-gen td { padding:0; border:1px solid #f4f1ec; height:52px; min-width:24px; }
+.tabla-gen .col-alias { font-size:13px; font-weight:700; padding:6px 12px; white-space:nowrap; text-align:left; border-right:2px solid #ddd; position:sticky; left:0; background:white; z-index:1; min-width:120px; }
+.tabla-gen .col-mes { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; padding:6px 8px; text-align:center; border-right:2px solid #ddd; color:#1a1714; }
 .cel-dia { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; cursor:default; }
 .cel-vac  { } /* color por trabajador */
 .cel-baja { background: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,.15) 3px, rgba(0,0,0,.15) 4px); }
@@ -277,10 +277,9 @@ header { background: #1a1714; color: white; padding: 0 24px; height: 54px; displ
         <table class="tabla-gen" id="calGenTabla"></table>
       </div>
       <div style="margin-top:12px;font-size:11px;color:#888;display:flex;gap:16px;flex-wrap:wrap">
-        <span>⬛ Color sólido = Vacaciones</span>
-        <span>▨ Rayado = Baja laboral</span>
-        <span>Gris = Festivo</span>
-        <span>💡 Pasa el ratón sobre un día para ver quién está</span>
+        <span>⬛ Color sólido = Vacaciones del trabajador</span>
+        <span>Gris claro = Festivo Asturias/Siero</span>
+        <span>💡 Pasa el ratón sobre un día para ver quién coincide</span>
       </div>
     </div>
   </div>
@@ -790,8 +789,8 @@ function abrirCalendarioGeneral(){
   conRegs.forEach(function(v,i){ colorMap[v.alias]=COLORES[i%COLORES.length]; });
 
   // Calcular días marcados por alias
-  var diasMap={}; // diasMap[fecha][alias] = tipo ('vacacion'|'baja')
-  registros.filter(function(r){return parseInt(r.año)===year;}).forEach(function(r){
+  var diasMap={}; // diasMap[fecha][alias] = 'vacacion' (solo vacaciones, sin bajas)
+  registros.filter(function(r){return parseInt(r.año)===year&&r.tipo==="vacacion";}).forEach(function(r){
     if(!colorMap[r.alias]) return; // ignorar si no está en la lista
     diasRango(r.fechaIni,r.fechaFin).forEach(function(d){
       if(!diasMap[d]) diasMap[d]={};
@@ -864,7 +863,7 @@ function abrirCalendarioGeneral(){
         var tipo=diasMap[fs]&&diasMap[fs][v.alias]?diasMap[fs][v.alias]:null;
 
         // Calcular cuántos trabajadores coinciden en este día
-        var coinc=diasMap[fs]?Object.keys(diasMap[fs]):[]; // aliases con registro
+        var coinc=diasMap[fs]?Object.keys(diasMap[fs]):[]; // aliases con vacaciones
 
         var bgCell;
         if(esFest){
@@ -873,8 +872,6 @@ function abrirCalendarioGeneral(){
           bgCell="#fafafa";
         } else if(tipo==="vacacion"){
           bgCell=color;
-        } else if(tipo==="baja"){
-          bgCell=color; // color del trabajador con patrón rayado
         } else {
           bgCell="white";
         }
@@ -882,16 +879,15 @@ function abrirCalendarioGeneral(){
         // Tooltip con todos los que coinciden ese día
         var title="";
         if(coinc.length){
-          title=coinc.map(function(a){return a+(diasMap[fs][a]==="baja"?" (baja)":"");}).join(", ");
+          title=coinc.join(", ");
         }
         if(esFest) title=(title?title+" | ":"")+fest[fs];
 
         var esHoy=(fs===hoy);
         var bordL=d===1?"border-left:2px solid #ddd;":"";
         var bordH=esHoy?"outline:2px solid #c4571a;outline-offset:-2px;":"";
-        var rayado=tipo==="baja"?"background-image:repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(0,0,0,.2) 3px,rgba(0,0,0,.2) 4px);":"";
 
-        html+="<td style='background:"+bgCell+";"+rayado+bordL+"height:26px;"+bordH+"'"+(title?" title='"+title+"'":"")+"></td>";
+        html+="<td style='background:"+bgCell+";"+bordL+"height:52px;"+bordH+"'"+(title?" title='"+title+"'":"")+"></td>";
       }
     }
     tr.innerHTML=html;
