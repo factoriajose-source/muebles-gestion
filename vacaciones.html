@@ -837,11 +837,11 @@ function abrirCalendarioGeneral(){
       var dow=new Date(fs+"T12:00:00").getDay();
       var esFin=(dow===0||dow===6);
       var esFest=!!fest[fs];
-      var bg=esFin?"#fafafa":esFest?"#f0ece8":"white";
+      var bg=esFin?"#f5f5f5":"white";
       // Letra encima: L=lunes, M=miércoles, S=sábado
       var letra=(dow===1?"L":dow===3?"M":dow===6?"S":"");
       var letraColor=dow===6?"#c4571a":dow===1||dow===3?"#555":"transparent";
-      var numColor=esFest?"#c4571a":esFin?"#ccc":"#aaa";
+      var numColor=esFest?"#c4571a":esFin?"#bbb":"#aaa";
       var numWeight=esFest?"800":"600";
       // Celda con letra en gris pequeño encima y número abajo
       var inner=
@@ -877,12 +877,10 @@ function abrirCalendarioGeneral(){
         // VACACIONES tienen prioridad sobre festivos y fines de semana
         if(tipo==="vacacion"){
           bgCell=color;
-        } else if(esFest){
-          bgCell="#f0ece8"; // festivo sin vacaciones
         } else if(esFin){
-          bgCell="#fafafa";
+          bgCell="#f5f5f5";
         } else {
-          bgCell="white";
+          bgCell="white"; // festivos sin vacaciones = fondo blanco normal
         }
 
         // Borde adicional si es festivo pero tiene vacaciones (indicar con borde interior)
