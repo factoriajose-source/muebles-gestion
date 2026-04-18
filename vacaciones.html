@@ -85,7 +85,7 @@ header { background: #1a1714; color: white; padding: 0 24px; height: 54px; displ
 /* Tabla general */
 .tabla-gen { border-collapse:collapse; min-width:900px; width:100%; }
 .tabla-gen th { font-size:9px; text-transform:uppercase; letter-spacing:.05em; padding:6px 3px; text-align:center; color:#888; font-weight:700; border-bottom:2px solid #eee; white-space:nowrap; }
-.tabla-gen td { padding:0; border:1px solid #f4f1ec; height:52px; min-width:24px; }
+.tabla-gen td { padding:0; border:1px solid transparent; height:52px; min-width:24px; }
 .tabla-gen .col-alias { font-size:13px; font-weight:700; padding:6px 12px; white-space:nowrap; text-align:left; border-right:2px solid #ddd; position:sticky; left:0; background:white; z-index:1; min-width:120px; }
 .tabla-gen .col-mes { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; padding:6px 8px; text-align:center; border-right:2px solid #ddd; color:#1a1714; }
 .cel-dia { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; cursor:default; }
@@ -877,10 +877,14 @@ function abrirCalendarioGeneral(){
         // VACACIONES tienen prioridad sobre festivos y fines de semana
         if(tipo==="vacacion"){
           bgCell=color;
+        } else if(esFest && esFin){
+          bgCell="#f5f5f5";
+        } else if(esFest){
+          bgCell="#fef6f0"; // festivo laborable sin vacaciones — tono muy suave
         } else if(esFin){
           bgCell="#f5f5f5";
         } else {
-          bgCell="white"; // festivos sin vacaciones = fondo blanco normal
+          bgCell="white";
         }
 
         // Borde adicional si es festivo pero tiene vacaciones (indicar con borde interior)
