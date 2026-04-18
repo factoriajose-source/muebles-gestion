@@ -778,148 +778,148 @@ function abrirCalendarioGeneral(){
     .filter(function(v){return v.alias!=="Jose Angel"&&v.activo!==false;})
     .sort(function(a,b){return a.alias.localeCompare(b.alias,"es");});
 
-  // Solo los que tienen registros en el año
   var conRegs=todos.filter(function(v){
     return registros.some(function(r){return r.alias===v.alias&&parseInt(r.año)===year;});
   });
-  if(!conRegs.length) conRegs=todos; // si no hay ninguno, mostrar todos
+  if(!conRegs.length) conRegs=todos;
 
-  // Asignar color a cada trabajador
   var colorMap={};
   conRegs.forEach(function(v,i){ colorMap[v.alias]=COLORES[i%COLORES.length]; });
 
-  // Calcular días marcados por alias
-  var diasMap={}; // diasMap[fecha][alias] = 'vacacion' (solo vacaciones, sin bajas)
+  // Solo vacaciones (no bajas)
+  var diasMap={};
   registros.filter(function(r){return parseInt(r.año)===year&&r.tipo==="vacacion";}).forEach(function(r){
-    if(!colorMap[r.alias]) return; // ignorar si no está en la lista
+    if(!colorMap[r.alias]) return;
     diasRango(r.fechaIni,r.fechaFin).forEach(function(d){
       if(!diasMap[d]) diasMap[d]={};
-      diasMap[d][r.alias]=r.tipo;
+      diasMap[d][r.alias]=true;
     });
   });
 
   var fest=festivos(year);
   var hoy=fStr(new Date());
   var MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  var FONDO="#f0f0f0"; // fondo único para todos los días sin vacaciones
 
   // Leyenda
   var leyDiv=document.getElementById("calGenLeyenda");
   leyDiv.innerHTML="";
   conRegs.forEach(function(v){
-    var d=document.createElement("div");
-    d.className="ley-gen";
-    d.innerHTML="<div class='ley-gen-dot' style='background:"+colorMap[v.alias]+"'></div>"+v.alias;
-    leyDiv.appendChild(d);
+    var el=document.createElement("div");
+    el.className="ley-gen";
+    el.innerHTML="<div class='ley-gen-dot' style='background:"+colorMap[v.alias]+"'></div>"+v.alias;
+    leyDiv.appendChild(el);
   });
 
-  // Construir tabla: filas = trabajadores, columnas = días del año
-  // Formato: Mes | D1 D2 D3... | Mes | D1 D2...
   var tabla=document.getElementById("calGenTabla");
   tabla.innerHTML="";
+  tabla.style.borderCollapse="collapse";
 
-  // Cabecera: meses y días
-  // Fila 1: nombre meses
+  // ── FILA 1: nombres de meses ──
   var trMes=document.createElement("tr");
-  trMes.innerHTML="<th class='col-alias' style='border-bottom:2px solid #ddd'>Trabajador</th>";
+  var thAlias=document.createElement("th");
+  thAlias.className="col-alias";
+  thAlias.style.background="white";
+  thAlias.textContent="";
+  trMes.appendChild(thAlias);
   for(var m=0;m<12;m++){
-    var diasMes=new Date(year,m+1,0).getDate();
-    trMes.innerHTML+="<th colspan='"+diasMes+"' class='col-mes' style='background:#f4f1ec;border-left:2px solid #ddd'>"+MESES[m]+"</th>";
+    var dm=new Date(year,m+1,0).getDate();
+    var th=document.createElement("th");
+    th.colSpan=dm;
+    th.textContent=MESES[m];
+    th.style.cssText="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;padding:6px 4px;text-align:center;background:#1a1714;color:white;border-left:3px solid white;";
+    trMes.appendChild(th);
   }
   tabla.appendChild(trMes);
 
-  // Fila 2: letra + número combinados en una celda (letra encima, número debajo)
+  // ── FILA 2: letras + números ──
   var trDias=document.createElement("tr");
-  trDias.innerHTML="<th class='col-alias' style='font-size:9px;color:#ccc;border-right:2px solid #ddd'></th>";
+  var thEmp=document.createElement("th");
+  thEmp.className="col-alias";
+  thEmp.style.cssText="background:white;border-right:2px solid #ddd";
+  trDias.appendChild(thEmp);
+
   for(var m=0;m<12;m++){
-    var diasMes=new Date(year,m+1,0).getDate();
-    for(var d=1;d<=diasMes;d++){
+    var dm=new Date(year,m+1,0).getDate();
+    for(var d=1;d<=dm;d++){
       var fs=year+"-"+p2(m+1)+"-"+p2(d);
       var dow=new Date(fs+"T12:00:00").getDay();
       var esFin=(dow===0||dow===6);
       var esFest=!!fest[fs];
-      var bg="#f8f8f8";
-      // Letra encima: L=lunes, M=miércoles, S=sábado
       var letra=(dow===1?"L":dow===3?"M":dow===6?"S":"");
-      var letraColor=dow===6?"#999":dow===1||dow===3?"#555":"transparent";
-      var numColor=esFest?"#c4571a":esFin?"#bbb":"#aaa";
-      var numWeight=esFest?"800":"600";
-      // Celda con letra en gris pequeño encima y número abajo
-      var inner=
-        "<div style='font-size:7px;font-weight:800;color:"+letraColor+";line-height:1;text-align:center;height:9px'>"+letra+"</div>"+
-        "<div style='font-size:9px;font-weight:"+numWeight+";color:"+numColor+";line-height:1;text-align:center'>"+d+"</div>";
-      trDias.innerHTML+="<th style='background:"+bg+";padding:2px 1px 3px 1px;vertical-align:bottom;"+(d===1?"border-left:2px solid #ddd":"")+"'>"+inner+"</th>";
+      var letraCol=letra?"#888":"transparent";
+      var numCol=esFest?"#c4571a":esFin?"#bbb":"#999";
+      var th=document.createElement("th");
+      th.innerHTML=
+        "<div style='font-size:7px;color:"+letraCol+";font-weight:800;line-height:1;height:8px;text-align:center'>"+letra+"</div>"+
+        "<div style='font-size:9px;color:"+numCol+";font-weight:"+(esFest?"900":"600")+";text-align:center'>"+d+"</div>";
+      th.style.cssText="background:white;padding:2px 0 3px 0;min-width:24px;"+(d===1?"border-left:3px solid #ddd;":"");
+      trDias.appendChild(th);
     }
   }
   tabla.appendChild(trDias);
 
-  // Filas de trabajadores
+  // ── FILAS DE TRABAJADORES ──
   conRegs.forEach(function(v){
-    var tr=document.createElement("tr");
     var color=colorMap[v.alias];
-    var html="<td class='col-alias' style='color:"+color+"'>"+
-      "<div style='display:flex;align-items:center;gap:6px'>"+
-      "<div style='width:10px;height:10px;border-radius:2px;background:"+color+";flex-shrink:0'></div>"+
-      v.alias+"</div></td>";
+    var tr=document.createElement("tr");
+
+    // Celda nombre
+    var tdNom=document.createElement("td");
+    tdNom.className="col-alias";
+    tdNom.style.cssText="color:"+color+";border-right:2px solid #ddd;background:white";
+    tdNom.innerHTML="<div style='display:flex;align-items:center;gap:6px'><div style='width:10px;height:10px;border-radius:2px;background:"+color+";flex-shrink:0'></div>"+v.alias+"</div>";
+    tr.appendChild(tdNom);
 
     for(var m=0;m<12;m++){
-      var diasMes=new Date(year,m+1,0).getDate();
-      for(var d=1;d<=diasMes;d++){
+      var dm=new Date(year,m+1,0).getDate();
+      for(var d=1;d<=dm;d++){
         var fs=year+"-"+p2(m+1)+"-"+p2(d);
-        var dow=new Date(fs+"T12:00:00").getDay();
-        var esFin=(dow===0||dow===6);
-        var esFest=!!fest[fs];
-        var tipo=diasMap[fs]&&diasMap[fs][v.alias]?diasMap[fs][v.alias]:null;
-
-        // Calcular cuántos trabajadores coinciden en este día
-        var coinc=diasMap[fs]?Object.keys(diasMap[fs]):[]; // aliases con vacaciones
-
-        var bgCell;
-        if(tipo==="vacacion"){
-          bgCell=color;
-        } else {
-          bgCell="#f8f8f8"; // todos los días sin vacaciones igual
-        }
-
-        // Borde adicional si es festivo pero tiene vacaciones (indicar con borde interior)
-        var festBorde="";
-
-        // Tooltip con todos los que coinciden ese día
-        var title="";
-        if(coinc.length) title=coinc.join(", ");
-        if(esFest) title=(title?title+" | ":"")+fest[fs];
-
+        var tieneVac=!!(diasMap[fs]&&diasMap[fs][v.alias]);
+        var coinc=diasMap[fs]?Object.keys(diasMap[fs]).join(", "):"";
         var esHoy=(fs===hoy);
-        var bordL=d===1?"border-left:1px solid #ddd;":"";
-        var bordH=esHoy?"outline:2px solid #c4571a;outline-offset:-2px;":"";
-
-        html+="<td style='background:"+bgCell+";"+festBorde+bordL+"height:52px;"+bordH+"'"+(title?" title='"+title+"'":"")+"></td>";
+        var td=document.createElement("td");
+        td.style.cssText=
+          "background:"+(tieneVac?color:FONDO)+";"+ // mismo fondo para todos los días sin vac
+          "height:52px;"+
+          (d===1?"border-left:3px solid #ddd;":"")+
+          (esHoy?"outline:2px solid #c4571a;outline-offset:-2px;":"");
+        if(coinc||fest[fs]){
+          td.title=(coinc?coinc:"")+( fest[fs]?(coinc?" | ":"")+fest[fs]:"");
+        }
+        tr.appendChild(td);
       }
     }
-    tr.innerHTML=html;
     tabla.appendChild(tr);
   });
 
-  // Fila de solapamientos (abajo del todo)
+  // ── FILA COINCIDENCIAS ──
   var trSol=document.createElement("tr");
-  trSol.innerHTML="<td class='col-alias' style='font-size:10px;color:#888;font-style:italic'>Coincidencias</td>";
+  var tdSolNom=document.createElement("td");
+  tdSolNom.className="col-alias";
+  tdSolNom.style.cssText="font-size:10px;color:#888;font-style:italic;border-right:2px solid #ddd;background:white";
+  tdSolNom.textContent="Coincidencias";
+  trSol.appendChild(tdSolNom);
+
   for(var m=0;m<12;m++){
-    var diasMes=new Date(year,m+1,0).getDate();
-    for(var d=1;d<=diasMes;d++){
+    var dm=new Date(year,m+1,0).getDate();
+    for(var d=1;d<=dm;d++){
       var fs=year+"-"+p2(m+1)+"-"+p2(d);
-      var coinc=diasMap[fs]?Object.keys(diasMap[fs]).filter(function(a){return diasMap[fs][a]==="vacacion";}):[]; 
-      var bordL=d===1?"border-left:2px solid #ddd;":"";
+      var coinc=diasMap[fs]?Object.keys(diasMap[fs]):[];
+      var td=document.createElement("td");
+      var bg=FONDO;
       if(coinc.length>=2){
-        // Mostrar número de solapamientos con fondo degradado
         var grad="linear-gradient(to bottom";
-        coinc.slice(0,4).forEach(function(a){ grad+=","+colorMap[a]; });
+        coinc.slice(0,4).forEach(function(a){grad+=","+colorMap[a];});
         grad+=")";
-        trSol.innerHTML+="<td style='background:"+grad+";"+bordL+"height:10px;' title='"+coinc.join(", ")+"'></td>";
+        bg=grad;
+        td.title=coinc.join(", ");
       } else if(coinc.length===1){
-        trSol.innerHTML+="<td style='background:"+colorMap[coinc[0]]+";"+bordL+"height:10px;'></td>";
-      } else {
-        var bg="#f8f8f8";
-        trSol.innerHTML+="<td style='background:"+bg+";"+bordL+"height:10px;'></td>";
+        bg=colorMap[coinc[0]]||FONDO;
+        td.title=coinc[0];
       }
+      td.style.cssText="background:"+bg+";height:14px;"+(d===1?"border-left:3px solid #ddd;":"");
+      trSol.appendChild(td);
     }
   }
   tabla.appendChild(trSol);
