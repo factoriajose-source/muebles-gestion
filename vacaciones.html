@@ -827,28 +827,7 @@ function abrirCalendarioGeneral(){
   }
   tabla.appendChild(trMes);
 
-  // Fila 2: letras día semana (L M X J V S D) encima del número
-  var trLetras=document.createElement("tr");
-  trLetras.innerHTML="<th class='col-alias' style='font-size:9px;color:#ccc;border-right:2px solid #ddd;padding:1px'></th>";
-  for(var m=0;m<12;m++){
-    var diasMes=new Date(year,m+1,0).getDate();
-    for(var d=1;d<=diasMes;d++){
-      var fs=year+"-"+p2(m+1)+"-"+p2(d);
-      var dow=new Date(fs+"T12:00:00").getDay();
-      var LETRAS=["D","L","M","X","J","V","S"];
-      var letra=LETRAS[dow];
-      // Solo mostrar L, M (miércoles=X pero pediste M), S
-      var mostrar=(dow===1?"L":dow===3?"M":dow===6?"S":"");
-      var esFin=(dow===0||dow===6);
-      var esFest=!!fest[fs];
-      var bg=esFin?"#fafafa":esFest?"#f0ece8":"white";
-      var col=mostrar?(dow===6?"#c4571a":"#1a1714"):"transparent";
-      trLetras.innerHTML+="<th style='background:"+bg+";color:"+col+";font-size:8px;font-weight:800;padding:1px 0;text-align:center;"+(d===1?"border-left:2px solid #ddd":"")+"'>"+mostrar+"</th>";
-    }
-  }
-  tabla.appendChild(trLetras);
-
-  // Fila 3: números de días
+  // Fila 2: letra + número combinados en una celda (letra encima, número debajo)
   var trDias=document.createElement("tr");
   trDias.innerHTML="<th class='col-alias' style='font-size:9px;color:#ccc;border-right:2px solid #ddd'></th>";
   for(var m=0;m<12;m++){
@@ -859,8 +838,16 @@ function abrirCalendarioGeneral(){
       var esFin=(dow===0||dow===6);
       var esFest=!!fest[fs];
       var bg=esFin?"#fafafa":esFest?"#f0ece8":"white";
-      var col=esFest?"#c4571a":esFin?"#ccc":"#bbb";
-      trDias.innerHTML+="<th style='background:"+bg+";color:"+col+";padding:2px 1px;font-weight:"+(esFest?"800":"700")+";"+(d===1?"border-left:2px solid #ddd":"")+">"+d+"</th>";
+      // Letra encima: L=lunes, M=miércoles, S=sábado
+      var letra=(dow===1?"L":dow===3?"M":dow===6?"S":"");
+      var letraColor=dow===6?"#c4571a":dow===1||dow===3?"#555":"transparent";
+      var numColor=esFest?"#c4571a":esFin?"#ccc":"#aaa";
+      var numWeight=esFest?"800":"600";
+      // Celda con letra en gris pequeño encima y número abajo
+      var inner=
+        "<div style='font-size:7px;font-weight:800;color:"+letraColor+";line-height:1;text-align:center;height:9px'>"+letra+"</div>"+
+        "<div style='font-size:9px;font-weight:"+numWeight+";color:"+numColor+";line-height:1;text-align:center'>"+d+"</div>";
+      trDias.innerHTML+="<th style='background:"+bg+";padding:2px 1px 3px 1px;vertical-align:bottom;"+(d===1?"border-left:2px solid #ddd":"")+"'>"+inner+"</th>";
     }
   }
   tabla.appendChild(trDias);
