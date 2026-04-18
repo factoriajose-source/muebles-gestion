@@ -855,8 +855,8 @@ function abrirCalendarioGeneral(){
       var dow=new Date(fs+"T12:00:00").getDay();
       var esFin=(dow===0||dow===6);
       var esFest=!!(festivos(ml.y)[fs]);
-      var letra=(dow===1?"L":dow===3?"M":dow===6?"S":"");
-      var letraCol=letra?"#bbb":"transparent";
+      var letra=(dow===0?"D":dow===1?"L":dow===3?"M":dow===4?"J":dow===5?"V":dow===6?"S":"");
+      var letraCol=dow===0?"#c0392b":letra?"#bbb":"transparent";
       var numCol=esFest?"#c4571a":"#ccc";
       var th=document.createElement("th");
       th.innerHTML=
