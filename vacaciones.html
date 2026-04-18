@@ -786,9 +786,11 @@ function abrirCalendarioGeneral(){
   var colorMap={};
   conRegs.forEach(function(v,i){ colorMap[v.alias]=COLORES[i%COLORES.length]; });
 
-  // Solo vacaciones (no bajas)
+  // Solo vacaciones (no bajas) — incluir año y año+1 para cubrir enero siguiente
   var diasMap={};
-  registros.filter(function(r){return parseInt(r.año)===year&&r.tipo==="vacacion";}).forEach(function(r){
+  registros.filter(function(r){
+    return (parseInt(r.año)===year||parseInt(r.año)===year+1)&&r.tipo==="vacacion";
+  }).forEach(function(r){
     if(!colorMap[r.alias]) return;
     diasRango(r.fechaIni,r.fechaFin).forEach(function(d){
       if(!diasMap[d]) diasMap[d]={};
@@ -799,7 +801,14 @@ function abrirCalendarioGeneral(){
   var fest=festivos(year);
   var hoy=fStr(new Date());
   var MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-  var FONDO="#f0f0f0"; // fondo único para todos los días sin vacaciones
+  var FONDO="#f0f0f0";
+  // Generar lista de 13 meses: enero año hasta enero año+1
+  var mesesLista=[];
+  for(var i=0;i<13;i++){
+    var y=year+(i>=12?1:0);
+    var m=i%12;
+    mesesLista.push({y:y,m:m,nombre:MESES[m]});
+  }
 
   // Leyenda
   var leyDiv=document.getElementById("calGenLeyenda");
@@ -822,14 +831,14 @@ function abrirCalendarioGeneral(){
   thAlias.style.background="white";
   thAlias.textContent="";
   trMes.appendChild(thAlias);
-  for(var m=0;m<12;m++){
-    var dm=new Date(year,m+1,0).getDate();
+  mesesLista.forEach(function(ml){
+    var dm=new Date(ml.y,ml.m+1,0).getDate();
     var th=document.createElement("th");
     th.colSpan=dm;
-    th.textContent=MESES[m];
+    th.textContent=ml.nombre+(ml.m===0?" "+ml.y:"");
     th.style.cssText="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;padding:6px 4px;text-align:center;background:#1a1714;color:white;border-left:3px solid white;";
     trMes.appendChild(th);
-  }
+  });
   tabla.appendChild(trMes);
 
   // ── FILA 2: letras + números ──
@@ -839,13 +848,13 @@ function abrirCalendarioGeneral(){
   thEmp.style.cssText="background:white;border-right:2px solid #ddd";
   trDias.appendChild(thEmp);
 
-  for(var m=0;m<12;m++){
-    var dm=new Date(year,m+1,0).getDate();
+  mesesLista.forEach(function(ml){
+    var dm=new Date(ml.y,ml.m+1,0).getDate();
     for(var d=1;d<=dm;d++){
-      var fs=year+"-"+p2(m+1)+"-"+p2(d);
+      var fs=ml.y+"-"+p2(ml.m+1)+"-"+p2(d);
       var dow=new Date(fs+"T12:00:00").getDay();
       var esFin=(dow===0||dow===6);
-      var esFest=!!fest[fs];
+      var esFest=!!(festivos(ml.y)[fs]);
       var letra=(dow===1?"L":dow===3?"M":dow===6?"S":"");
       var letraCol=letra?"#bbb":"transparent";
       var numCol=esFest?"#c4571a":"#ccc";
@@ -856,7 +865,7 @@ function abrirCalendarioGeneral(){
       th.style.cssText="background:white;padding:2px 0 3px 0;min-width:24px;"+(d===1?"border-left:3px solid #ddd;":"");
       trDias.appendChild(th);
     }
-  }
+  });
   tabla.appendChild(trDias);
 
   // ── FILAS DE TRABAJADORES ──
@@ -871,25 +880,24 @@ function abrirCalendarioGeneral(){
     tdNom.innerHTML="<div style='display:flex;align-items:center;gap:6px'><div style='width:10px;height:10px;border-radius:2px;background:"+color+";flex-shrink:0'></div>"+v.alias+"</div>";
     tr.appendChild(tdNom);
 
-    for(var m=0;m<12;m++){
-      var dm=new Date(year,m+1,0).getDate();
+    mesesLista.forEach(function(ml){
+      var dm=new Date(ml.y,ml.m+1,0).getDate();
       for(var d=1;d<=dm;d++){
-        var fs=year+"-"+p2(m+1)+"-"+p2(d);
+        var fs=ml.y+"-"+p2(ml.m+1)+"-"+p2(d);
         var tieneVac=!!(diasMap[fs]&&diasMap[fs][v.alias]);
         var coinc=diasMap[fs]?Object.keys(diasMap[fs]).join(", "):"";
-        var esHoy=(fs===hoy);
         var td=document.createElement("td");
         td.style.cssText=
           "border:none;"+
           "background:"+(tieneVac?color:FONDO)+";"+
           "height:52px;"+
           (d===1?"border-left:3px solid #ddd;":"");
-        if(coinc||fest[fs]){
-          td.title=(coinc?coinc:"")+( fest[fs]?(coinc?" | ":"")+fest[fs]:"");
+        if(coinc||festivos(ml.y)[fs]){
+          td.title=(coinc?coinc:"")+( festivos(ml.y)[fs]?(coinc?" | ":"")+festivos(ml.y)[fs]:"");
         }
         tr.appendChild(td);
       }
-    }
+    });
     tabla.appendChild(tr);
   });
 
@@ -901,10 +909,10 @@ function abrirCalendarioGeneral(){
   tdSolNom.textContent="Coincidencias";
   trSol.appendChild(tdSolNom);
 
-  for(var m=0;m<12;m++){
-    var dm=new Date(year,m+1,0).getDate();
+  mesesLista.forEach(function(ml){
+    var dm=new Date(ml.y,ml.m+1,0).getDate();
     for(var d=1;d<=dm;d++){
-      var fs=year+"-"+p2(m+1)+"-"+p2(d);
+      var fs=ml.y+"-"+p2(ml.m+1)+"-"+p2(d);
       var coinc=diasMap[fs]?Object.keys(diasMap[fs]):[];
       var td=document.createElement("td");
       var bg=FONDO;
@@ -921,7 +929,7 @@ function abrirCalendarioGeneral(){
       td.style.cssText="border:none;background:"+bg+";height:14px;"+(d===1?"border-left:3px solid #ddd;":"");
       trSol.appendChild(td);
     }
-  }
+  });
   tabla.appendChild(trSol);
 
   document.getElementById("calGenOverlay").classList.add("open");
