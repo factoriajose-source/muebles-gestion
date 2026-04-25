@@ -2621,34 +2621,32 @@ async function registrarFichaje(turno, hora, firmaData, v) {
 }
 
 // ===== IMPRESION FICHAS =====
-// Lee vacaciones_bajas via REST (evita problemas con SDK en colecciones pequeñas)
+// Lee vacaciones_bajas via REST directamente con API key
 async function getVacacionesBajasREST() {
   try {
-    const token = await auth.currentUser.getIdToken();
     const PROJECT = "muebles-presupuestos";
+    const API_KEY = "AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c";
     const BASE = "https://firestore.googleapis.com/v1/projects/"+PROJECT+"/databases/(default)/documents";
     let docs = [], pageToken = null;
     do {
-      let url = BASE + "/vacaciones_bajas?pageSize=200" + (pageToken ? "&pageToken="+pageToken : "");
-      const res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+      let url = BASE + "/vacaciones_bajas?pageSize=200&key=" + API_KEY + (pageToken ? "&pageToken="+pageToken : "");
+      const res = await fetch(url);
       const data = await res.json();
       if (data.documents) {
         data.documents.forEach(d => {
           const f = d.fields || {};
-          const get = k => f[k]?.stringValue ?? f[k]?.integerValue ?? null;
+          const get = k => f[k]?.stringValue ?? (f[k]?.integerValue !== undefined ? String(f[k].integerValue) : null);
           docs.push({
             alias:    get("alias"),
             tipo:     get("tipo"),
             fechaIni: get("fechaIni"),
-            fechaFin: get("fechaFin"),
-            año:      get("año"),
-            nota:     get("nota") || ""
+            fechaFin: get("fechaFin")
           });
         });
       }
       pageToken = data.nextPageToken || null;
     } while (pageToken);
-    console.log("VAC REST: leídos", docs.length, "registros de vacaciones_bajas");
+    console.log("VAC REST: leídos", docs.length, "registros");
     return docs;
   } catch(e) {
     console.error("VAC REST error:", e);
