@@ -237,21 +237,30 @@ function parseDoc(doc) {
 }
 function fsGet(col) {
   var docs = [];
-  function getPage(pageToken) {
+  function getPage(pageToken, intentos) {
+    intentos = intentos || 0;
     var url = BASE + "/" + col + "?pageSize=300" + (pageToken ? "&pageToken=" + pageToken : "");
     return fetch(url, { headers: { Authorization: "Bearer " + token } })
-      .then(function(r) { return r.json(); })
+      .then(function(r) {
+        if (r.status === 429 && intentos < 3) {
+          // Esperar 2 segundos y reintentar
+          return new Promise(function(res) { setTimeout(res, 2000); })
+            .then(function() { return getPage(pageToken, intentos + 1); });
+        }
+        return r.json();
+      })
       .then(function(data) {
+        if (!data || data.error) { console.error("fsGet error:", data); return docs; }
         if (data.documents) {
           data.documents.forEach(function(d) {
             docs.push(Object.assign({ _id: d.name.split("/").pop() }, parseDoc(d)));
           });
         }
-        if (data.nextPageToken) return getPage(data.nextPageToken);
+        if (data.nextPageToken) return getPage(data.nextPageToken, 0);
         return docs;
       });
   }
-  return getPage(null);
+  return getPage(null, 0);
 }
 function fsPatch(col, id, data) {
   var fields = {};

@@ -193,18 +193,30 @@ function parseDoc(doc) {
 }
 
 function fsGet(col) {
-  var docs = []; var url = BASE_URL + "/" + col + "?pageSize=300";
-  return fetch(url, { headers: { Authorization: "Bearer " + idToken } })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.documents) {
-        data.documents.forEach(function(d) {
-          var id = d.name.split("/").pop();
-          docs.push(Object.assign({ _id: id }, parseDoc(d)));
-        });
-      }
-      return docs;
-    });
+  var docs = [];
+  function getPage(pageToken, intentos) {
+    intentos = intentos || 0;
+    var url = BASE_URL + "/" + col + "?pageSize=300" + (pageToken ? "&pageToken=" + pageToken : "");
+    return fetch(url, { headers: { Authorization: "Bearer " + idToken } })
+      .then(function(r) {
+        if (r.status === 429 && intentos < 3) {
+          return new Promise(function(res) { setTimeout(res, 2000); })
+            .then(function() { return getPage(pageToken, intentos + 1); });
+        }
+        return r.json();
+      })
+      .then(function(data) {
+        if (!data || data.error) return docs;
+        if (data.documents) {
+          data.documents.forEach(function(d) {
+            docs.push(Object.assign({ _id: d.name.split("/").pop() }, parseDoc(d)));
+          });
+        }
+        if (data.nextPageToken) return getPage(data.nextPageToken, 0);
+        return docs;
+      });
+  }
+  return getPage(null, 0);
 }
 
 function doLogin() {
