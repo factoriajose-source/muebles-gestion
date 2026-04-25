@@ -2663,14 +2663,43 @@ async function imprimirFichaRango(alias, anio, mes, tipo, fechaRef) {
     snV.forEach(d => {
       const r = d.data();
       if (r.alias !== alias) return;
+      // Iterar día a día del rango
       let cur = new Date(r.fechaIni + "T12:00:00");
       const fin = new Date(r.fechaFin + "T12:00:00");
       while (cur <= fin) {
-        const fs = cur.toISOString().slice(0,10);
-        diasVacBaja[fs] = r.tipo; // 'vacacion' o 'baja'
+        // Usar formato YYYY-MM-DD local (no UTC para evitar desfase de zona horaria)
+        const fs = cur.getFullYear() + "-"
+          + String(cur.getMonth()+1).padStart(2,"0") + "-"
+          + String(cur.getDate()).padStart(2,"0");
+        diasVacBaja[fs] = r.tipo;
         cur.setDate(cur.getDate()+1);
       }
     });
+
+    // Añadir días de vacaciones/bajas que no tienen fichaje en el rango
+    Object.keys(diasVacBaja).forEach(fs => {
+      if (registros.find(r => r.fecha === fs)) return; // ya tiene fichaje
+      // Comprobar si el día está en el rango solicitado
+      let enRango = false;
+      if (tipo === "mes" && fs.startsWith(anio + "-" + mes)) enRango = true;
+      else if (tipo === "semana") {
+        const d0 = new Date(fechaRef + "T12:00:00");
+        const start = new Date(d0);
+        const dow2 = d0.getDay();
+        start.setDate(d0.getDate() - (dow2 === 0 ? 6 : dow2 - 1));
+        start.setHours(0,0,0,0);
+        const end = new Date(start); end.setDate(start.getDate() + 6); end.setHours(23,59,59,999);
+        const dr = new Date(fs + "T12:00:00");
+        if (dr >= start && dr <= end) enRango = true;
+      }
+      if (enRango) {
+        registros.push({ alias, fecha: fs,
+          ini_m:null, fin_m:null, ini_t:null, fin_t:null,
+          firma_ini_m:null, firma_fin_m:null, firma_ini_t:null, firma_fin_t:null
+        });
+      }
+    });
+
     registros.sort((a,b) => a.fecha.localeCompare(b.fecha));
     generarPDFFicha(v||{alias}, registros, tipo, anio, mes, diasVacBaja);
   } catch(e) { showToast("Error: " + e.message); }
@@ -2690,7 +2719,7 @@ async function imprimirFichaDia(fecha) {
     snV.forEach(d => {
       const r = d.data();
       if (r.fechaIni <= fecha && r.fechaFin >= fecha) {
-        vacBajaDia[r.alias] = r.tipo;
+        if (!vacBajaDia[r.alias]) vacBajaDia[r.alias] = r.tipo;
       }
     });
     // Añadir trabajadores que tienen vac/baja ese día pero no ficharon
