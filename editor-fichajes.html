@@ -238,8 +238,8 @@ function parseDoc(doc) {
 function fsGet(col) {
   var docs = [];
   function getPage(pageToken) {
-    var url = BASE+"/"+col+"?pageSize=300"+(pageToken?"&pageToken="+pageToken:"");
-    return fetch(url, { headers: { Authorization: "Bearer "+token } })
+    var url = BASE + "/" + col + "?pageSize=300" + (pageToken ? "&pageToken=" + pageToken : "");
+    return fetch(url, { headers: { Authorization: "Bearer " + token } })
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.documents) {
@@ -330,19 +330,10 @@ function doLogin() {
     return fsGet("vendedores");
   })
   .then(function(vends) {
-    var emailLower = email.toLowerCase();
-    // Comprobar si ese email pertenece a alguien que NO es Jose Angel
-    var otroUsuario = vends.find(function(v) {
-      return (v.email||"").toLowerCase().trim() === emailLower && v.alias !== "Jose Angel";
-    });
-    if (otroUsuario) {
-      token = null;
-      err.textContent = "Acceso solo para José Ángel";
-      err.style.display = "block";
-      return;
-    }
-    // Login correcto y es Jose Angel (o email no está en ningún vendedor)
-    vendedores = vends.filter(function(v) { return v.activo !== false && v.alias; })
+    console.log("Editor login: vendedores cargados:", vends.length);
+    // Si no hay vendedores cargados, intentar de todas formas
+    vendedores = (vends.length ? vends : [])
+      .filter(function(v) { return v.activo !== false && v.alias; })
       .sort(function(a,b) { return a.alias.localeCompare(b.alias,"es"); });
     document.getElementById("loginBox").style.display = "none";
     document.getElementById("appBox").style.display   = "block";
@@ -371,12 +362,13 @@ function cargarTabla() {
   var filtroHasta = document.getElementById("filtroHasta").value;
   var info        = document.getElementById("infoTabla");
   var tbody       = document.getElementById("tblBody");
-  tbody.innerHTML = "<tr><td colspan='13' class='empty'>⏳ Cargando...</td></tr>";
+  tbody.innerHTML = "<tr><td colspan='13' class='empty'>⏳ Cargando fichajes... (puede tardar unos segundos con muchos registros)</td></tr>";
   cambios = {};
   document.getElementById("btnGuardarTodo").disabled = true;
   document.getElementById("cambiosPend").style.display = "none";
 
   fsGet("fichajes").then(function(docs) {
+    console.log("Editor: total docs cargados:", docs.length);
     filas = docs.filter(function(f) {
       if (f.alias === "Jose Angel") return false;
       if (filtroTr !== "todos" && f.alias !== filtroTr) return false;
