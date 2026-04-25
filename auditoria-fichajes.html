@@ -98,9 +98,17 @@
           <button class="btn btn-green no-print" id="btnPrint" onclick="window.print()" disabled>🖨️ Imprimir PDF</button>
           <a id="btnEditor" href="editor-fichajes.html" target="_blank" class="btn no-print" style="background:#8e44ad;color:white;text-decoration:none;display:none">✏️ Editor de Fichajes</a>
           <a id="btnFichajeManual" href="index.html" target="_blank" class="btn no-print" style="background:#1a1714;color:white;text-decoration:none;display:none">🖊️ Fichaje Manual</a>
-          <a id="btnMensajes" href="index.html" target="_blank" class="btn no-print" style="background:#fff3cd;color:#856404;border:1px solid #ffc107;text-decoration:none;display:none">📬 Mensajes</a>
         </div>
         <div id="status"></div>
+      </div>
+
+      <!-- MENSAJES — visible nada más entrar -->
+      <div class="card" id="mensajesCard">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h2 style="margin-bottom:0">📬 Mensajes y alertas del sistema</h2>
+          <button class="btn btn-gray no-print" style="padding:6px 12px;font-size:12px" onclick="cargarMensajes()">🔄 Actualizar</button>
+        </div>
+        <div id="mensajesContent"><div style="color:#888;font-size:13px">Cargando mensajes...</div></div>
       </div>
     </div>
 
@@ -224,6 +232,7 @@ function doLogin() {
     if (btnMsg) btnMsg.style.display = "inline-block";
     initFechas();
     cargarFiltro();
+    cargarMensajes();
   })
   .catch(function() {
     errEl.textContent   = "Email o contraseña incorrectos";
@@ -453,6 +462,53 @@ function setStatus(msg, tipo) {
   el.textContent = msg;
   el.className = tipo==="ok"?"s-ok":tipo==="err"?"s-err":"s-info";
   el.style.display = "block";
+}
+
+function cargarMensajes() {
+  var cont = document.getElementById("mensajesContent");
+  cont.innerHTML = "<div style='color:#888;font-size:13px'>Cargando...</div>";
+  fsGet("mensajes").then(function(msgs) {
+    msgs.sort(function(a,b){ return (b.creado||"").localeCompare(a.creado||""); });
+    if (!msgs.length) {
+      cont.innerHTML = "<div style='color:#2d7a4f;font-size:13px;padding:8px'>✅ Sin mensajes. Todo correcto.</div>";
+      return;
+    }
+    var h = "";
+    msgs.forEach(function(m) {
+      var esAlerta = m.tipo === "alerta";
+      var color = esAlerta ? "#c0392b" : "#185fa5";
+      var icon  = esAlerta ? "⚠️" : "ℹ️";
+      h += "<div style='background:#fff;border:1px solid #e0dfd8;border-radius:8px;padding:10px 14px;margin-bottom:8px;border-left:4px solid "+color+";display:flex;justify-content:space-between;align-items:flex-start;gap:10px'>"
+        + "<div style='flex:1'>"
+        + "<div style='font-size:11px;color:#888;margin-bottom:3px'>" + icon + " " + (m.fecha||"") + " " + (m.hora||"") + " · " + (m.tipo||"").toUpperCase() + "</div>"
+        + "<div style='font-size:13px;color:#222;line-height:1.5'>" + (m.texto||"") + "</div>"
+        + "</div>"
+        + "<button onclick='borrarMensaje(\"" + m._id + "\")' style='padding:3px 8px;border:1px solid #ddd;border-radius:6px;background:white;cursor:pointer;font-size:11px;white-space:nowrap;color:#c0392b'>Borrar</button>"
+        + "</div>";
+    });
+    h += "<button onclick='borrarTodosMensajes()' style='margin-top:8px;padding:7px 14px;border:1px solid #ddd;border-radius:8px;background:white;cursor:pointer;font-size:12px;color:#888'>🗑 Borrar todos</button>";
+    cont.innerHTML = h;
+  }).catch(function(e) {
+    cont.innerHTML = "<div style='color:#c0392b;font-size:13px'>Error: " + e.message + "</div>";
+  });
+}
+
+function borrarMensaje(id) {
+  fetch(BASE_URL + "/mensajes/" + id, {
+    method: "DELETE", headers: { Authorization: "Bearer " + idToken }
+  }).then(function() { cargarMensajes(); });
+}
+
+function borrarTodosMensajes() {
+  if (!confirm("¿Borrar todos los mensajes?")) return;
+  fsGet("mensajes").then(function(msgs) {
+    var proms = msgs.map(function(m) {
+      return fetch(BASE_URL + "/mensajes/" + m._id, {
+        method: "DELETE", headers: { Authorization: "Bearer " + idToken }
+      });
+    });
+    Promise.all(proms).then(function() { cargarMensajes(); });
+  });
 }
 </script>
 </body>
