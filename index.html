@@ -2694,8 +2694,12 @@ async function imprimirFichaRango(alias, anio, mes, tipo, fechaRef) {
       }
     });
     // Construir mapa de días con vacaciones/bajas para este trabajador
+    console.log("VAC imprimirFichaRango: vacDocs.length=", vacDocs.length, "alias=", alias, "anio=", anio, "mes=", mes);
     const diasVacBaja = {};
+    const vacAlias = vacDocs.filter(r => r.alias === alias);
+    alert("VAC DEBUG\nvacDocs total: " + vacDocs.length + "\npara alias '" + alias + "': " + vacAlias.length + " registros\nPrimeros alias en BD: " + vacDocs.slice(0,5).map(r=>r.alias).join(", "));
     vacDocs.filter(r => r.alias === alias).forEach(r => {
+      console.log("VAC encontrado registro:", JSON.stringify(r));
       let cur = new Date(r.fechaIni + "T12:00:00");
       const fin = new Date(r.fechaFin + "T12:00:00");
       while (cur <= fin) {
