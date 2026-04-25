@@ -215,7 +215,6 @@ canvas { border: 1.5px solid #ddd; border-radius: 8px; touch-action: none; curso
 </div>
 
 <script>
-window.onload = function() {
 // Firebase SDK compat
 firebase.initializeApp({
   apiKey: "AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
@@ -675,7 +674,6 @@ function cerrarFirma() {
 document.getElementById("firmaOverlay").addEventListener("click", function(e) {
   if (e.target === this) cerrarFirma();
 });
-}; // fin window.onload
 </script>
 </body>
 </html>
