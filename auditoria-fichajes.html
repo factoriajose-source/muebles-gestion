@@ -97,7 +97,6 @@
           <button class="btn btn-primary" id="btnAnalizar" onclick="analizar()">🔍 Analizar</button>
           <button class="btn btn-green no-print" id="btnPrint" onclick="window.print()" disabled>🖨️ Imprimir PDF</button>
           <a id="btnEditor" href="editor-fichajes.html" target="_blank" class="btn no-print" style="background:#8e44ad;color:white;text-decoration:none;display:none">✏️ Editor de Fichajes</a>
-          <a id="btnFichajeManual" href="index.html#fichaje-manual" target="_blank" class="btn no-print" style="background:#1a1714;color:white;text-decoration:none;display:none">🖊️ Fichaje Manual</a>
         </div>
         <div id="status"></div>
       </div>
@@ -238,8 +237,6 @@ function doLogin() {
     document.getElementById("appBox").style.display   = "block";
     var btnEd = document.getElementById("btnEditor");
     if (btnEd) btnEd.style.display = "inline-block";
-    var btnFM = document.getElementById("btnFichajeManual");
-    if (btnFM) btnFM.style.display = "inline-block";
     var btnMsg = document.getElementById("btnMensajes");
     if (btnMsg) btnMsg.style.display = "inline-block";
     initFechas();
