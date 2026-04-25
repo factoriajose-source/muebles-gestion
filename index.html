@@ -2660,8 +2660,10 @@ async function imprimirFichaRango(alias, anio, mes, tipo, fechaRef) {
     });
     // Construir mapa de días con vacaciones/bajas para este trabajador
     const diasVacBaja = {};
+    console.log("VAC DEBUG: total registros vac/baja:", snV.size || snV.docs?.length);
     snV.forEach(d => {
       const r = d.data();
+      console.log("VAC DEBUG registro:", r.alias, r.fechaIni, r.fechaFin, r.tipo);
       if (r.alias !== alias) return;
       // Iterar día a día del rango
       let cur = new Date(r.fechaIni + "T12:00:00");
