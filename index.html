@@ -2621,32 +2621,30 @@ async function registrarFichaje(turno, hora, firmaData, v) {
 }
 
 // ===== IMPRESION FICHAS =====
-// Lee vacaciones_bajas via REST directamente con API key
+// Lee vacaciones_bajas via REST usando el token de Firebase Auth
 async function getVacacionesBajasREST() {
   try {
+    const user = auth.currentUser;
+    if (!user) { console.log("VAC REST: sin usuario autenticado"); return []; }
+    const token = await user.getIdToken(true);
     const PROJECT = "muebles-presupuestos";
-    const API_KEY = "AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c";
     const BASE = "https://firestore.googleapis.com/v1/projects/"+PROJECT+"/databases/(default)/documents";
     let docs = [], pageToken = null;
     do {
-      let url = BASE + "/vacaciones_bajas?pageSize=200&key=" + API_KEY + (pageToken ? "&pageToken="+pageToken : "");
-      const res = await fetch(url);
+      let url = BASE + "/vacaciones_bajas?pageSize=300" + (pageToken ? "&pageToken="+pageToken : "");
+      const res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+      if (!res.ok) { console.error("VAC REST HTTP error:", res.status); return []; }
       const data = await res.json();
       if (data.documents) {
         data.documents.forEach(d => {
           const f = d.fields || {};
-          const get = k => f[k]?.stringValue ?? (f[k]?.integerValue !== undefined ? String(f[k].integerValue) : null);
-          docs.push({
-            alias:    get("alias"),
-            tipo:     get("tipo"),
-            fechaIni: get("fechaIni"),
-            fechaFin: get("fechaFin")
-          });
+          const gs = k => f[k]?.stringValue ?? null;
+          docs.push({ alias: gs("alias"), tipo: gs("tipo"), fechaIni: gs("fechaIni"), fechaFin: gs("fechaFin") });
         });
       }
       pageToken = data.nextPageToken || null;
     } while (pageToken);
-    console.log("VAC REST: leídos", docs.length, "registros");
+    console.log("VAC REST OK:", docs.length, "registros, ejemplo:", docs[0]);
     return docs;
   } catch(e) {
     console.error("VAC REST error:", e);
