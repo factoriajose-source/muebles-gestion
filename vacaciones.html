@@ -397,14 +397,19 @@ function doLogin(){
   })
   .then(function(vends){
     vendedores=vends.filter(function(v){return v.activo!==false&&v.alias;});
-    var miV=vendedores.find(function(v){return (v.email||"").toLowerCase().trim()===document.getElementById("lEmail").value.trim().toLowerCase();});
-    var alias=miV?miV.alias:"";
-    if(PERMITIDOS.indexOf((alias||"").toLowerCase())===-1){
+    // Buscar por email; si no está en ningún vendedor, es Jose Angel
+    var emailLower=document.getElementById("lEmail").value.trim().toLowerCase();
+    var miV=vendedores.find(function(v){return (v.email||"").toLowerCase().trim()===emailLower;});
+    // Si no encontramos el email en vendedores, comprobar si pertenece a otro que NO es permitido
+    var otroNoPermitido=miV && PERMITIDOS.indexOf((miV.alias||"").toLowerCase())===-1;
+    if(otroNoPermitido){
       token=null;
       err.textContent="No tienes permiso para acceder a este módulo";
       err.style.display="block";
       return;
     }
+    // Si no está en vendedores o es permitido, dejar pasar
+    var alias=miV?miV.alias:"Jose Angel";
     currentAlias=alias;
     document.getElementById("loginBox").style.display="none";
     document.getElementById("appBox").style.display="block";
