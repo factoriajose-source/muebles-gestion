@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✏️ Editor de Fichajes · Meres</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: #f4f1ec; color: #1a1714; font-size: 14px; }
+
+/* LOGIN */
+.login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f4f1ec; }
+.login-card { background: white; border-radius: 14px; padding: 32px; max-width: 380px; width: 100%; box-shadow: 0 4px 24px rgba(0,0,0,.1); text-align: center; }
+.fg { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; text-align: left; }
+.fg label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #888; }
+.fg input, .fg select { padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 14px; width: 100%; }
+.fg input:focus { outline: none; border-color: #8e44ad; }
+
+/* HEADER */
+header { background: #1a1714; color: white; padding: 0 24px; height: 54px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.brand { font-weight: 800; font-size: 15px; letter-spacing: .04em; }
+.brand span { color: #b07fd4; }
+
+/* BOTONES */
+.btn { padding: 9px 18px; border: none; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+.btn:hover { opacity: .85; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn-purple { background: #8e44ad; color: white; }
+.btn-green  { background: #2d7a4f; color: white; }
+.btn-red    { background: #c0392b; color: white; }
+.btn-dark   { background: #1a1714; color: white; }
+.btn-gray   { background: #f0ece6; color: #555; }
+.btn-full   { width: 100%; padding: 13px; }
+
+/* TOOLBAR */
+.toolbar { background: white; border-bottom: 1px solid #e8e4de; padding: 12px 24px; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; position: sticky; top: 54px; z-index: 90; }
+.tg { display: flex; flex-direction: column; gap: 4px; }
+.tg label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #888; }
+.tg input, .tg select { padding: 8px 10px; border: 1.5px solid #ddd; border-radius: 7px; font-family: inherit; font-size: 13px; background: white; }
+
+/* TABLA */
+.wrap { padding: 20px 24px; }
+.card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+.card-head { padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0ece6; }
+.card-head h2 { font-size: 15px; font-weight: 700; }
+.card-head .info { font-size: 12px; color: #888; }
+
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 900px; }
+thead tr { background: #1a1714; color: white; }
+thead th { padding: 10px 8px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+thead th.center { text-align: center; }
+tbody tr { border-bottom: 1px solid #f4f1ec; }
+tbody tr:hover { background: #faf8f4; }
+tbody td { padding: 6px 8px; vertical-align: middle; }
+tbody td.center { text-align: center; }
+
+/* CELDAS EDITABLES */
+.cel-input { width: 100%; border: none; background: transparent; font-family: inherit; font-size: 12px; color: #1a1714; padding: 3px 4px; border-radius: 4px; }
+.cel-input:focus { outline: 2px solid #8e44ad; background: #fdf8ff; }
+input[type=time].cel-input { width: 85px; }
+input[type=date].cel-input { width: 120px; }
+.cel-alias select { width: 100%; border: none; background: transparent; font-family: inherit; font-size: 12px; color: #1a1714; padding: 3px 4px; border-radius: 4px; }
+.cel-alias select:focus { outline: 2px solid #8e44ad; background: #fdf8ff; }
+
+/* FIRMA */
+.firma-cel { display: flex; align-items: center; gap: 6px; }
+.firma-img { height: 28px; max-width: 70px; object-fit: contain; border: 1px solid #eee; border-radius: 3px; background: white; cursor: pointer; }
+.firma-btn { font-size: 10px; padding: 2px 6px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer; color: #888; font-family: inherit; white-space: nowrap; }
+.firma-btn:hover { border-color: #8e44ad; color: #8e44ad; }
+.sin-firma { color: #ccc; font-size: 11px; font-style: italic; }
+
+/* ESTADO FILA */
+tr.editada td:first-child { border-left: 3px solid #8e44ad; }
+tr.nueva td:first-child { border-left: 3px solid #2d7a4f; }
+tr.borrar td { opacity: .4; text-decoration: line-through; }
+
+/* BADGE */
+.badge { display: inline-block; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+.b-ok   { background: #e8f5ee; color: #2d7a4f; }
+.b-warn { background: #fff0e8; color: #c4571a; }
+.b-man  { background: #f0e8ff; color: #8e44ad; }
+
+/* MODAL FIRMA */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
+.overlay.open { display: flex; }
+.modal { background: white; border-radius: 14px; padding: 24px; width: 100%; max-width: 420px; }
+.modal h3 { font-size: 16px; font-weight: 800; margin-bottom: 14px; }
+canvas { border: 1.5px solid #ddd; border-radius: 8px; touch-action: none; cursor: crosshair; display: block; width: 100%; }
+
+/* TOAST */
+.toast { position: fixed; bottom: 20px; right: 20px; background: #1a1714; color: white; padding: 12px 18px; border-radius: 8px; font-size: 13px; z-index: 999; display: none; }
+.toast.ok  { border-left: 4px solid #2d7a4f; }
+.toast.err { border-left: 4px solid #c0392b; }
+
+.empty { text-align: center; padding: 40px; color: #aaa; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<!-- LOGIN -->
+<div id="loginBox" class="login-wrap">
+  <div class="login-card">
+    <div style="font-size:44px;margin-bottom:10px">✏️</div>
+    <h2 style="font-size:20px;font-weight:800;margin-bottom:6px">Editor de Fichajes</h2>
+    <p style="color:#888;font-size:13px;margin-bottom:24px">Acceso exclusivo · José Ángel</p>
+    <div class="fg"><label>Email</label><input type="email" id="lEmail" autocomplete="email" placeholder="tu@email.com"></div>
+    <div class="fg"><label>Contraseña</label><input type="password" id="lPass" autocomplete="current-password" placeholder="••••••••"></div>
+    <button class="btn btn-purple btn-full" onclick="doLogin()">Entrar</button>
+    <div id="lErr" style="color:#c0392b;font-size:13px;margin-top:10px;display:none"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appBox" style="display:none">
+  <header>
+    <div class="brand">MERES · <span>Editor de Fichajes</span></div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <span id="cambiosPend" style="font-size:12px;color:#f1c40f;display:none">● Cambios sin guardar</span>
+      <button class="btn btn-green" id="btnGuardarTodo" onclick="guardarTodo()" disabled>💾 Guardar todo</button>
+      <button class="btn btn-gray" onclick="window.close()" style="padding:6px 12px;font-size:12px">✕ Cerrar</button>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="tg">
+      <label>Trabajador</label>
+      <select id="filtroTr" onchange="cargarTabla()">
+        <option value="todos">Todos</option>
+      </select>
+    </div>
+    <div class="tg">
+      <label>Desde</label>
+      <input type="date" id="filtroDesde" onchange="cargarTabla()">
+    </div>
+    <div class="tg">
+      <label>Hasta</label>
+      <input type="date" id="filtroHasta" onchange="cargarTabla()">
+    </div>
+    <button class="btn btn-purple" onclick="cargarTabla()">🔄 Cargar</button>
+    <button class="btn btn-green" onclick="nuevaFila()" style="margin-left:8px">+ Nuevo fichaje</button>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <div class="card-head">
+        <h2>📋 Fichajes</h2>
+        <div class="info" id="infoTabla">Selecciona filtros y pulsa Cargar</div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:30px"></th>
+              <th>Trabajador</th>
+              <th>Fecha</th>
+              <th class="center">Ent. Mañana</th>
+              <th class="center">Sal. Mañana</th>
+              <th class="center">Ent. Tarde</th>
+              <th class="center">Sal. Tarde</th>
+              <th class="center">Firma Ent.Mañ</th>
+              <th class="center">Firma Sal.Mañ</th>
+              <th class="center">Firma Ent.Tar</th>
+              <th class="center">Firma Sal.Tar</th>
+              <th class="center">Manual</th>
+              <th class="center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tblBody">
+            <tr><td colspan="13" class="empty">Selecciona filtros y pulsa Cargar</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL FIRMA -->
+<div class="overlay" id="firmaOverlay">
+  <div class="modal">
+    <h3 id="firmaTitulo">✍️ Editar firma</h3>
+    <p style="font-size:12px;color:#888;margin-bottom:12px">Dibuja la firma con el ratón o el dedo</p>
+    <canvas id="firmaCanvas" width="360" height="160"></canvas>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-purple" style="flex:1" onclick="guardarFirma()">✓ Usar esta firma</button>
+      <button class="btn btn-gray" onclick="limpiarCanvas()">🗑 Borrar</button>
+      <button class="btn btn-gray" onclick="cerrarFirma()">Cancelar</button>
+    </div>
+    <div style="margin-top:10px">
+      <button class="btn btn-red" style="width:100%;font-size:12px" onclick="quitarFirma()">🗑 Quitar firma de este campo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var PROJECT  = "muebles-presupuestos";
+var API_KEY  = "AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c";
+var BASE     = "https://firestore.googleapis.com/v1/projects/"+PROJECT+"/databases/(default)/documents";
+var AUTH_URL = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key="+API_KEY;
+
+var token = null, vendedores = [], filas = [], cambios = {};
+var firmaActualFila = null, firmaActualCampo = null;
+var canvas, ctx, dibujando = false;
+
+// ─── FIRESTORE REST ───────────────────────────────────────────────────────────
+function parseDoc(doc) {
+  if (!doc.fields) return {};
+  var o = {};
+  Object.keys(doc.fields).forEach(function(k) {
+    var v = doc.fields[k];
+    if      (v.stringValue  !== undefined) o[k] = v.stringValue;
+    else if (v.integerValue !== undefined) o[k] = parseInt(v.integerValue);
+    else if (v.booleanValue !== undefined) o[k] = v.booleanValue;
+    else if (v.mapValue)                   o[k] = parseDoc(v.mapValue);
+    else o[k] = null;
+  });
+  return o;
+}
+function fsGet(col) {
+  var docs = [], url = BASE+"/"+col+"?pageSize=500";
+  return fetch(url, { headers: { Authorization: "Bearer "+token } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.documents) return [];
+      return data.documents.map(function(d) {
+        return Object.assign({ _id: d.name.split("/").pop() }, parseDoc(d));
+      });
+    });
+}
+function fsPatch(col, id, data) {
+  var fields = {};
+  Object.keys(data).forEach(function(k) {
+    var v = data[k];
+    if (v === null || v === undefined) fields[k] = { nullValue: null };
+    else if (typeof v === "boolean")   fields[k] = { booleanValue: v };
+    else if (typeof v === "number")    fields[k] = { integerValue: v };
+    else                               fields[k] = { stringValue: String(v) };
+  });
+  return fetch(BASE+"/"+col+"/"+id, {
+    method: "PATCH",
+    headers: { Authorization: "Bearer "+token, "Content-Type": "application/json" },
+    body: JSON.stringify({ fields: fields })
+  }).then(function(r) { return r.json(); });
+}
+function fsAdd(col, data) {
+  var fields = {};
+  Object.keys(data).forEach(function(k) {
+    var v = data[k];
+    if (v === null || v === undefined) fields[k] = { nullValue: null };
+    else if (typeof v === "boolean")   fields[k] = { booleanValue: v };
+    else if (typeof v === "number")    fields[k] = { integerValue: v };
+    else                               fields[k] = { stringValue: String(v) };
+  });
+  // Usar el nombre del documento como key del fichaje
+  var docId = "fichaje_"+data.alias.replace(/ /g,"_")+"_"+data.fecha;
+  return fetch(BASE+"/"+col+"/"+docId, {
+    method: "PATCH",
+    headers: { Authorization: "Bearer "+token, "Content-Type": "application/json" },
+    body: JSON.stringify({ fields: fields })
+  }).then(function(r) { return r.json(); });
+}
+function fsDel(col, id) {
+  return fetch(BASE+"/"+col+"/"+id, {
+    method: "DELETE",
+    headers: { Authorization: "Bearer "+token }
+  });
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function p2(n) { return ("0"+n).slice(-2); }
+function toast(msg, tipo) {
+  var t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast "+(tipo||"ok");
+  t.style.display = "block";
+  setTimeout(function() { t.style.display = "none"; }, 3000);
+}
+function marcarCambio(id) {
+  cambios[id] = true;
+  document.getElementById("btnGuardarTodo").disabled = false;
+  document.getElementById("cambiosPend").style.display = "inline";
+  var tr = document.getElementById("tr-"+id);
+  if (tr && !tr.classList.contains("nueva")) tr.classList.add("editada");
+}
+
+// ─── LOGIN ────────────────────────────────────────────────────────────────────
+document.getElementById("lPass").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") doLogin();
+});
+function doLogin() {
+  var email = document.getElementById("lEmail").value.trim();
+  var pass  = document.getElementById("lPass").value;
+  var err   = document.getElementById("lErr");
+  err.style.display = "none";
+  fetch(AUTH_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: email, password: pass, returnSecureToken: true })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) throw new Error();
+    token = data.idToken;
+    return fsGet("vendedores");
+  })
+  .then(function(vends) {
+    // Solo José Ángel puede entrar
+    var miV = vends.find(function(v) {
+      return (v.email||"").toLowerCase().trim() === document.getElementById("lEmail").value.trim().toLowerCase();
+    });
+    if (!miV || miV.alias !== "Jose Angel") {
+      token = null;
+      err.textContent = "Acceso solo para José Ángel";
+      err.style.display = "block";
+      return;
+    }
+    vendedores = vends.filter(function(v) { return v.activo !== false && v.alias; })
+      .sort(function(a,b) { return a.alias.localeCompare(b.alias,"es"); });
+
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("appBox").style.display   = "block";
+
+    // Rellenar filtro
+    var sel = document.getElementById("filtroTr");
+    sel.innerHTML = "<option value='todos'>Todos los trabajadores</option>";
+    vendedores.forEach(function(v) {
+      sel.innerHTML += "<option value='"+v.alias+"'>"+v.alias+(v.nombre?" — "+v.nombre:"")+"</option>";
+    });
+
+    // Fecha por defecto: mes actual
+    var hoy  = new Date();
+    var yyyy = hoy.getFullYear();
+    var mm   = p2(hoy.getMonth()+1);
+    var ult  = new Date(yyyy, hoy.getMonth()+1, 0);
+    document.getElementById("filtroDesde").value = yyyy+"-"+mm+"-01";
+    document.getElementById("filtroHasta").value = yyyy+"-"+mm+"-"+p2(ult.getDate());
+  })
+  .catch(function() {
+    err.textContent = "Email o contraseña incorrectos";
+    err.style.display = "block";
+  });
+}
+
+// ─── CARGAR TABLA ─────────────────────────────────────────────────────────────
+function cargarTabla() {
+  var filtroTr    = document.getElementById("filtroTr").value;
+  var filtroDesde = document.getElementById("filtroDesde").value;
+  var filtroHasta = document.getElementById("filtroHasta").value;
+  var info        = document.getElementById("infoTabla");
+  var tbody       = document.getElementById("tblBody");
+  tbody.innerHTML = "<tr><td colspan='13' class='empty'>⏳ Cargando...</td></tr>";
+  cambios = {};
+  document.getElementById("btnGuardarTodo").disabled = true;
+  document.getElementById("cambiosPend").style.display = "none";
+
+  fsGet("fichajes").then(function(docs) {
+    filas = docs.filter(function(f) {
+      if (f.alias === "Jose Angel") return false;
+      if (filtroTr !== "todos" && f.alias !== filtroTr) return false;
+      if (filtroDesde && f.fecha < filtroDesde) return false;
+      if (filtroHasta && f.fecha > filtroHasta) return false;
+      return true;
+    }).sort(function(a,b) {
+      var r = (a.fecha||"").localeCompare(b.fecha||"");
+      return r !== 0 ? r : (a.alias||"").localeCompare(b.alias||"");
+    });
+
+    info.textContent = filas.length + " fichajes";
+    renderTabla();
+  }).catch(function(e) {
+    tbody.innerHTML = "<tr><td colspan='13' class='empty'>❌ Error: "+e.message+"</td></tr>";
+  });
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function renderTabla() {
+  var tbody = document.getElementById("tblBody");
+  if (!filas.length) {
+    tbody.innerHTML = "<tr><td colspan='13' class='empty'>Sin fichajes con los filtros seleccionados</td></tr>";
+    return;
+  }
+  tbody.innerHTML = "";
+  filas.forEach(function(f) { tbody.appendChild(crearFila(f)); });
+}
+
+function crearFila(f) {
+  var tr = document.createElement("tr");
+  tr.id  = "tr-"+f._id;
+  if (f._nuevo)   tr.classList.add("nueva");
+  if (f._borrar)  tr.classList.add("borrar");
+
+  // Col 0: índice visual
+  var tdIdx = document.createElement("td");
+  tdIdx.style.cssText = "color:#ccc;font-size:10px;text-align:center;width:30px";
+  tdIdx.textContent = filas.indexOf(f)+1;
+  tr.appendChild(tdIdx);
+
+  // Col 1: Alias (select)
+  var tdAlias = document.createElement("td");
+  tdAlias.className = "cel-alias";
+  var sel = document.createElement("select");
+  sel.className = "cel-input";
+  vendedores.forEach(function(v) {
+    var o = document.createElement("option");
+    o.value = v.alias; o.textContent = v.alias;
+    if (v.alias === f.alias) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.addEventListener("change", function() {
+    f.alias = sel.value; marcarCambio(f._id);
+  });
+  tdAlias.appendChild(sel);
+  tr.appendChild(tdAlias);
+
+  // Col 2: Fecha
+  tr.appendChild(celInput(f, "fecha", "date", f._id));
+
+  // Cols 3-6: Horas
+  tr.appendChild(celInput(f, "ini_m", "time", f._id));
+  tr.appendChild(celInput(f, "fin_m", "time", f._id));
+  tr.appendChild(celInput(f, "ini_t", "time", f._id));
+  tr.appendChild(celInput(f, "fin_t", "time", f._id));
+
+  // Cols 7-10: Firmas
+  tr.appendChild(celFirma(f, "firma_ini_m", "Ent.Mañ"));
+  tr.appendChild(celFirma(f, "firma_fin_m", "Sal.Mañ"));
+  tr.appendChild(celFirma(f, "firma_ini_t", "Ent.Tar"));
+  tr.appendChild(celFirma(f, "firma_fin_t", "Sal.Tar"));
+
+  // Col 11: Manual
+  var tdMan = document.createElement("td");
+  tdMan.className = "center";
+  if (f.manual) tdMan.innerHTML = "<span class='badge b-man'>Manual</span>";
+  else tdMan.innerHTML = "<span style='color:#ddd;font-size:11px'>—</span>";
+  tr.appendChild(tdMan);
+
+  // Col 12: Acciones
+  var tdAcc = document.createElement("td");
+  tdAcc.className = "center";
+  tdAcc.style.whiteSpace = "nowrap";
+  var btnDel = document.createElement("button");
+  btnDel.className = "btn btn-red";
+  btnDel.style.cssText = "padding:4px 10px;font-size:11px";
+  btnDel.textContent = f._borrar ? "↩ Restaurar" : "🗑 Borrar";
+  btnDel.addEventListener("click", function() {
+    f._borrar = !f._borrar;
+    document.getElementById("tr-"+f._id).className = f._borrar ? "borrar" : (f._nuevo ? "nueva" : "editada");
+    btnDel.textContent = f._borrar ? "↩ Restaurar" : "🗑 Borrar";
+    marcarCambio(f._id);
+  });
+  tdAcc.appendChild(btnDel);
+  tr.appendChild(tdAcc);
+
+  return tr;
+}
+
+function celInput(f, campo, tipo, id) {
+  var td = document.createElement("td");
+  td.className = "center";
+  var inp = document.createElement("input");
+  inp.type  = tipo;
+  inp.className = "cel-input";
+  inp.value = f[campo] || "";
+  inp.addEventListener("change", function() {
+    f[campo] = inp.value || null;
+    marcarCambio(id);
+  });
+  td.appendChild(inp);
+  return td;
+}
+
+function celFirma(f, campo, label) {
+  var td = document.createElement("td");
+  td.className = "center";
+  td.id = "td-"+f._id+"-"+campo;
+  renderCelFirma(td, f, campo);
+  return td;
+}
+
+function renderCelFirma(td, f, campo) {
+  td.innerHTML = "";
+  var wrap = document.createElement("div");
+  wrap.className = "firma-cel";
+  if (f[campo]) {
+    var img = document.createElement("img");
+    img.className = "firma-img";
+    img.src = f[campo];
+    img.title = "Ver / editar firma";
+    img.addEventListener("click", function() { abrirFirma(f, campo); });
+    wrap.appendChild(img);
+  } else {
+    var btn = document.createElement("button");
+    btn.className = "firma-btn";
+    btn.textContent = "+ Firma";
+    btn.addEventListener("click", function() { abrirFirma(f, campo); });
+    wrap.appendChild(btn);
+  }
+  td.appendChild(wrap);
+}
+
+// ─── NUEVA FILA ───────────────────────────────────────────────────────────────
+function nuevaFila() {
+  var hoy = new Date();
+  var fStr = hoy.getFullYear()+"-"+p2(hoy.getMonth()+1)+"-"+p2(hoy.getDate());
+  var alias = document.getElementById("filtroTr").value !== "todos"
+    ? document.getElementById("filtroTr").value
+    : (vendedores[0] ? vendedores[0].alias : "");
+  var id = "_nuevo_"+Date.now();
+  var f = {
+    _id: id, _nuevo: true,
+    alias: alias, fecha: fStr,
+    ini_m: null, fin_m: null, ini_t: null, fin_t: null,
+    firma_ini_m: null, firma_fin_m: null, firma_ini_t: null, firma_fin_t: null,
+    manual: true, manual_por: "Jose Angel", manual_ts: new Date().toISOString()
+  };
+  filas.unshift(f);
+  var tbody = document.getElementById("tblBody");
+  tbody.insertBefore(crearFila(f), tbody.firstChild);
+  marcarCambio(id);
+  toast("Nueva fila añadida — rellena los datos y guarda", "ok");
+}
+
+// ─── GUARDAR TODO ─────────────────────────────────────────────────────────────
+function guardarTodo() {
+  var btn = document.getElementById("btnGuardarTodo");
+  btn.disabled = true; btn.textContent = "⏳ Guardando...";
+  var promesas = [];
+  var filasConCambios = filas.filter(function(f) { return cambios[f._id]; });
+
+  filasConCambios.forEach(function(f) {
+    if (f._borrar && !f._nuevo) {
+      // Eliminar de Firebase
+      promesas.push(fsDel("fichajes", f._id));
+    } else if (!f._borrar) {
+      // Crear o actualizar
+      var data = {
+        alias: f.alias || "",
+        fecha: f.fecha || "",
+        ini_m: f.ini_m || null,
+        fin_m: f.fin_m || null,
+        ini_t: f.ini_t || null,
+        fin_t: f.fin_t || null,
+        firma_ini_m: f.firma_ini_m || null,
+        firma_fin_m: f.firma_fin_m || null,
+        firma_ini_t: f.firma_ini_t || null,
+        firma_fin_t: f.firma_fin_t || null,
+        manual: true,
+        manual_por: "Jose Angel",
+        manual_ts: new Date().toISOString()
+      };
+      if (f._nuevo) {
+        promesas.push(fsAdd("fichajes", data));
+      } else {
+        promesas.push(fsPatch("fichajes", f._id, data));
+      }
+    }
+  });
+
+  Promise.all(promesas).then(function() {
+    toast("✅ "+promesas.length+" cambios guardados en Firebase", "ok");
+    btn.textContent = "💾 Guardar todo";
+    cambios = {};
+    document.getElementById("cambiosPend").style.display = "none";
+    // Recargar tabla
+    cargarTabla();
+  }).catch(function(e) {
+    toast("❌ Error al guardar: "+e.message, "err");
+    btn.disabled = false;
+    btn.textContent = "💾 Guardar todo";
+  });
+}
+
+// ─── MODAL FIRMA ─────────────────────────────────────────────────────────────
+function abrirFirma(f, campo) {
+  firmaActualFila  = f;
+  firmaActualCampo = campo;
+  var labels = { firma_ini_m:"Entrada Mañana", firma_fin_m:"Salida Mañana", firma_ini_t:"Entrada Tarde", firma_fin_t:"Salida Tarde" };
+  document.getElementById("firmaTitulo").textContent = "✍️ Firma — " + f.alias + " · " + f.fecha + " · " + (labels[campo]||campo);
+  canvas = document.getElementById("firmaCanvas");
+  ctx    = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = "#1a1714";
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = "round";
+  ctx.lineJoin    = "round";
+  // Si ya tiene firma, mostrarla
+  if (f[campo]) {
+    var img = new Image();
+    img.onload = function() { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); };
+    img.src = f[campo];
+  }
+  document.getElementById("firmaOverlay").classList.add("open");
+  // Eventos canvas
+  canvas.onmousedown  = startDraw;
+  canvas.onmousemove  = draw;
+  canvas.onmouseup    = stopDraw;
+  canvas.onmouseleave = stopDraw;
+  canvas.ontouchstart = function(e) { e.preventDefault(); startDraw(e.touches[0]); };
+  canvas.ontouchmove  = function(e) { e.preventDefault(); draw(e.touches[0]); };
+  canvas.ontouchend   = stopDraw;
+}
+
+function getPos(e) {
+  var r = canvas.getBoundingClientRect();
+  var scaleX = canvas.width  / r.width;
+  var scaleY = canvas.height / r.height;
+  return {
+    x: (e.clientX - r.left) * scaleX,
+    y: (e.clientY - r.top)  * scaleY
+  };
+}
+function startDraw(e) { dibujando = true; var p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }
+function draw(e)       { if (!dibujando) return; var p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }
+function stopDraw()    { dibujando = false; }
+function limpiarCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+function guardarFirma() {
+  var dataURL = canvas.toDataURL("image/png");
+  firmaActualFila[firmaActualCampo] = dataURL;
+  marcarCambio(firmaActualFila._id);
+  // Actualizar celda visual
+  var td = document.getElementById("td-"+firmaActualFila._id+"-"+firmaActualCampo);
+  if (td) renderCelFirma(td, firmaActualFila, firmaActualCampo);
+  cerrarFirma();
+  toast("Firma actualizada — recuerda guardar todo", "ok");
+}
+
+function quitarFirma() {
+  firmaActualFila[firmaActualCampo] = null;
+  marcarCambio(firmaActualFila._id);
+  var td = document.getElementById("td-"+firmaActualFila._id+"-"+firmaActualCampo);
+  if (td) renderCelFirma(td, firmaActualFila, firmaActualCampo);
+  cerrarFirma();
+  toast("Firma eliminada — recuerda guardar todo", "ok");
+}
+
+function cerrarFirma() {
+  document.getElementById("firmaOverlay").classList.remove("open");
+  dibujando = false;
+}
+document.getElementById("firmaOverlay").addEventListener("click", function(e) {
+  if (e.target === this) cerrarFirma();
+});
+</script>
+</body>
+</html>

@@ -96,6 +96,7 @@
           </div>
           <button class="btn btn-primary" id="btnAnalizar" onclick="analizar()">🔍 Analizar</button>
           <button class="btn btn-green no-print" id="btnPrint" onclick="window.print()" disabled>🖨️ Imprimir PDF</button>
+          <a id="btnEditor" href="editor-fichajes.html" target="_blank" class="btn no-print" style="background:#8e44ad;color:white;text-decoration:none;display:none">✏️ Editor de Fichajes</a>
         </div>
         <div id="status"></div>
       </div>
@@ -214,6 +215,14 @@ function doLogin() {
     document.getElementById("appBox").style.display   = "block";
     initFechas();
     cargarFiltro();
+    // Mostrar botón editor solo para José Ángel
+    fsGet("vendedores").then(function(vends) {
+      var miV = vends.find(function(v){ return (v.email||"").toLowerCase().trim() === email.toLowerCase(); });
+      if (miV && miV.alias === "Jose Angel") {
+        var btnEd = document.getElementById("btnEditor");
+        if (btnEd) btnEd.style.display = "inline-block";
+      }
+    }).catch(function(){});
   })
   .catch(function() {
     errEl.textContent   = "Email o contraseña incorrectos";
