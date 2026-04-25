@@ -1022,7 +1022,8 @@ document.getElementById("tab-btn-fichajes").addEventListener("click", () => show
 document.getElementById("st-tab-presup").addEventListener("click", () => { currentStatsTab = "presup"; document.getElementById("st-tab-presup").classList.add("active"); document.getElementById("st-tab-visitas").classList.remove("active"); document.getElementById("st-tab-vendedores").classList.remove("active"); renderStats(); });
 document.getElementById("st-tab-visitas").addEventListener("click", () => { currentStatsTab = "visitas"; document.getElementById("st-tab-visitas").classList.add("active"); document.getElementById("st-tab-presup").classList.remove("active"); document.getElementById("st-tab-vendedores").classList.remove("active"); renderStats(); });
 document.getElementById("st-tab-vendedores").addEventListener("click", () => { currentStatsTab = "vendedores"; document.getElementById("st-tab-vendedores").classList.add("active"); document.getElementById("st-tab-presup").classList.remove("active"); document.getElementById("st-tab-visitas").classList.remove("active"); renderStats(); });
-document.getElementById("st-tab-mensajes").addEventListener("click", () => {
+const _elMensajes = document.getElementById("st-tab-mensajes");
+if (_elMensajes) _elMensajes.addEventListener("click", () => {
   currentStatsTab = "mensajes";
   ["st-tab-presup","st-tab-visitas","st-tab-vendedores"].forEach(id => {
     const el = document.getElementById(id); if(el) el.classList.remove("active");
