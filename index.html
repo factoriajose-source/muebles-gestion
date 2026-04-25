@@ -2621,6 +2621,41 @@ async function registrarFichaje(turno, hora, firmaData, v) {
 }
 
 // ===== IMPRESION FICHAS =====
+// Lee vacaciones_bajas via REST (evita problemas con SDK en colecciones pequeñas)
+async function getVacacionesBajasREST() {
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const PROJECT = "muebles-presupuestos";
+    const BASE = "https://firestore.googleapis.com/v1/projects/"+PROJECT+"/databases/(default)/documents";
+    let docs = [], pageToken = null;
+    do {
+      let url = BASE + "/vacaciones_bajas?pageSize=200" + (pageToken ? "&pageToken="+pageToken : "");
+      const res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+      const data = await res.json();
+      if (data.documents) {
+        data.documents.forEach(d => {
+          const f = d.fields || {};
+          const get = k => f[k]?.stringValue ?? f[k]?.integerValue ?? null;
+          docs.push({
+            alias:    get("alias"),
+            tipo:     get("tipo"),
+            fechaIni: get("fechaIni"),
+            fechaFin: get("fechaFin"),
+            año:      get("año"),
+            nota:     get("nota") || ""
+          });
+        });
+      }
+      pageToken = data.nextPageToken || null;
+    } while (pageToken);
+    console.log("VAC REST: leídos", docs.length, "registros de vacaciones_bajas");
+    return docs;
+  } catch(e) {
+    console.error("VAC REST error:", e);
+    return [];
+  }
+}
+
 async function imprimirFichaMes(alias) {
   const ahora = nowMadridFull();
   const anio = ahora.fecha.slice(0,4);
@@ -2637,9 +2672,9 @@ async function imprimirFichaRango(alias, anio, mes, tipo, fechaRef) {
   const v = vendedoresData.find(x => x.alias === alias);
   showToast("Generando ficha...");
   try {
-    const [snF, snV] = await Promise.all([
+    const [snF, vacDocs] = await Promise.all([
       getDocs(collection(db, "fichajes")),
-      getDocs(collection(db, "vacaciones_bajas"))
+      getVacacionesBajasREST()
     ]);
     let registros = [];
     snF.forEach(d => {
@@ -2660,24 +2695,10 @@ async function imprimirFichaRango(alias, anio, mes, tipo, fechaRef) {
     });
     // Construir mapa de días con vacaciones/bajas para este trabajador
     const diasVacBaja = {};
-    console.log("VAC DEBUG: snV tipo=", typeof snV, "size=", snV?.size, "docs=", snV?.docs?.length);
-    if (snV && snV.docs) {
-      snV.docs.forEach(d => {
-        console.log("VAC DEBUG doc id=", d.id, "data=", JSON.stringify(d.data()));
-      });
-    } else {
-      snV.forEach(d => {
-        console.log("VAC DEBUG doc id=", d.id, "data=", JSON.stringify(d.data()));
-      });
-    }
-    snV.forEach(d => {
-      const r = d.data();
-      if (r.alias !== alias) return;
-      // Iterar día a día del rango
+    vacDocs.filter(r => r.alias === alias).forEach(r => {
       let cur = new Date(r.fechaIni + "T12:00:00");
       const fin = new Date(r.fechaFin + "T12:00:00");
       while (cur <= fin) {
-        // Usar formato YYYY-MM-DD local (no UTC para evitar desfase de zona horaria)
         const fs = cur.getFullYear() + "-"
           + String(cur.getMonth()+1).padStart(2,"0") + "-"
           + String(cur.getDate()).padStart(2,"0");
@@ -2685,11 +2706,10 @@ async function imprimirFichaRango(alias, anio, mes, tipo, fechaRef) {
         cur.setDate(cur.getDate()+1);
       }
     });
-
-    // Añadir días de vacaciones/bajas que no tienen fichaje en el rango
+    console.log("VAC diasVacBaja para", alias, ":", diasVacBaja);
+    // Añadir días de vacaciones/bajas sin fichaje en el rango
     Object.keys(diasVacBaja).forEach(fs => {
-      if (registros.find(r => r.fecha === fs)) return; // ya tiene fichaje
-      // Comprobar si el día está en el rango solicitado
+      if (registros.find(r => r.fecha === fs)) return;
       let enRango = false;
       if (tipo === "mes" && fs.startsWith(anio + "-" + mes)) enRango = true;
       else if (tipo === "semana") {
@@ -2709,25 +2729,23 @@ async function imprimirFichaRango(alias, anio, mes, tipo, fechaRef) {
         });
       }
     });
-
     registros.sort((a,b) => a.fecha.localeCompare(b.fecha));
     generarPDFFicha(v||{alias}, registros, tipo, anio, mes, diasVacBaja);
-  } catch(e) { showToast("Error: " + e.message); }
+  } catch(e) { showToast("Error: " + e.message); console.error(e); }
 }
 
 async function imprimirFichaDia(fecha) {
   showToast("Generando listado del dia...");
   try {
-    const [snF, snV] = await Promise.all([
+    const [snF, vacDocs] = await Promise.all([
       getDocs(collection(db, "fichajes")),
-      getDocs(collection(db, "vacaciones_bajas"))
+      getVacacionesBajasREST()
     ]);
     let registros = [];
     snF.forEach(d => { const r = d.data(); if (r.fecha === fecha) registros.push(r); });
     // Mapa alias → tipo para ese día concreto
     const vacBajaDia = {};
-    snV.forEach(d => {
-      const r = d.data();
+    vacDocs.forEach(r => {
       if (r.fechaIni <= fecha && r.fechaFin >= fecha) {
         if (!vacBajaDia[r.alias]) vacBajaDia[r.alias] = r.tipo;
       }
@@ -2741,7 +2759,7 @@ async function imprimirFichaDia(fecha) {
     });
     registros.sort((a,b) => a.alias.localeCompare(b.alias));
     generarPDFDia(registros, fecha, vacBajaDia);
-  } catch(e) { showToast("Error: " + e.message); }
+  } catch(e) { showToast("Error: " + e.message); console.error(e); }
 }
 
 function generarPDFFicha(v, registros, tipo, anio, mes, diasVacBaja) {
