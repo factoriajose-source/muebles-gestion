@@ -211,18 +211,13 @@ function doLogin() {
   .then(function(data) {
     if (data.error) throw new Error(data.error.message);
     idToken = data.idToken;
+    // Mostrar botón editor siempre que el login sea correcto
     document.getElementById("loginBox").style.display = "none";
     document.getElementById("appBox").style.display   = "block";
+    var btnEd = document.getElementById("btnEditor");
+    if (btnEd) btnEd.style.display = "inline-block";
     initFechas();
     cargarFiltro();
-    // Mostrar botón editor solo para José Ángel
-    fsGet("vendedores").then(function(vends) {
-      var miV = vends.find(function(v){ return (v.email||"").toLowerCase().trim() === email.toLowerCase(); });
-      if (miV && miV.alias === "Jose Angel") {
-        var btnEd = document.getElementById("btnEditor");
-        if (btnEd) btnEd.style.display = "inline-block";
-      }
-    }).catch(function(){});
   })
   .catch(function() {
     errEl.textContent   = "Email o contraseña incorrectos";
