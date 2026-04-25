@@ -181,6 +181,24 @@ canvas { border: 1.5px solid #ddd; border-radius: 8px; touch-action: none; curso
   <div class="modal">
     <h3 id="firmaTitulo">✍️ Editar firma</h3>
     <p style="font-size:12px;color:#888;margin-bottom:12px">Dibuja la firma con el ratón o el dedo</p>
+
+    <!-- COPIAR FIRMA DE OTRO DÍA -->
+    <div style="background:#f4f1ec;border-radius:8px;padding:10px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:8px">📋 Copiar firma de otro fichaje</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="copiarDeFecha" style="flex:1;padding:7px 10px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:12px;min-width:130px">
+          <option value="">-- Selecciona fecha --</option>
+        </select>
+        <select id="copiarDeCampo" style="flex:1;padding:7px 10px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:12px">
+          <option value="firma_ini_m">Entrada Mañana</option>
+          <option value="firma_fin_m">Salida Mañana</option>
+          <option value="firma_ini_t">Entrada Tarde</option>
+          <option value="firma_fin_t">Salida Tarde</option>
+        </select>
+        <button class="btn btn-purple" style="padding:7px 14px;font-size:12px" onclick="pegarFirmaCopiada()">📋 Pegar</button>
+      </div>
+      <div id="prevFirmaCopiar" style="margin-top:8px;min-height:20px"></div>
+    </div>
     <canvas id="firmaCanvas" width="360" height="160"></canvas>
     <div style="display:flex;gap:8px;margin-top:12px">
       <button class="btn btn-purple" style="flex:1" onclick="guardarFirma()">✓ Usar esta firma</button>
@@ -218,15 +236,22 @@ function parseDoc(doc) {
   return o;
 }
 function fsGet(col) {
-  var docs = [], url = BASE+"/"+col+"?pageSize=500";
-  return fetch(url, { headers: { Authorization: "Bearer "+token } })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (!data.documents) return [];
-      return data.documents.map(function(d) {
-        return Object.assign({ _id: d.name.split("/").pop() }, parseDoc(d));
+  var docs = [];
+  function getPage(pageToken) {
+    var url = BASE+"/"+col+"?pageSize=300"+(pageToken?"&pageToken="+pageToken:"");
+    return fetch(url, { headers: { Authorization: "Bearer "+token } })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.documents) {
+          data.documents.forEach(function(d) {
+            docs.push(Object.assign({ _id: d.name.split("/").pop() }, parseDoc(d)));
+          });
+        }
+        if (data.nextPageToken) return getPage(data.nextPageToken);
+        return docs;
       });
-    });
+  }
+  return getPage(null);
 }
 function fsPatch(col, id, data) {
   var fields = {};
@@ -584,14 +609,46 @@ function abrirFirma(f, campo) {
   ctx.lineWidth   = 2;
   ctx.lineCap     = "round";
   ctx.lineJoin    = "round";
-  // Si ya tiene firma, mostrarla
   if (f[campo]) {
     var img = new Image();
     img.onload = function() { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); };
     img.src = f[campo];
   }
+
+  // Cargar fechas disponibles del mismo trabajador para copiar firma
+  var selFecha = document.getElementById("copiarDeFecha");
+  selFecha.innerHTML = "<option value=''>-- Selecciona fecha --</option>";
+  document.getElementById("prevFirmaCopiar").innerHTML = "";
+  // Seleccionar el mismo tipo de campo por defecto
+  document.getElementById("copiarDeCampo").value = campo;
+
+  // Buscar fichajes del mismo trabajador que tengan alguna firma
+  var fichajesAlias = filas.filter(function(fx) {
+    return fx.alias === f.alias && fx._id !== f._id &&
+      (fx.firma_ini_m || fx.firma_fin_m || fx.firma_ini_t || fx.firma_fin_t);
+  }).sort(function(a,b) { return b.fecha.localeCompare(a.fecha); }); // más recientes primero
+
+  if (fichajesAlias.length) {
+    fichajesAlias.forEach(function(fx) {
+      var o = document.createElement("option");
+      o.value = fx._id;
+      o.textContent = fx.fecha;
+      selFecha.appendChild(o);
+    });
+    // Seleccionar el más reciente automáticamente y mostrar preview
+    selFecha.value = fichajesAlias[0]._id;
+    mostrarPreviewFirma(fichajesAlias[0]);
+  } else {
+    selFecha.innerHTML += "<option disabled>Sin fichajes con firma disponibles</option>";
+  }
+
+  selFecha.onchange = function() {
+    var fx = filas.find(function(x) { return x._id === selFecha.value; });
+    if (fx) mostrarPreviewFirma(fx);
+    else document.getElementById("prevFirmaCopiar").innerHTML = "";
+  };
+
   document.getElementById("firmaOverlay").classList.add("open");
-  // Eventos canvas
   canvas.onmousedown  = startDraw;
   canvas.onmousemove  = draw;
   canvas.onmouseup    = stopDraw;
@@ -601,7 +658,37 @@ function abrirFirma(f, campo) {
   canvas.ontouchend   = stopDraw;
 }
 
-function getPos(e) {
+function mostrarPreviewFirma(fx) {
+  var campoCopiar = document.getElementById("copiarDeCampo").value;
+  var prev = document.getElementById("prevFirmaCopiar");
+  var firma = fx[campoCopiar];
+  if (firma) {
+    prev.innerHTML = "<div style='font-size:11px;color:#888;margin-bottom:4px'>Vista previa:</div>"+
+      "<img src='"+firma+"' style='height:40px;max-width:160px;border:1px solid #ddd;border-radius:4px;background:white;padding:2px'>";
+  } else {
+    prev.innerHTML = "<span style='font-size:11px;color:#c0392b'>Sin firma en ese campo para esa fecha</span>";
+  }
+  // Actualizar preview al cambiar campo
+  document.getElementById("copiarDeCampo").onchange = function() {
+    mostrarPreviewFirma(fx);
+  };
+}
+
+function pegarFirmaCopiada() {
+  var selFecha  = document.getElementById("copiarDeFecha").value;
+  var campoCop  = document.getElementById("copiarDeCampo").value;
+  if (!selFecha) { toast("Selecciona una fecha origen","err"); return; }
+  var fx = filas.find(function(x) { return x._id === selFecha; });
+  if (!fx) { toast("Fichaje no encontrado","err"); return; }
+  var firma = fx[campoCop];
+  if (!firma) { toast("Sin firma en ese campo y fecha","err"); return; }
+  // Pegar en el canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  var img = new Image();
+  img.onload = function() { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); };
+  img.src = firma;
+  toast("✅ Firma pegada en el canvas — pulsa 'Usar esta firma' para confirmar","ok");
+}
   var r = canvas.getBoundingClientRect();
   var scaleX = canvas.width  / r.width;
   var scaleY = canvas.height / r.height;
