@@ -97,6 +97,8 @@
           <button class="btn btn-primary" id="btnAnalizar" onclick="analizar()">🔍 Analizar</button>
           <button class="btn btn-green no-print" id="btnPrint" onclick="window.print()" disabled>🖨️ Imprimir PDF</button>
           <a id="btnEditor" href="editor-fichajes.html" target="_blank" class="btn no-print" style="background:#8e44ad;color:white;text-decoration:none;display:none">✏️ Editor de Fichajes</a>
+          <a id="btnFichajeManual" href="index.html" target="_blank" class="btn no-print" style="background:#1a1714;color:white;text-decoration:none;display:none">🖊️ Fichaje Manual</a>
+          <a id="btnMensajes" href="index.html" target="_blank" class="btn no-print" style="background:#fff3cd;color:#856404;border:1px solid #ffc107;text-decoration:none;display:none">📬 Mensajes</a>
         </div>
         <div id="status"></div>
       </div>
@@ -211,11 +213,15 @@ function doLogin() {
   .then(function(data) {
     if (data.error) throw new Error(data.error.message);
     idToken = data.idToken;
-    // Mostrar botón editor siempre que el login sea correcto
+    // Mostrar botones al entrar
     document.getElementById("loginBox").style.display = "none";
     document.getElementById("appBox").style.display   = "block";
     var btnEd = document.getElementById("btnEditor");
     if (btnEd) btnEd.style.display = "inline-block";
+    var btnFM = document.getElementById("btnFichajeManual");
+    if (btnFM) btnFM.style.display = "inline-block";
+    var btnMsg = document.getElementById("btnMensajes");
+    if (btnMsg) btnMsg.style.display = "inline-block";
     initFechas();
     cargarFiltro();
   })
