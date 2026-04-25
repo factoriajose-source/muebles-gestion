@@ -221,7 +221,7 @@ var token = null, vendedores = [], filas = [], cambios = {};
 var firmaActualFila = null, firmaActualCampo = null;
 var canvas, ctx, dibujando = false;
 
-// ─── FIRESTORE REST ───────────────────────────────────────────────────────────
+
 function parseDoc(doc) {
   if (!doc.fields) return {};
   var o = {};
@@ -292,7 +292,7 @@ function fsDel(col, id) {
   });
 }
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
+
 function p2(n) { return ("0"+n).slice(-2); }
 function toast(msg, tipo) {
   var t = document.getElementById("toast");
@@ -309,7 +309,7 @@ function marcarCambio(id) {
   if (tr && !tr.classList.contains("nueva")) tr.classList.add("editada");
 }
 
-// ─── LOGIN ────────────────────────────────────────────────────────────────────
+
 document.getElementById("lPass").addEventListener("keydown", function(e) {
   if (e.key === "Enter") doLogin();
 });
@@ -364,7 +364,7 @@ function doLogin() {
   });
 }
 
-// ─── CARGAR TABLA ─────────────────────────────────────────────────────────────
+
 function cargarTabla() {
   var filtroTr    = document.getElementById("filtroTr").value;
   var filtroDesde = document.getElementById("filtroDesde").value;
@@ -395,7 +395,7 @@ function cargarTabla() {
   });
 }
 
-// ─── RENDER ───────────────────────────────────────────────────────────────────
+
 function renderTabla() {
   var tbody = document.getElementById("tblBody");
   if (!filas.length) {
@@ -521,7 +521,7 @@ function renderCelFirma(td, f, campo) {
   td.appendChild(wrap);
 }
 
-// ─── NUEVA FILA ───────────────────────────────────────────────────────────────
+
 function nuevaFila() {
   var hoy = new Date();
   var fStr = hoy.getFullYear()+"-"+p2(hoy.getMonth()+1)+"-"+p2(hoy.getDate());
@@ -543,7 +543,7 @@ function nuevaFila() {
   toast("Nueva fila añadida — rellena los datos y guarda", "ok");
 }
 
-// ─── GUARDAR TODO ─────────────────────────────────────────────────────────────
+
 function guardarTodo() {
   var btn = document.getElementById("btnGuardarTodo");
   btn.disabled = true; btn.textContent = "⏳ Guardando...";
@@ -593,7 +593,7 @@ function guardarTodo() {
   });
 }
 
-// ─── MODAL FIRMA ─────────────────────────────────────────────────────────────
+
 function abrirFirma(f, campo) {
   firmaActualFila  = f;
   firmaActualCampo = campo;
@@ -686,6 +686,8 @@ function pegarFirmaCopiada() {
   img.src = firma;
   toast("✅ Firma pegada en el canvas — pulsa 'Usar esta firma' para confirmar","ok");
 }
+
+function getPos(e) {
   var r = canvas.getBoundingClientRect();
   var scaleX = canvas.width  / r.width;
   var scaleY = canvas.height / r.height;
