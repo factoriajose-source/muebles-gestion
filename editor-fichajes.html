@@ -330,30 +330,27 @@ function doLogin() {
     return fsGet("vendedores");
   })
   .then(function(vends) {
-    // Solo José Ángel puede entrar
-    var miV = vends.find(function(v) {
-      return (v.email||"").toLowerCase().trim() === document.getElementById("lEmail").value.trim().toLowerCase();
+    var emailLower = email.toLowerCase();
+    // Comprobar si ese email pertenece a alguien que NO es Jose Angel
+    var otroUsuario = vends.find(function(v) {
+      return (v.email||"").toLowerCase().trim() === emailLower && v.alias !== "Jose Angel";
     });
-    if (!miV || miV.alias !== "Jose Angel") {
+    if (otroUsuario) {
       token = null;
       err.textContent = "Acceso solo para José Ángel";
       err.style.display = "block";
       return;
     }
+    // Login correcto y es Jose Angel (o email no está en ningún vendedor)
     vendedores = vends.filter(function(v) { return v.activo !== false && v.alias; })
       .sort(function(a,b) { return a.alias.localeCompare(b.alias,"es"); });
-
     document.getElementById("loginBox").style.display = "none";
     document.getElementById("appBox").style.display   = "block";
-
-    // Rellenar filtro
     var sel = document.getElementById("filtroTr");
     sel.innerHTML = "<option value='todos'>Todos los trabajadores</option>";
     vendedores.forEach(function(v) {
       sel.innerHTML += "<option value='"+v.alias+"'>"+v.alias+(v.nombre?" — "+v.nombre:"")+"</option>";
     });
-
-    // Fecha por defecto: mes actual
     var hoy  = new Date();
     var yyyy = hoy.getFullYear();
     var mm   = p2(hoy.getMonth()+1);
