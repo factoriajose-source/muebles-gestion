@@ -2621,33 +2621,21 @@ async function registrarFichaje(turno, hora, firmaData, v) {
 }
 
 // ===== IMPRESION FICHAS =====
-// Lee vacaciones_bajas via REST usando el token de Firebase Auth
+// Lee vacaciones_bajas usando el SDK de Firebase (mismo que fichajes)
 async function getVacacionesBajasREST() {
   try {
-    const user = auth.currentUser;
-    if (!user) { console.log("VAC REST: sin usuario autenticado"); return []; }
-    const token = await user.getIdToken(true);
-    const PROJECT = "muebles-presupuestos";
-    const BASE = "https://firestore.googleapis.com/v1/projects/"+PROJECT+"/databases/(default)/documents";
-    let docs = [], pageToken = null;
-    do {
-      let url = BASE + "/vacaciones_bajas?pageSize=300" + (pageToken ? "&pageToken="+pageToken : "");
-      const res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
-      if (!res.ok) { console.error("VAC REST HTTP error:", res.status); return []; }
-      const data = await res.json();
-      if (data.documents) {
-        data.documents.forEach(d => {
-          const f = d.fields || {};
-          const gs = k => f[k]?.stringValue ?? null;
-          docs.push({ alias: gs("alias"), tipo: gs("tipo"), fechaIni: gs("fechaIni"), fechaFin: gs("fechaFin") });
-        });
+    const sn = await getDocs(collection(db, "vacaciones_bajas"));
+    const docs = [];
+    sn.forEach(d => {
+      const r = d.data();
+      if (r.alias && r.fechaIni && r.fechaFin && r.tipo) {
+        docs.push({ alias: r.alias, tipo: r.tipo, fechaIni: r.fechaIni, fechaFin: r.fechaFin });
       }
-      pageToken = data.nextPageToken || null;
-    } while (pageToken);
-    console.log("VAC REST OK:", docs.length, "registros, ejemplo:", docs[0]);
+    });
+    console.log("VAC SDK OK:", docs.length, "registros", docs.length ? "ejemplo:"+JSON.stringify(docs[0]) : "");
     return docs;
   } catch(e) {
-    console.error("VAC REST error:", e);
+    console.error("VAC SDK error:", e);
     return [];
   }
 }
