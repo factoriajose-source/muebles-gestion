@@ -280,12 +280,16 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
     <!-- Datos del cliente (aparece tras elegir tienda) -->
     <div id="modal-cliente" style="display:none;border-top:1px solid #eee;padding-top:14px">
       <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:10px">Datos del cliente (opcional)</div>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
         <input type="text" id="cli-nombre" placeholder="Nombre del cliente" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
         <input type="text" id="cli-tel" placeholder="Teléfono" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
         <input type="text" id="cli-poblacion" placeholder="Población" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
+        <input type="text" id="cli-vendedor" placeholder="Vendedor" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
       </div>
-      <button onclick="ejecutarImpresion()" style="width:100%;padding:11px;background:#1a1714;color:white;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>
+      <div style="display:flex;gap:8px">
+        <button onclick="ejecutarImpresion()" style="flex:1;padding:11px;background:#1a1714;color:white;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>
+        <button onclick="guardarYImprimir()" style="flex:1;padding:11px;background:#2d7a4f;color:white;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">💾 Guardar + Imprimir</button>
+      </div>
     </div>
     <button onclick="cerrarModalTienda()" style="width:100%;padding:9px;border:1.5px solid #ddd;border-radius:8px;background:white;font-family:inherit;font-size:13px;cursor:pointer;color:#888;margin-top:8px">Cancelar</button>
   </div>
@@ -324,9 +328,10 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
 var db, auth;
 var ARTICULOS=[],PROVEEDORES_MAP={},XL_DATA=null,XL_COLS=[];
 // Multi-presupuesto
-var PRESUPUESTOS=[[]];   // array de arrays de líneas
-var PRES_ACTIVO=0;       // índice del presupuesto activo
-var PRES_TIENDA_SEL="";  // tienda seleccionada para impresión
+var PRESUPUESTOS=[[]];
+var PRES_ACTIVO=0;
+var PRES_TIENDA_SEL="";
+var VENDEDOR_ACTUAL={alias:"",nombre:""}; // vendedor detectado al login
 var STORAGE_KEY="meres_tarifas_v3";
 
 function initFirebase(){
@@ -342,6 +347,16 @@ function doLogin(){
   var err=document.getElementById("lErr");
   err.style.display="none";
   auth.signInWithEmailAndPassword(email,pass).then(function(){
+    // Buscar el alias del vendedor por email
+    return db.collection("vendedores").get();
+  }).then(function(sn){
+    sn.forEach(function(d){
+      var v=d.data();
+      if((v.email||"").toLowerCase().trim()===email.toLowerCase()){
+        VENDEDOR_ACTUAL={alias:v.alias||"", nombre:(v.nombre||"")+" "+(v.apellidos||"")};
+      }
+    });
+    if(!VENDEDOR_ACTUAL.alias) VENDEDOR_ACTUAL={alias:"Jose Angel",nombre:"Jose Angel"};
     document.getElementById("loginBox").style.display="none";
     document.getElementById("appBox").style.display="block";
     cargarProveedoresFirebase();
@@ -935,7 +950,83 @@ function imprimirPresupuesto(){
 
 function selTiendaImpresion(tienda){
   PRES_TIENDA_SEL=tienda;
+  document.getElementById("cli-vendedor").value=VENDEDOR_ACTUAL.alias||"";
   document.getElementById("modal-cliente").style.display="block";
+}
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+function guardarYImprimir(){
+  // Primero guardar en Firebase, luego imprimir
+  var tieneAlgo=PRESUPUESTOS.some(function(p){return p.length>0;});
+  if(!tieneAlgo){ toast("No hay artículos","err"); return; }
+  if(!PRES_TIENDA_SEL){ toast("Elige una tienda","err"); return; }
+
+  var cliNombre=document.getElementById("cli-nombre").value.trim();
+  var cliTel=document.getElementById("cli-tel").value.trim();
+  var cliPob=document.getElementById("cli-poblacion").value.trim();
+  var vendedor=document.getElementById("cli-vendedor").value.trim()||VENDEDOR_ACTUAL.alias;
+
+  // Construir líneas en formato compatible con index.html
+  var presConContenido=PRESUPUESTOS.filter(function(p){return p.length>0;});
+  var lineasFirebase=[];
+  presConContenido.forEach(function(pres,pi){
+    pres.forEach(function(l){
+      var pd=PROVEEDORES_MAP[l.art.prv]||PROVEEDORES_MAP[parseInt(l.art.prv)]||{};
+      var precioSinDto=l.pts&&pd.precioPunto?Math.round(l.pts*pd.precioPunto):null;
+      lineasFirebase.push({
+        desc: l.art.nom+(l.tela&&l.tela!=="UNICO"?" ("+l.tela+")":""),
+        ref: l.art.prv+"-"+l.art.mod.replace(/[aeiouáéíóúAEIOUÁÉÍÓÚ]/g,"")+"-"+l.art.ref,
+        precio: l.precio!==null?Math.round(l.precio):0,
+        precioSinDto: precioSinDto||0,
+        dto: pd.dtoMax||0,
+        qty: l.qty,
+        opcion: pi+1,
+        tela: l.tela,
+        mod: l.art.mod,
+        prv: l.art.prv
+      });
+    });
+  });
+
+  var totalGeneral=0;
+  lineasFirebase.forEach(function(l){ totalGeneral+=l.precio*l.qty; });
+
+  var docId=uid();
+  var fecha=new Date().toISOString().slice(0,10);
+  var presupuestoData={
+    id: docId,
+    num: "EXP-"+Date.now().toString(36).toUpperCase(),
+    fecha: fecha,
+    estado: "pendiente",
+    origen: "express",
+    tienda: PRES_TIENDA_SEL,
+    vendedor: vendedor,
+    cliente: {
+      nombre: cliNombre||"Sin nombre",
+      tel: cliTel,
+      email: "",
+      dni: "",
+      dir: cliPob,
+      notas: ""
+    },
+    lines: lineasFirebase,
+    total: Math.round(totalGeneral),
+    opciones: presConContenido.length,
+    mo: {desc:"",precio:0},
+    descuento: 0,
+    validez: "14",
+    pagos: []
+  };
+
+  db.collection("presupuestos").doc(docId).set(presupuestoData).then(function(){
+    toast("✅ Presupuesto guardado como #"+presupuestoData.num,"ok");
+    ejecutarImpresion();
+  }).catch(function(e){
+    toast("❌ Error al guardar: "+e.message,"err");
+    // Imprimir igualmente aunque no se guarde
+    ejecutarImpresion();
+  });
 }
 
 function cerrarModalTienda(){
@@ -950,6 +1041,8 @@ function ejecutarImpresion(){
   var cliNombre=document.getElementById("cli-nombre").value.trim();
   var cliTel=document.getElementById("cli-tel").value.trim();
   var cliPob=document.getElementById("cli-poblacion").value.trim();
+  var cliPob=document.getElementById("cli-poblacion").value.trim();
+  var cliVendedor=document.getElementById("cli-vendedor").value.trim()||VENDEDOR_ACTUAL.alias;
   var STORES={
     "Muebles La Factoría":{logo:"https://www.muebleslafactoria.info/img/logo-1686043424.jpg",address:"Carretera General de Oviedo a Santander Km.8, 33199 Meres, Siero - Asturias",tel:"985 792 670",whatsapp:"687 476 389",email:"factoria.asturias@gmail.com",web:"www.muebleslafactoria.info",color:"#1a6b2a"},
     "Merkamueble":{logo:"https://merkamueble.com/img/merkamueble-logo-16970183001.jpg",address:"Crta. Oviedo-Santander, Km.5, 33199 Granda - Asturias",tel:"985 793 496",email:"merkamuebleasturias@gmail.com",web:"www.merkamueble.com",color:"#003580"},
@@ -968,11 +1061,12 @@ function ejecutarImpresion(){
       +"</div></div>";
   }
   var bloqueCliente="";
-  if(cliNombre||cliTel||cliPob){
-    bloqueCliente="<div style=\'background:#f8f6f2;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;display:flex;gap:24px\'>"
+  if(cliNombre||cliTel||cliPob||cliVendedor){
+    bloqueCliente="<div style=\'background:#f8f6f2;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;display:flex;gap:24px;flex-wrap:wrap\'>"
       +(cliNombre?"<div><span style=\'color:#888;font-size:10px;text-transform:uppercase\'>Cliente</span><br><strong>"+cliNombre+"</strong></div>":"")
       +(cliTel?"<div><span style=\'color:#888;font-size:10px;text-transform:uppercase\'>Teléfono</span><br><strong>"+cliTel+"</strong></div>":"")
       +(cliPob?"<div><span style=\'color:#888;font-size:10px;text-transform:uppercase\'>Población</span><br><strong>"+cliPob+"</strong></div>":"")
+      +(cliVendedor?"<div><span style=\'color:#888;font-size:10px;text-transform:uppercase\'>Vendedor</span><br><strong>"+cliVendedor+"</strong></div>":"")
       +"</div>";
   }
   var paginas="";
