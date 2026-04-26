@@ -256,6 +256,7 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
         <span id="visorZoomLbl" style="color:#aaa;font-size:12px;min-width:38px;text-align:center">100%</span>
         <button onclick="zoomMas()" title="Ampliar" style="background:rgba(255,255,255,.15);color:white;border:none;border-radius:6px;padding:5px 12px;font-size:16px;cursor:pointer;font-weight:700">🔍+</button>
         <button onclick="zoomReset()" style="background:rgba(255,255,255,.15);color:white;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">1:1</button>
+        <button onclick="imprimirImagenes()" style="background:#2d7a4f;color:white;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>
         <button onclick="cerrarVisor()" style="background:#c0392b;color:white;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer">✕ Cerrar</button>
       </div>
     </div>
@@ -704,24 +705,91 @@ function importarTarifa(){
 
 function cancelarImport(){document.getElementById("import-form").style.display="none";document.getElementById("file-input").value="";XL_DATA=null;}
 
+function imprimirImagenes(){
+  var titulo=document.getElementById("visorTitulo").textContent;
+  var win=window.open("","_blank","width=900,height=700");
+  var imgs=visorImgs.map(function(src,i){
+    return "<div style='page-break-inside:avoid;margin-bottom:8px;text-align:center'>"
+      +"<img src='"+src+"' style='max-width:100%;max-height:230px;object-fit:contain'>"
+      +"<div style='font-size:10px;color:#888;margin-top:2px'>"+(i+1)+" / "+visorImgs.length+"</div>"
+      +"</div>";
+  }).join("");
+  win.document.write(
+    "<!DOCTYPE html><html><head><meta charset='UTF-8'>"
+    +"<title>"+titulo+"</title>"
+    +"<style>"
+    +"body{margin:15px;font-family:system-ui,sans-serif;}"
+    +"h2{font-size:14px;margin-bottom:12px;color:#1a1714;border-bottom:2px solid #eee;padding-bottom:6px}"
+    +"@media print{"
+    +"  body{margin:8mm;}"
+    +"  .no-print{display:none}"
+    +"  @page{size:A4;margin:8mm}"
+    +"}"
+    +"</style></head><body>"
+    +"<h2>"+titulo+"</h2>"
+    +"<div style='display:grid;grid-template-columns:repeat("+Math.min(visorImgs.length,2)+",1fr);gap:10px'>"
+    +imgs
+    +"</div>"
+    +"<div class='no-print' style='text-align:center;margin-top:16px'>"
+    +"<button onclick='window.print()' style='padding:10px 24px;background:#1a1714;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer'>🖨️ Imprimir</button>"
+    +"&nbsp;<button onclick='window.close()' style='padding:10px 24px;background:#eee;border:none;border-radius:8px;font-size:14px;cursor:pointer'>Cerrar</button>"
+    +"</div>"
+    +"<script>window.onload=function(){window.print();}<\/script>"
+    +"</body></html>"
+  );
+  win.document.close();
+}
+
 function renderTarifas(){
   var cont=document.getElementById("lista-tarifas");
   var grupos={};
-  ARTICULOS.forEach(function(a){var k=a.prv+"||"+a.mod;if(!grupos[k])grupos[k]={prv:a.prv,prvNom:a.prvNom,mod:a.mod,count:0};grupos[k].count++;});
+  ARTICULOS.forEach(function(a){
+    var k=a.prv+"||"+a.mod;
+    if(!grupos[k])grupos[k]={prv:a.prv,prvNom:a.prvNom,mod:a.mod,count:0};
+    grupos[k].count++;
+  });
   var keys=Object.keys(grupos);
   if(!keys.length){cont.innerHTML="<div style='color:#aaa;text-align:center;padding:20px'>Sin tarifas</div>";return;}
-  var html="";
-  keys.forEach(function(k){
+
+  // Proveedores únicos para el filtro
+  var prvsFiltro={};
+  keys.forEach(function(k){var g=grupos[k];prvsFiltro[g.prv]=g.prvNom;});
+
+  // Leer filtro actual
+  var filtroEl=document.getElementById("tar-filtro-prv");
+  var filtroPrv=filtroEl?filtroEl.value:"";
+
+  var html="<div style='display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap'>"
+    +"<div style='font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888'>Filtrar por proveedor:</div>"
+    +"<select id='tar-filtro-prv' onchange='renderTarifas()' style='padding:7px 10px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px'>"
+    +"<option value=''>Todos los proveedores</option>";
+  Object.keys(prvsFiltro).sort().forEach(function(p){
+    var pd=PROVEEDORES_MAP[p];
+    var nom=pd?pd.nombre:prvsFiltro[p];
+    html+="<option value='"+p+"'"+(p===filtroPrv?" selected":"")+">"+p+" · "+nom+"</option>";
+  });
+  html+="</select></div>";
+
+  var alguno=false;
+  keys.filter(function(k){
+    return !filtroPrv||grupos[k].prv===filtroPrv;
+  }).forEach(function(k){
+    alguno=true;
     var g=grupos[k];var pd=PROVEEDORES_MAP[g.prv]||{};var esG=g.prv==="678";
+    var imgs=cargarImagenesGuardadas(g.prv,g.mod);
     html+="<div class='tarifa-item'>"
-      +"<div><div style='font-weight:700;font-size:13px'>"+g.prv+" - "+(pd.nombre||g.prvNom)+" -- "+g.mod+"</div>"
-        +"<div style='font-size:11px;color:#888;margin-top:2px'>"+g.count+" articulos"
-          +(pd.precioPunto?" | P.Coste: "+pd.precioPunto+"EUR/pt | Dto: "+pd.dtoMax+"%":"")
-          +(esG?" | Tarifa base siempre incluida":"")
+      +"<div><div style='font-weight:700;font-size:13px'>"+g.prv+" · "+(pd.nombre||g.prvNom)+" — "+g.mod+"</div>"
+        +"<div style='font-size:11px;color:#888;margin-top:2px'>"+g.count+" artículos"
+          +(pd.precioPunto?" · "+pd.precioPunto+" €/pt · Dto: "+pd.dtoMax+"%":"")
+          +(esG?" · <em>Tarifa base siempre incluida</em>":"")
+          +(imgs.length?" · 🖼️ "+imgs.length+" imagen(es)":"")
         +"</div></div>"
-      +"<div>"+(esG?"":"<button class='btn btn-red' style='padding:5px 10px;font-size:11px' data-prv='"+g.prv+"' data-mod='"+g.mod+"' onclick='eliminarTarifaBtn(this)'>Eliminar</button>")+"</div>"
+      +"<div style='display:flex;gap:6px'>"
+        +(esG?"":"<button class='btn btn-red' style='padding:5px 10px;font-size:11px' data-prv='"+g.prv+"' data-mod='"+g.mod+"' onclick='eliminarTarifaBtn(this)'>🗑 Eliminar</button>")
+      +"</div>"
       +"</div>";
   });
+  if(!alguno) html+="<div style='color:#aaa;text-align:center;padding:20px'>Sin tarifas para este proveedor</div>";
   cont.innerHTML=html;
 }
 
