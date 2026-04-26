@@ -869,11 +869,12 @@ function ejecutarImpresion(tienda){
   var filas=PRESUPUESTO.map(function(l){
     var sub=l.precio!==null?Math.round(l.precio*l.qty):"—";
     var pd=PROVEEDORES_MAP[l.art.prv]||{};
+    var modCodigo=l.art.mod.replace(/[aeiouáéíóuAEIOUÁÉÍÓÚ]/g,"");
     return "<tr>"
       +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;font-size:12px'>"
         +"<strong>"+l.art.nom+"</strong>"
         +(l.tela!=="UNICO"?"<br><span style='color:"+st.color+";font-size:11px'>"+l.tela+"</span>":"")
-        +"<br><span style='font-size:10px;color:#aaa'>"+l.art.prvNom+" · Ref. "+l.art.ref+"</span>"
+        +"<br><span style='font-size:10px;color:#aaa'>Ref. "+l.art.prv+"-"+modCodigo+"-"+l.art.ref+"</span>"
       +"</td>"
       +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center;font-size:13px'>"+l.qty+"</td>"
       +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-size:13px'>"+(l.precio!==null?Math.round(l.precio)+" €":"—")+"</td>"
@@ -896,7 +897,7 @@ function ejecutarImpresion(tienda){
     }).join("");
     paginaFotos="<div style='page-break-before:always;padding:20px'>"
       +cabecera
-      +"<div style='font-size:13px;font-weight:700;color:#1a1714;margin-bottom:14px'>📷 Imágenes del modelo: "+mod+"</div>"
+      +"<div style='font-size:13px;font-weight:700;color:#1a1714;margin-bottom:14px'>📷 Imágenes del modelo: "+mod.replace(/[aeiouáéíóúAEIOUÁÉÍÓÚ]/g,"")+"</div>"
       +"<div style='display:grid;grid-template-columns:repeat("+cols+",1fr);gap:14px'>"
       +fotosHtml
       +"</div></div>";
