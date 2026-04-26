@@ -117,7 +117,7 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
         </div>
         <div style="overflow-x:auto">
           <table class="tbl">
-            <thead><tr><th>Articulo</th><th>Ref</th><th>Medidas</th><th>Puntos</th><th>P.Coste/pt</th><th>Dto.Max</th><th>Precio publico</th><th></th></tr></thead>
+            <thead><tr><th>Articulo</th><th>Ref</th><th>Medidas</th><th>Puntos tela</th><th>Precio publico</th><th></th></tr></thead>
             <tbody id="art-body"><tr><td colspan="8" style="text-align:center;padding:30px;color:#bbb">Cargando tarifas...</td></tr></tbody>
           </table>
         </div>
@@ -242,7 +242,7 @@ function cargarProveedoresFirebase(){
       var p=d.data();
       var cod=String(p.Codigo||p.codigo||"").trim();
       if(!cod)return;
-      var pp=parseFloat(String(p.P_COSTE||"0").replace(",","."))||0;
+      var pp=parseFloat(String(p.PUNTOS||p.puntos||"0").replace(",","."))||0;
       var dto=parseFloat(String(p.MAX_DTO||"0").replace(",",".").replace("%",""))||0;
       var nom=p.Nombre||p.nombre||cod;
       PROVEEDORES_MAP[cod]={nombre:nom,precioPunto:pp,dtoMax:dto};
@@ -353,8 +353,8 @@ function renderArt(){
     if(a.prv!==lp){
       var pd=PROVEEDORES_MAP[a.prv]||{};
       html+="<tr><td colspan='8' class='sep-prv'>"+a.prv+" - "+(pd.nombre||a.prvNom)
-        +(pd.precioPunto?" | P.Coste: "+pd.precioPunto.toFixed(3)+" EUR/pt":"")
-        +(pd.dtoMax?" | Dto.Max: "+pd.dtoMax+"%":"")
+        
+        
         +"</td></tr>";
       lp=a.prv;lm="";
     }
@@ -383,8 +383,8 @@ function renderArt(){
       +"<td style='color:#888;font-size:11px'>"+a.ref+"</td>"
       +"<td style='color:#888;font-size:11px;white-space:nowrap'>"+a.med+"</td>"
       +"<td style='font-weight:600;color:#2856c8' id='pts-"+a.prv+"-"+a.ref+"'>"+pts+"</td>"
-      +"<td style='color:#888;font-size:11px'>"+(pd.precioPunto?pd.precioPunto.toFixed(3)+" EUR":"---")+"</td>"
-      +"<td style='color:#c4571a;font-size:11px'>"+(pd.dtoMax?pd.dtoMax+"%":"---")+"</td>"
+      
+      
       +"<td><div>"+telaHtml+"</div>"
         +"<div class='precio-pub' id='prec-"+a.prv+"-"+a.ref+"'>"+(precio!==null?fmtEur(precio):"<span style='color:#aaa;font-size:11px'>Sin datos proveedor</span>")+"</div>"
       +"</td>"
@@ -451,7 +451,7 @@ function renderPres(){
       +"<td style='font-size:12px'><strong>"+l.art.nom+"</strong>"
         +(l.tela!=="UNICO"?"<br><span style='font-size:10px;color:#c4571a'>"+l.tela+"</span>":"")
         +"<br><span style='font-size:10px;color:#aaa'>"+l.art.prvNom+" ref."+l.art.ref+"</span>"
-        +"<br><span style='font-size:10px;color:#aaa'>"+l.pts+" pts x "+(pd.precioPunto||"?")+" - "+(pd.dtoMax||"?")+"% dto</span>"
+        
       +"</td>"
       +"<td style='text-align:center'><div class='qty-ctrl'>"
         +"<button class='qty-btn' onclick='qtyPres("+i+",-1)'>-</button>"
@@ -471,10 +471,10 @@ function delPres(i){PRESUPUESTO.splice(i,1);renderPres();}
 function limpiarPres(){PRESUPUESTO=[];renderPres();}
 
 function exportarCSV(){
-  var rows=[["Articulo","Proveedor","Ref","Tela","Puntos","P.Coste/pt","Dto%","Precio unit.","Cant.","Total"]];
+  var rows=[["Articulo","Proveedor","Ref","Tela","Precio unit.","Cant.","Total"]];
   PRESUPUESTO.forEach(function(l){
     var pd=PROVEEDORES_MAP[l.art.prv]||{};
-    rows.push([l.art.nom,l.art.prvNom,l.art.ref,l.tela,l.pts,pd.precioPunto||"",pd.dtoMax||"",l.precio!==null?l.precio.toFixed(2):"",l.qty,l.precio!==null?(l.precio*l.qty).toFixed(2):""]);
+    rows.push([l.art.nom,l.art.prvNom,l.art.ref,l.tela,l.precio!==null?l.precio.toFixed(2):"",l.qty,l.precio!==null?(l.precio*l.qty).toFixed(2):""]);
   });
   var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c||"").replace(/"/g,'""')+'"';}).join(";");}).join("\r\n");
   var blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
