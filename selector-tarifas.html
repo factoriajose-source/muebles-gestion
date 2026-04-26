@@ -129,26 +129,30 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
       </div>
     </div>
     <div style="position:sticky;top:110px">
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <div class="card-title" style="margin:0">Presupuesto</div>
+      <div class="card" id="pres-card">
+        <!-- Cabecera con tabs de presupuestos -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:14px;font-weight:700">Presupuestos</div>
           <div style="display:flex;gap:6px" class="no-print">
-            <button class="btn btn-gray" style="padding:5px 10px;font-size:11px" onclick="limpiarPres()">Vaciar</button>
+            <button class="btn btn-gray" style="padding:5px 10px;font-size:11px" onclick="limpiarPresActivo()">🗑</button>
             <button class="btn btn-green" style="padding:5px 10px;font-size:11px" onclick="exportarCSV()">CSV</button>
             <button class="btn btn-dark" style="padding:5px 10px;font-size:11px" onclick="imprimirPresupuesto()">🖨️</button>
           </div>
         </div>
-        <div class="pres-empty" id="pres-empty">Anade articulos del catalogo</div>
+        <!-- Tabs de presupuestos -->
+        <div id="pres-tabs" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap"></div>
+        <!-- Contenido del presupuesto activo -->
+        <div class="pres-empty" id="pres-empty">Añade artículos del catálogo</div>
         <table class="pres-tbl" id="pres-tbl" style="display:none">
-          <thead><tr><th>Articulo</th><th style="text-align:center">Cant</th><th style="text-align:right">Total</th><th class="no-print"></th></tr></thead>
+          <thead><tr><th>Artículo</th><th style="text-align:center">Cant</th><th style="text-align:right">Total</th><th class="no-print"></th></tr></thead>
           <tbody id="pres-body"></tbody>
         </table>
-        <div id="pres-footer" style="display:none;margin-top:12px;padding-top:10px;border-top:2px solid #e8e4de">
+        <div id="pres-footer" style="display:none;margin-top:10px;padding-top:8px;border-top:2px solid #e8e4de">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <span style="font-weight:700;color:#888">TOTAL</span>
-            <span class="total-pres" id="pres-total">0,00 EUR</span>
+            <span class="total-pres" id="pres-total">0 €</span>
           </div>
-          <div style="font-size:11px;color:#bbb;margin-top:4px;text-align:right">Precios orientativos sin IVA</div>
+          <div style="font-size:11px;color:#bbb;margin-top:3px;text-align:right">Precios orientativos sin IVA</div>
         </div>
       </div>
     </div>
@@ -249,19 +253,29 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
 <div id="modalTienda" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;align-items:center;justify-content:center">
   <div style="background:white;border-radius:14px;padding:28px;max-width:420px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.3)">
     <div style="font-size:16px;font-weight:800;margin-bottom:6px">🖨️ Imprimir presupuesto</div>
-    <div style="font-size:13px;color:#888;margin-bottom:20px">Selecciona la tienda para añadir la cabecera correspondiente:</div>
-    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
-      <button onclick="ejecutarImpresion('Muebles La Factoría')" style="padding:14px;border:2px solid #1a6b2a;border-radius:10px;background:white;cursor:pointer;font-size:14px;font-weight:700;color:#1a6b2a;text-align:left;display:flex;align-items:center;gap:10px">
-        <img src="https://www.muebleslafactoria.info/img/logo-1686043424.jpg" style="height:32px;object-fit:contain"> Muebles La Factoría
+    <div style="font-size:13px;color:#888;margin-bottom:14px">Selecciona la tienda:</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+      <button onclick="selTiendaImpresion('Muebles La Factoría')" style="padding:12px;border:2px solid #1a6b2a;border-radius:10px;background:white;cursor:pointer;font-size:13px;font-weight:700;color:#1a6b2a;text-align:left;display:flex;align-items:center;gap:10px">
+        <img src="https://www.muebleslafactoria.info/img/logo-1686043424.jpg" style="height:28px;object-fit:contain"> Muebles La Factoría
       </button>
-      <button onclick="ejecutarImpresion('Merkamueble')" style="padding:14px;border:2px solid #003580;border-radius:10px;background:white;cursor:pointer;font-size:14px;font-weight:700;color:#003580;text-align:left;display:flex;align-items:center;gap:10px">
-        <img src="https://merkamueble.com/img/merkamueble-logo-16970183001.jpg" style="height:32px;object-fit:contain"> Merkamueble
+      <button onclick="selTiendaImpresion('Merkamueble')" style="padding:12px;border:2px solid #003580;border-radius:10px;background:white;cursor:pointer;font-size:13px;font-weight:700;color:#003580;text-align:left;display:flex;align-items:center;gap:10px">
+        <img src="https://merkamueble.com/img/merkamueble-logo-16970183001.jpg" style="height:28px;object-fit:contain"> Merkamueble
       </button>
-      <button onclick="ejecutarImpresion('ExpoSofá')" style="padding:14px;border:2px solid #E8470A;border-radius:10px;background:white;cursor:pointer;font-size:14px;font-weight:700;color:#E8470A;text-align:left;display:flex;align-items:center;gap:10px">
-        <span style="font-size:22px">🛋️</span> ExpoSofá
+      <button onclick="selTiendaImpresion('ExpoSofá')" style="padding:12px;border:2px solid #E8470A;border-radius:10px;background:white;cursor:pointer;font-size:13px;font-weight:700;color:#E8470A;text-align:left;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">🛋️</span> ExpoSofá
       </button>
     </div>
-    <button onclick="document.getElementById('modalTienda').style.display='none'" style="width:100%;padding:10px;border:1.5px solid #ddd;border-radius:8px;background:white;font-family:inherit;font-size:13px;cursor:pointer;color:#888">Cancelar</button>
+    <!-- Datos del cliente (aparece tras elegir tienda) -->
+    <div id="modal-cliente" style="display:none;border-top:1px solid #eee;padding-top:14px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:10px">Datos del cliente (opcional)</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+        <input type="text" id="cli-nombre" placeholder="Nombre del cliente" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
+        <input type="text" id="cli-tel" placeholder="Teléfono" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
+        <input type="text" id="cli-poblacion" placeholder="Población" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
+      </div>
+      <button onclick="ejecutarImpresion()" style="width:100%;padding:11px;background:#1a1714;color:white;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>
+    </div>
+    <button onclick="cerrarModalTienda()" style="width:100%;padding:9px;border:1.5px solid #ddd;border-radius:8px;background:white;font-family:inherit;font-size:13px;cursor:pointer;color:#888;margin-top:8px">Cancelar</button>
   </div>
 </div>
 
@@ -296,7 +310,11 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
 
 <script>
 var db, auth;
-var ARTICULOS=[],PROVEEDORES_MAP={},PRESUPUESTO=[],XL_DATA=null,XL_COLS=[];
+var ARTICULOS=[],PROVEEDORES_MAP={},XL_DATA=null,XL_COLS=[];
+// Multi-presupuesto
+var PRESUPUESTOS=[[]];   // array de arrays de líneas
+var PRES_ACTIVO=0;       // índice del presupuesto activo
+var PRES_TIENDA_SEL="";  // tienda seleccionada para impresión
 var STORAGE_KEY="meres_tarifas_v3";
 
 function initFirebase(){
@@ -539,32 +557,72 @@ function addPresFromRow(prv,ref){
 }
 
 function addPres(art,tela){
+  var pres=PRESUPUESTOS[PRES_ACTIVO];
   var pts=(art.categorias||{})[tela];
   var precio=calcPrecio(art,tela);
-  var idx=PRESUPUESTO.findIndex(function(l){return l.art.prv===art.prv&&l.art.ref===art.ref&&l.tela===tela;});
-  if(idx>=0){PRESUPUESTO[idx].qty++;}
-  else{PRESUPUESTO.push({art:art,tela:tela,pts:pts,precio:precio,qty:1});}
+  var idx=pres.findIndex(function(l){return l.art.prv===art.prv&&l.art.ref===art.ref&&l.tela===tela;});
+  if(idx>=0){pres[idx].qty++;}
+  else{pres.push({art:art,tela:tela,pts:pts,precio:precio,qty:1});}
   renderPres();
-  toast("Anadido: "+art.nom+" ("+tela+")","ok");
+  toast("Añadido: "+art.nom+" ("+tela+")","ok");
+}
+
+function renderTabs(){
+  var cont=document.getElementById("pres-tabs");
+  var html="";
+  PRESUPUESTOS.forEach(function(p,i){
+    var total=0;p.forEach(function(l){if(l.precio!==null)total+=l.precio*l.qty;});
+    var activo=i===PRES_ACTIVO;
+    html+="<div style='display:flex;align-items:center;gap:3px'>"
+      +"<button onclick='selPresupuesto("+i+")' style='padding:5px 10px;border-radius:7px 7px 0 0;border:1.5px solid "+(activo?"#1a1714":"#ddd")+";border-bottom:none;background:"+(activo?"#1a1714":"white")+";color:"+(activo?"white":"#555")+";font-family:inherit;font-size:12px;font-weight:700;cursor:pointer'>"
+        +"Op. "+(i+1)+(total>0?" · "+Math.round(total)+"€":"")
+      +"</button>"
+      +(PRESUPUESTOS.length>1?"<button onclick='eliminarPresupuesto("+i+")' style='padding:3px 6px;border:1.5px solid #ddd;border-bottom:none;border-radius:7px 7px 0 0;background:white;color:#bbb;font-size:11px;cursor:pointer;margin-left:-2px'>✕</button>":"")
+      +"</div>";
+  });
+  // Botón +
+  html+="<button onclick='nuevoPresupuesto()' style='padding:5px 10px;border-radius:7px;border:1.5px dashed #c4571a;background:white;color:#c4571a;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;margin-left:4px'>+</button>";
+  cont.innerHTML=html;
+}
+
+function selPresupuesto(i){
+  PRES_ACTIVO=i;
+  renderTabs();
+  renderPres();
+}
+
+function nuevoPresupuesto(){
+  PRESUPUESTOS.push([]);
+  PRES_ACTIVO=PRESUPUESTOS.length-1;
+  renderTabs();
+  renderPres();
+}
+
+function eliminarPresupuesto(i){
+  if(PRESUPUESTOS.length<=1)return;
+  PRESUPUESTOS.splice(i,1);
+  PRES_ACTIVO=Math.min(PRES_ACTIVO,PRESUPUESTOS.length-1);
+  renderTabs();
+  renderPres();
 }
 
 function renderPres(){
+  renderTabs();
+  var pres=PRESUPUESTOS[PRES_ACTIVO];
   var empty=document.getElementById("pres-empty");
   var tbl=document.getElementById("pres-tbl");
   var footer=document.getElementById("pres-footer");
   var tbody=document.getElementById("pres-body");
-  if(!PRESUPUESTO.length){empty.style.display="block";tbl.style.display="none";footer.style.display="none";return;}
+  if(!pres.length){empty.style.display="block";tbl.style.display="none";footer.style.display="none";return;}
   empty.style.display="none";tbl.style.display="table";footer.style.display="block";
   var total=0,html="";
-  PRESUPUESTO.forEach(function(l,i){
+  pres.forEach(function(l,i){
     var sub=l.precio!==null?l.precio*l.qty:null;
     if(sub)total+=sub;
-    var pd=PROVEEDORES_MAP[l.art.prv]||{};
     html+="<tr>"
       +"<td style='font-size:12px'><strong>"+l.art.nom+"</strong>"
         +(l.tela!=="UNICO"?"<br><span style='font-size:10px;color:#c4571a'>"+l.tela+"</span>":"")
         +"<br><span style='font-size:10px;color:#aaa'>"+l.art.prvNom+" ref."+l.art.ref+"</span>"
-        
       +"</td>"
       +"<td style='text-align:center'><div class='qty-ctrl'>"
         +"<button class='qty-btn' onclick='qtyPres("+i+",-1)'>-</button>"
@@ -572,22 +630,22 @@ function renderPres(){
         +"<button class='qty-btn' onclick='qtyPres("+i+",1)'>+</button>"
       +"</div></td>"
       +"<td style='text-align:right;font-weight:700'>"+(sub!==null?fmtEur(sub):"---")+"</td>"
-      +"<td class='no-print'><button onclick='delPres("+i+")' style='background:none;border:none;cursor:pointer;color:#bbb;font-size:16px'>x</button></td>"
+      +"<td class='no-print'><button onclick='delPres("+i+")' style='background:none;border:none;cursor:pointer;color:#bbb;font-size:16px'>✕</button></td>"
       +"</tr>";
   });
   tbody.innerHTML=html;
   document.getElementById("pres-total").textContent=fmtEur(total);
 }
 
-function qtyPres(i,d){PRESUPUESTO[i].qty=Math.max(1,PRESUPUESTO[i].qty+d);renderPres();}
-function delPres(i){PRESUPUESTO.splice(i,1);renderPres();}
-function limpiarPres(){PRESUPUESTO=[];renderPres();}
+function qtyPres(i,d){PRESUPUESTOS[PRES_ACTIVO][i].qty=Math.max(1,PRESUPUESTOS[PRES_ACTIVO][i].qty+d);renderPres();}
+function delPres(i){PRESUPUESTOS[PRES_ACTIVO].splice(i,1);renderPres();}
+function limpiarPresActivo(){PRESUPUESTOS[PRES_ACTIVO]=[];renderPres();}
 
 function exportarCSV(){
-  var rows=[["Articulo","Proveedor","Ref","Tela","Precio unit.","Cant.","Total"]];
-  PRESUPUESTO.forEach(function(l){
-    var pd=PROVEEDORES_MAP[l.art.prv]||{};
-    rows.push([l.art.nom,l.art.prvNom,l.art.ref,l.tela,l.precio!==null?Math.round(l.precio):"",l.qty,l.precio!==null?Math.round(l.precio*l.qty):""]);
+  var pres=PRESUPUESTOS[PRES_ACTIVO];
+  var rows=[["Opcion","Articulo","Tela","Precio unit.","Cant.","Total"]];
+  pres.forEach(function(l){
+    rows.push(["Op."+(PRES_ACTIVO+1),l.art.nom,l.tela,l.precio!==null?Math.round(l.precio):"",l.qty,l.precio!==null?Math.round(l.precio*l.qty):""]);
   });
   var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c||"").replace(/"/g,'""')+'"';}).join(";");}).join("\r\n");
   var blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
@@ -815,130 +873,112 @@ function renderTarifas(){
 }
 
 function imprimirPresupuesto(){
-  if(!PRESUPUESTO.length){ toast("El presupuesto está vacío","err"); return; }
+  var tieneAlgo=PRESUPUESTOS.some(function(p){return p.length>0;});
+  if(!tieneAlgo){ toast("No hay artículos en ningún presupuesto","err"); return; }
+  PRES_TIENDA_SEL="";
+  document.getElementById("modal-cliente").style.display="none";
+  document.getElementById("cli-nombre").value="";
+  document.getElementById("cli-tel").value="";
+  document.getElementById("cli-poblacion").value="";
   document.getElementById("modalTienda").style.display="flex";
 }
 
-function ejecutarImpresion(tienda){
-  document.getElementById("modalTienda").style.display="none";
+function selTiendaImpresion(tienda){
+  PRES_TIENDA_SEL=tienda;
+  document.getElementById("modal-cliente").style.display="block";
+}
 
-  // Datos de tienda
+function cerrarModalTienda(){
+  document.getElementById("modalTienda").style.display="none";
+  PRES_TIENDA_SEL="";
+}
+
+function ejecutarImpresion(){
+  if(!PRES_TIENDA_SEL){ toast("Elige una tienda primero","err"); return; }
+  document.getElementById("modalTienda").style.display="none";
+  var tienda=PRES_TIENDA_SEL;
+  var cliNombre=document.getElementById("cli-nombre").value.trim();
+  var cliTel=document.getElementById("cli-tel").value.trim();
+  var cliPob=document.getElementById("cli-poblacion").value.trim();
   var STORES={
-    "Muebles La Factoría":{
-      logo:"https://www.muebleslafactoria.info/img/logo-1686043424.jpg",
-      address:"Carretera General de Oviedo a Santander Km.8, 33199 Meres, Siero - Asturias",
-      tel:"985 792 670", whatsapp:"687 476 389",
-      email:"factoria.asturias@gmail.com", web:"www.muebleslafactoria.info",
-      color:"#1a6b2a"
-    },
-    "Merkamueble":{
-      logo:"https://merkamueble.com/img/merkamueble-logo-16970183001.jpg",
-      address:"Crta. Oviedo-Santander, Km.5, 33199 Granda - Asturias",
-      tel:"985 793 496", email:"merkamuebleasturias@gmail.com",
-      web:"www.merkamueble.com", color:"#003580"
-    },
-    "ExpoSofá":{
-      logo:"", // Sin logo URL — usar texto
-      address:"Carretera Oviedo-Santander Km.4, 33199 Granda, Siero - Asturias",
-      tel:"984 103 883", whatsapp:"673 857 323",
-      email:"exposofa.ventas@gmail.com", web:"www.exposofa.info",
-      color:"#E8470A"
-    }
+    "Muebles La Factoría":{logo:"https://www.muebleslafactoria.info/img/logo-1686043424.jpg",address:"Carretera General de Oviedo a Santander Km.8, 33199 Meres, Siero - Asturias",tel:"985 792 670",whatsapp:"687 476 389",email:"factoria.asturias@gmail.com",web:"www.muebleslafactoria.info",color:"#1a6b2a"},
+    "Merkamueble":{logo:"https://merkamueble.com/img/merkamueble-logo-16970183001.jpg",address:"Crta. Oviedo-Santander, Km.5, 33199 Granda - Asturias",tel:"985 793 496",email:"merkamuebleasturias@gmail.com",web:"www.merkamueble.com",color:"#003580"},
+    "ExpoSofá":{logo:"",address:"Carretera Oviedo-Santander Km.4, 33199 Granda, Siero - Asturias",tel:"984 103 883",whatsapp:"673 857 323",email:"exposofa.ventas@gmail.com",web:"www.exposofa.info",color:"#E8470A"}
   };
   var st=STORES[tienda]||STORES["Muebles La Factoría"];
   var fecha=new Date().toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric"});
-
-  // Calcular total
-  var total=0;
-  PRESUPUESTO.forEach(function(l){ if(l.precio!==null) total+=l.precio*l.qty; });
-
-  // Cabecera HTML de tienda
-  var cabecera="<div style='display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:3px solid "+st.color+";margin-bottom:18px'>"
-    +"<div>"
-    +(st.logo?"<img src='"+st.logo+"' style='height:52px;object-fit:contain'>":"<div style='font-size:22px;font-weight:900;color:"+st.color+"'>"+tienda+"</div>")
-    +"</div>"
-    +"<div style='text-align:right;font-size:11px;color:#555;line-height:1.7'>"
-      +"<div style='font-weight:700;color:"+st.color+"'>"+tienda+"</div>"
-      +"<div>"+st.address+"</div>"
-      +"<div>Tel: "+st.tel+(st.whatsapp?" | WhatsApp: "+st.whatsapp:"")+"</div>"
-      +"<div>"+st.email+" | "+st.web+"</div>"
-    +"</div>"
-    +"</div>";
-
-  // Filas del presupuesto
-  var filas=PRESUPUESTO.map(function(l){
-    var sub=l.precio!==null?Math.round(l.precio*l.qty):"—";
-    var pd=PROVEEDORES_MAP[l.art.prv]||{};
-    var modCodigo=l.art.mod.replace(/[aeiouáéíóuAEIOUÁÉÍÓÚ]/g,"");
-    return "<tr>"
-      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;font-size:12px'>"
-        +"<strong>"+l.art.nom+"</strong>"
-        +(l.tela!=="UNICO"?"<br><span style='color:"+st.color+";font-size:11px'>"+l.tela+"</span>":"")
-        +"<br><span style='font-size:10px;color:#aaa'>Ref. "+l.art.prv+"-"+modCodigo+"-"+l.art.ref+"</span>"
-      +"</td>"
-      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center;font-size:13px'>"+l.qty+"</td>"
-      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-size:13px'>"+(l.precio!==null?Math.round(l.precio)+" €":"—")+"</td>"
-      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700;font-size:13px'>"+(sub!=="—"?sub+" €":sub)+"</td>"
-      +"</tr>";
-  }).join("");
-
-  // Fotos del modelo seleccionado (si hay)
+  function mkCabecera(){
+    return "<div style=\'display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:3px solid "+st.color+";margin-bottom:16px\'>"
+      +"<div>"+(st.logo?"<img src=\'"+st.logo+"\' style=\'height:50px;object-fit:contain\'>":"<div style=\'font-size:20px;font-weight:900;color:"+st.color+"\'>"+tienda+"</div>")+"</div>"
+      +"<div style=\'text-align:right;font-size:11px;color:#555;line-height:1.7\'>"
+        +"<div style=\'font-weight:700;color:"+st.color+"\'>"+tienda+"</div>"
+        +"<div>"+st.address+"</div>"
+        +"<div>Tel: "+st.tel+(st.whatsapp?" | WhatsApp: "+st.whatsapp:"")+"</div>"
+        +"<div>"+st.email+" | "+st.web+"</div>"
+      +"</div></div>";
+  }
+  var bloqueCliente="";
+  if(cliNombre||cliTel||cliPob){
+    bloqueCliente="<div style=\'background:#f8f6f2;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;display:flex;gap:24px\'>"
+      +(cliNombre?"<div><span style=\'color:#888;font-size:10px;text-transform:uppercase\'>Cliente</span><br><strong>"+cliNombre+"</strong></div>":"")
+      +(cliTel?"<div><span style=\'color:#888;font-size:10px;text-transform:uppercase\'>Teléfono</span><br><strong>"+cliTel+"</strong></div>":"")
+      +(cliPob?"<div><span style=\'color:#888;font-size:10px;text-transform:uppercase\'>Población</span><br><strong>"+cliPob+"</strong></div>":"")
+      +"</div>";
+  }
+  var paginas="";
+  var presConContenido=PRESUPUESTOS.filter(function(p){return p.length>0;});
+  presConContenido.forEach(function(pres,pi){
+    var total=0;
+    var filas=pres.map(function(l){
+      var sub=l.precio!==null?Math.round(l.precio*l.qty):null;
+      if(sub)total+=sub;
+      var modCodigo=l.art.mod.replace(/[aeiouáéíóúAEIOUÁÉÍÓÚ]/g,"");
+      return "<tr>"
+        +"<td style=\'padding:7px 8px;border-bottom:1px solid #f0ece6;font-size:12px\'><strong>"+l.art.nom+"</strong>"
+        +(l.tela!=="UNICO"?"<br><span style=\'color:"+st.color+";font-size:11px\'>"+l.tela+"</span>":"")
+        +"<br><span style=\'font-size:10px;color:#aaa\'>Ref. "+l.art.prv+"-"+modCodigo+"-"+l.art.ref+"</span></td>"
+        +"<td style=\'padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center\'>"+l.qty+"</td>"
+        +"<td style=\'padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right\'>"+(l.precio!==null?Math.round(l.precio)+" €":"—")+"</td>"
+        +"<td style=\'padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700\'>"+(sub!==null?sub+" €":"—")+"</td>"
+        +"</tr>";
+    }).join("");
+    var tituloOp=presConContenido.length>1?"<div style=\'font-size:12px;font-weight:700;color:"+st.color+";margin-bottom:6px\'>OPCIÓN "+(pi+1)+"</div>":"";
+    paginas+="<div style=\'padding:20px;"+(pi>0?"page-break-before:always":"")+"\'>"+mkCabecera()
+      +"<div style=\'display:flex;justify-content:space-between;margin-bottom:10px\'><div style=\'font-size:15px;font-weight:800\'>Presupuesto</div><div style=\'font-size:12px;color:#888\'>"+fecha+" | Sin IVA</div></div>"
+      +bloqueCliente+tituloOp
+      +"<table style=\'width:100%;border-collapse:collapse\'><thead><tr>"
+      +"<th style=\'background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:left\'>Artículo</th>"
+      +"<th style=\'background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:center;width:60px\'>Cant.</th>"
+      +"<th style=\'background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:right;width:90px\'>P.Unit.</th>"
+      +"<th style=\'background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:right;width:90px\'>Total</th>"
+      +"</tr></thead><tbody>"+filas+"</tbody>"
+      +"<tfoot><tr><td colspan=\'3\' style=\'padding:10px 8px;text-align:right;font-weight:700;font-size:14px;border-top:2px solid #1a1714\'>TOTAL</td>"
+      +"<td style=\'padding:10px 8px;text-align:right;font-weight:800;font-size:18px;color:"+st.color+";border-top:2px solid #1a1714\'>"+Math.round(total)+" €</td></tr></tfoot></table>"
+      +"<div style=\'margin-top:12px;font-size:11px;color:#aaa;text-align:center\'>Precios orientativos sin IVA · Válido 14 días</div></div>";
+  });
   var prv=document.getElementById("f-prv").value;
   var mod=document.getElementById("f-mod").value;
   var imgs=prv&&mod?cargarImagenesGuardadas(prv,mod):[];
-  var paginaFotos="";
   if(imgs.length){
     var cols=Math.min(imgs.length,2);
     var fotosHtml=imgs.map(function(src,i){
-      return "<div style='text-align:center;page-break-inside:avoid'>"
-        +"<img src='"+src+"' style='max-width:100%;max-height:250px;object-fit:contain;border-radius:6px'>"
-        +"<div style='font-size:10px;color:#aaa;margin-top:4px'>"+(i+1)+"/"+imgs.length+"</div>"
-        +"</div>";
+      return "<div style=\'text-align:center\'><img src=\'"+src+"\' style=\'max-width:100%;max-height:240px;object-fit:contain\'>"
+        +"<div style=\'font-size:10px;color:#aaa;margin-top:4px\'>"+(i+1)+"/"+imgs.length+"</div></div>";
     }).join("");
-    paginaFotos="<div style='page-break-before:always;padding:20px'>"
-      +cabecera
-      +"<div style='font-size:13px;font-weight:700;color:#1a1714;margin-bottom:14px'>📷 Imágenes del modelo: "+mod.replace(/[aeiouáéíóúAEIOUÁÉÍÓÚ]/g,"")+"</div>"
-      +"<div style='display:grid;grid-template-columns:repeat("+cols+",1fr);gap:14px'>"
-      +fotosHtml
-      +"</div></div>";
+    paginas+="<div style=\'page-break-before:always;padding:20px\'>"+mkCabecera()
+      +"<div style=\'font-size:13px;font-weight:700;margin-bottom:14px\'>Imágenes: "+mod.replace(/[aeiouáéíóúAEIOUÁÉÍÓÚ]/g,"")+"</div>"
+      +"<div style=\'display:grid;grid-template-columns:repeat("+cols+",1fr);gap:14px\'>"+fotosHtml+"</div></div>";
   }
-
   var win=window.open("","_blank","width=900,height=750");
-  win.document.write("<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Presupuesto "+tienda+"</title>"
-    +"<style>body{margin:0;font-family:system-ui,sans-serif;color:#1a1714}"
-    +"table{width:100%;border-collapse:collapse}"
-    +"th{background:#1a1714;color:white;padding:8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em}"
-    +"@media print{.no-print{display:none}@page{size:A4;margin:10mm}}"
-    +"</style></head><body>"
-    // PÁGINA 1: cabecera + presupuesto
-    +"<div style='padding:20px'>"
-    +cabecera
-    +"<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px'>"
-      +"<div style='font-size:15px;font-weight:800'>Presupuesto</div>"
-      +"<div style='font-size:12px;color:#888'>Fecha: "+fecha+" &nbsp;|&nbsp; Precios orientativos sin IVA</div>"
-    +"</div>"
-    +"<table><thead><tr>"
-      +"<th>Artículo</th><th style='text-align:center;width:60px'>Cant.</th>"
-      +"<th style='text-align:right;width:90px'>Precio unit.</th><th style='text-align:right;width:90px'>Total</th>"
-    +"</tr></thead><tbody>"+filas+"</tbody>"
-    +"<tfoot><tr>"
-      +"<td colspan='3' style='padding:10px 8px;text-align:right;font-weight:700;font-size:14px;border-top:2px solid #1a1714'>TOTAL</td>"
-      +"<td style='padding:10px 8px;text-align:right;font-weight:800;font-size:18px;color:"+st.color+";border-top:2px solid #1a1714'>"+Math.round(total)+" €</td>"
-    +"</tr></tfoot></table>"
-    +"<div style='margin-top:16px;font-size:11px;color:#aaa;text-align:center'>Precios orientativos sin IVA · Válido 14 días</div>"
-    +"</div>"
-    // PÁGINA 2: fotos (si hay)
-    +paginaFotos
-    +"<div class='no-print' style='text-align:center;padding:16px;border-top:1px solid #eee;margin-top:10px'>"
-      +"<button onclick='window.print()' style='padding:10px 28px;background:#1a1714;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer'>🖨️ Imprimir</button>"
-      +" <button onclick='window.close()' style='padding:10px 20px;background:#eee;border:none;border-radius:8px;font-size:14px;cursor:pointer;margin-left:8px'>Cerrar</button>"
-    +"</div>"
-    +"<script>window.onload=function(){window.print();}<\/script>"
-    +"</body></html>"
-  );
+  win.document.write("<!DOCTYPE html><html><head><meta charset=\'UTF-8\'><title>Presupuesto</title>"
+    +"<style>body{margin:0;font-family:system-ui,sans-serif;color:#1a1714}@media print{.np{display:none}@page{size:A4;margin:8mm}}</style>"
+    +"</head><body>"+paginas
+    +"<div class=\'np\' style=\'text-align:center;padding:16px;border-top:1px solid #eee\'>"
+    +"<button onclick=\'window.print()\' style=\'padding:10px 28px;background:#1a1714;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer\'>Imprimir</button>"
+    +" <button onclick=\'window.close()\' style=\'padding:10px 20px;background:#eee;border:none;border-radius:8px;font-size:14px;cursor:pointer;margin-left:8px\'>Cerrar</button></div>"
+    +"<script>window.onload=function(){window.print();};<\/script></body></html>");
   win.document.close();
 }
-
 function eliminarTarifaBtn(btn){
   var prv=btn.getAttribute("data-prv");
   var mod=btn.getAttribute("data-mod");
