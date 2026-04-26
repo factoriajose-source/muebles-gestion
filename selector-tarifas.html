@@ -135,6 +135,7 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
           <div style="display:flex;gap:6px" class="no-print">
             <button class="btn btn-gray" style="padding:5px 10px;font-size:11px" onclick="limpiarPres()">Vaciar</button>
             <button class="btn btn-green" style="padding:5px 10px;font-size:11px" onclick="exportarCSV()">CSV</button>
+            <button class="btn btn-dark" style="padding:5px 10px;font-size:11px" onclick="imprimirPresupuesto()">🖨️</button>
           </div>
         </div>
         <div class="pres-empty" id="pres-empty">Anade articulos del catalogo</div>
@@ -243,6 +244,26 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
   </div>
 </div>
 </div><!-- fin appBox -->
+
+<!-- MODAL SELECCIÓN TIENDA PARA IMPRIMIR -->
+<div id="modalTienda" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;align-items:center;justify-content:center">
+  <div style="background:white;border-radius:14px;padding:28px;max-width:420px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+    <div style="font-size:16px;font-weight:800;margin-bottom:6px">🖨️ Imprimir presupuesto</div>
+    <div style="font-size:13px;color:#888;margin-bottom:20px">Selecciona la tienda para añadir la cabecera correspondiente:</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+      <button onclick="ejecutarImpresion('Muebles La Factoría')" style="padding:14px;border:2px solid #1a6b2a;border-radius:10px;background:white;cursor:pointer;font-size:14px;font-weight:700;color:#1a6b2a;text-align:left;display:flex;align-items:center;gap:10px">
+        <img src="https://www.muebleslafactoria.info/img/logo-1686043424.jpg" style="height:32px;object-fit:contain"> Muebles La Factoría
+      </button>
+      <button onclick="ejecutarImpresion('Merkamueble')" style="padding:14px;border:2px solid #003580;border-radius:10px;background:white;cursor:pointer;font-size:14px;font-weight:700;color:#003580;text-align:left;display:flex;align-items:center;gap:10px">
+        <img src="https://merkamueble.com/img/merkamueble-logo-16970183001.jpg" style="height:32px;object-fit:contain"> Merkamueble
+      </button>
+      <button onclick="ejecutarImpresion('ExpoSofá')" style="padding:14px;border:2px solid #E8470A;border-radius:10px;background:white;cursor:pointer;font-size:14px;font-weight:700;color:#E8470A;text-align:left;display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">🛋️</span> ExpoSofá
+      </button>
+    </div>
+    <button onclick="document.getElementById('modalTienda').style.display='none'" style="width:100%;padding:10px;border:1.5px solid #ddd;border-radius:8px;background:white;font-family:inherit;font-size:13px;cursor:pointer;color:#888">Cancelar</button>
+  </div>
+</div>
 
 <!-- VISOR DE IMÁGENES (ventana flotante) -->
 <div id="visorOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;flex-direction:column;align-items:center;justify-content:center">
@@ -791,6 +812,130 @@ function renderTarifas(){
   });
   if(!alguno) html+="<div style='color:#aaa;text-align:center;padding:20px'>Sin tarifas para este proveedor</div>";
   cont.innerHTML=html;
+}
+
+function imprimirPresupuesto(){
+  if(!PRESUPUESTO.length){ toast("El presupuesto está vacío","err"); return; }
+  document.getElementById("modalTienda").style.display="flex";
+}
+
+function ejecutarImpresion(tienda){
+  document.getElementById("modalTienda").style.display="none";
+
+  // Datos de tienda
+  var STORES={
+    "Muebles La Factoría":{
+      logo:"https://www.muebleslafactoria.info/img/logo-1686043424.jpg",
+      address:"Carretera General de Oviedo a Santander Km.8, 33199 Meres, Siero - Asturias",
+      tel:"985 792 670", whatsapp:"687 476 389",
+      email:"factoria.asturias@gmail.com", web:"www.muebleslafactoria.info",
+      color:"#1a6b2a"
+    },
+    "Merkamueble":{
+      logo:"https://merkamueble.com/img/merkamueble-logo-16970183001.jpg",
+      address:"Crta. Oviedo-Santander, Km.5, 33199 Granda - Asturias",
+      tel:"985 793 496", email:"merkamuebleasturias@gmail.com",
+      web:"www.merkamueble.com", color:"#003580"
+    },
+    "ExpoSofá":{
+      logo:"", // Sin logo URL — usar texto
+      address:"Carretera Oviedo-Santander Km.4, 33199 Granda, Siero - Asturias",
+      tel:"984 103 883", whatsapp:"673 857 323",
+      email:"exposofa.ventas@gmail.com", web:"www.exposofa.info",
+      color:"#E8470A"
+    }
+  };
+  var st=STORES[tienda]||STORES["Muebles La Factoría"];
+  var fecha=new Date().toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric"});
+
+  // Calcular total
+  var total=0;
+  PRESUPUESTO.forEach(function(l){ if(l.precio!==null) total+=l.precio*l.qty; });
+
+  // Cabecera HTML de tienda
+  var cabecera="<div style='display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:3px solid "+st.color+";margin-bottom:18px'>"
+    +"<div>"
+    +(st.logo?"<img src='"+st.logo+"' style='height:52px;object-fit:contain'>":"<div style='font-size:22px;font-weight:900;color:"+st.color+"'>"+tienda+"</div>")
+    +"</div>"
+    +"<div style='text-align:right;font-size:11px;color:#555;line-height:1.7'>"
+      +"<div style='font-weight:700;color:"+st.color+"'>"+tienda+"</div>"
+      +"<div>"+st.address+"</div>"
+      +"<div>Tel: "+st.tel+(st.whatsapp?" | WhatsApp: "+st.whatsapp:"")+"</div>"
+      +"<div>"+st.email+" | "+st.web+"</div>"
+    +"</div>"
+    +"</div>";
+
+  // Filas del presupuesto
+  var filas=PRESUPUESTO.map(function(l){
+    var sub=l.precio!==null?Math.round(l.precio*l.qty):"—";
+    var pd=PROVEEDORES_MAP[l.art.prv]||{};
+    return "<tr>"
+      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;font-size:12px'>"
+        +"<strong>"+l.art.nom+"</strong>"
+        +(l.tela!=="UNICO"?"<br><span style='color:"+st.color+";font-size:11px'>"+l.tela+"</span>":"")
+        +"<br><span style='font-size:10px;color:#aaa'>"+l.art.prvNom+" · Ref. "+l.art.ref+"</span>"
+      +"</td>"
+      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center;font-size:13px'>"+l.qty+"</td>"
+      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-size:13px'>"+(l.precio!==null?Math.round(l.precio)+" €":"—")+"</td>"
+      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700;font-size:13px'>"+(sub!=="—"?sub+" €":sub)+"</td>"
+      +"</tr>";
+  }).join("");
+
+  // Fotos del modelo seleccionado (si hay)
+  var prv=document.getElementById("f-prv").value;
+  var mod=document.getElementById("f-mod").value;
+  var imgs=prv&&mod?cargarImagenesGuardadas(prv,mod):[];
+  var paginaFotos="";
+  if(imgs.length){
+    var cols=Math.min(imgs.length,2);
+    var fotosHtml=imgs.map(function(src,i){
+      return "<div style='text-align:center;page-break-inside:avoid'>"
+        +"<img src='"+src+"' style='max-width:100%;max-height:250px;object-fit:contain;border-radius:6px'>"
+        +"<div style='font-size:10px;color:#aaa;margin-top:4px'>"+(i+1)+"/"+imgs.length+"</div>"
+        +"</div>";
+    }).join("");
+    paginaFotos="<div style='page-break-before:always;padding:20px'>"
+      +cabecera
+      +"<div style='font-size:13px;font-weight:700;color:#1a1714;margin-bottom:14px'>📷 Imágenes del modelo: "+mod+"</div>"
+      +"<div style='display:grid;grid-template-columns:repeat("+cols+",1fr);gap:14px'>"
+      +fotosHtml
+      +"</div></div>";
+  }
+
+  var win=window.open("","_blank","width=900,height=750");
+  win.document.write("<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Presupuesto "+tienda+"</title>"
+    +"<style>body{margin:0;font-family:system-ui,sans-serif;color:#1a1714}"
+    +"table{width:100%;border-collapse:collapse}"
+    +"th{background:#1a1714;color:white;padding:8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em}"
+    +"@media print{.no-print{display:none}@page{size:A4;margin:10mm}}"
+    +"</style></head><body>"
+    // PÁGINA 1: cabecera + presupuesto
+    +"<div style='padding:20px'>"
+    +cabecera
+    +"<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px'>"
+      +"<div style='font-size:15px;font-weight:800'>Presupuesto</div>"
+      +"<div style='font-size:12px;color:#888'>Fecha: "+fecha+" &nbsp;|&nbsp; Precios orientativos sin IVA</div>"
+    +"</div>"
+    +"<table><thead><tr>"
+      +"<th>Artículo</th><th style='text-align:center;width:60px'>Cant.</th>"
+      +"<th style='text-align:right;width:90px'>Precio unit.</th><th style='text-align:right;width:90px'>Total</th>"
+    +"</tr></thead><tbody>"+filas+"</tbody>"
+    +"<tfoot><tr>"
+      +"<td colspan='3' style='padding:10px 8px;text-align:right;font-weight:700;font-size:14px;border-top:2px solid #1a1714'>TOTAL</td>"
+      +"<td style='padding:10px 8px;text-align:right;font-weight:800;font-size:18px;color:"+st.color+";border-top:2px solid #1a1714'>"+Math.round(total)+" €</td>"
+    +"</tr></tfoot></table>"
+    +"<div style='margin-top:16px;font-size:11px;color:#aaa;text-align:center'>Precios orientativos sin IVA · Válido 14 días</div>"
+    +"</div>"
+    // PÁGINA 2: fotos (si hay)
+    +paginaFotos
+    +"<div class='no-print' style='text-align:center;padding:16px;border-top:1px solid #eee;margin-top:10px'>"
+      +"<button onclick='window.print()' style='padding:10px 28px;background:#1a1714;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer'>🖨️ Imprimir</button>"
+      +" <button onclick='window.close()' style='padding:10px 20px;background:#eee;border:none;border-radius:8px;font-size:14px;cursor:pointer;margin-left:8px'>Cerrar</button>"
+    +"</div>"
+    +"<script>window.onload=function(){window.print();}<\/script>"
+    +"</body></html>"
+  );
+  win.document.close();
 }
 
 function eliminarTarifaBtn(btn){
