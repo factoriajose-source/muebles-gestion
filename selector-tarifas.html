@@ -976,15 +976,18 @@ function guardarYImprimir(){
       var precioSinDto=l.pts&&pd.precioPunto?Math.round(l.pts*pd.precioPunto):null;
       lineasFirebase.push({
         desc: l.art.nom+(l.tela&&l.tela!=="UNICO"?" ("+l.tela+")":""),
-        ref: l.art.prv+"-"+l.art.mod.replace(/[aeiouáéíóúAEIOUÁÉÍÓÚ]/g,"")+"-"+l.art.ref,
-        precio: l.precio!==null?Math.round(l.precio):0,
+        fabrica: l.art.prv+" · "+l.art.mod,
+        medidas: l.art.med||"",
+        color: l.tela!=="UNICO"?l.tela:"",
+        price: l.precio!==null?Math.round(l.precio):0,
         precioSinDto: precioSinDto||0,
         dto: pd.dtoMax||0,
         qty: l.qty,
         opcion: pi+1,
         tela: l.tela,
         mod: l.art.mod,
-        prv: l.art.prv
+        prv: l.art.prv,
+        cheslon: ""
       });
     });
   });
@@ -1130,16 +1133,34 @@ function ejecutarImpresion(){
       if(!modelosVistos[key]){
         modelosVistos[key]=true;
         modelosUnicos.push({prv:l.art.prv, mod:l.art.mod});
-        console.log("Modelo para fotos:",l.art.prv, l.art.mod, "→ docId:",getDocId(l.art.prv,l.art.mod));
+        var docId=getDocId(l.art.prv,l.art.mod);
+        console.log("Modelo para fotos:",l.art.prv,l.art.mod,"→ docId:",docId,"→ en cache:",IMGS_CACHE[docId]?IMGS_CACHE[docId].length+" fotos":"NO");
       }
     });
   });
   console.log("Total modelos únicos:",modelosUnicos.length);
   console.log("Claves en cache:",Object.keys(IMGS_CACHE));
 
-  // Cargar fotos de todos los modelos en paralelo
+  // Cargar fotos — primero intenta el docId exacto, luego busca por similitud en cache
   var promesasFotos=modelosUnicos.map(function(m){
     return new Promise(function(resolve){
+      var docId=getDocId(m.prv,m.mod);
+      // Si ya está en cache con ese docId exacto, usar directamente
+      if(IMGS_CACHE[docId]!==undefined){
+        resolve({prv:m.prv, mod:m.mod, imgs:IMGS_CACHE[docId]});
+        return;
+      }
+      // Buscar en cache por similitud (mismo prv, modelo parecido)
+      var modNorm=m.mod.replace(/[^a-zA-Z0-9]/g,"_").toUpperCase();
+      var clavesSimilares=Object.keys(IMGS_CACHE).filter(function(k){
+        return k.indexOf("img_"+m.prv+"_")===0 && k.toUpperCase().indexOf(modNorm)>=0;
+      });
+      if(clavesSimilares.length>0){
+        console.log("Encontrado por similitud:",clavesSimilares[0],"para",m.mod);
+        resolve({prv:m.prv, mod:m.mod, imgs:IMGS_CACHE[clavesSimilares[0]]});
+        return;
+      }
+      // Si no, buscar en Firestore
       cargarImagenesFirestore(m.prv,m.mod,function(imgs){
         resolve({prv:m.prv, mod:m.mod, imgs:imgs});
       });
