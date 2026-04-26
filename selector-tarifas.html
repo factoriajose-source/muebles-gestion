@@ -251,15 +251,22 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
       <div style="color:white;font-size:15px;font-weight:700" id="visorTitulo"></div>
       <div style="display:flex;gap:8px;align-items:center">
         <span style="color:#aaa;font-size:13px" id="visorCounter"></span>
+        <!-- Zoom -->
+        <button onclick="zoomMenos()" title="Reducir" style="background:rgba(255,255,255,.15);color:white;border:none;border-radius:6px;padding:5px 12px;font-size:16px;cursor:pointer;font-weight:700">🔍−</button>
+        <span id="visorZoomLbl" style="color:#aaa;font-size:12px;min-width:38px;text-align:center">100%</span>
+        <button onclick="zoomMas()" title="Ampliar" style="background:rgba(255,255,255,.15);color:white;border:none;border-radius:6px;padding:5px 12px;font-size:16px;cursor:pointer;font-weight:700">🔍+</button>
+        <button onclick="zoomReset()" style="background:rgba(255,255,255,.15);color:white;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">1:1</button>
         <button onclick="cerrarVisor()" style="background:#c0392b;color:white;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer">✕ Cerrar</button>
       </div>
     </div>
     <!-- Miniaturas -->
     <div id="visorThumbs" style="display:flex;gap:8px;justify-content:center;margin-bottom:14px;flex-wrap:wrap"></div>
-    <!-- Imagen grande -->
+    <!-- Imagen grande con zoom -->
     <div style="display:flex;align-items:center;gap:12px">
       <button onclick="visorAnterior()" style="background:rgba(255,255,255,.15);color:white;border:none;border-radius:50%;width:48px;height:48px;font-size:22px;cursor:pointer;flex-shrink:0">‹</button>
-      <img id="visorImg" src="" style="flex:1;max-height:70vh;object-fit:contain;border-radius:8px;display:block;margin:auto">
+      <div id="visorImgWrap" style="flex:1;overflow:auto;max-height:68vh;background:rgba(255,255,255,.04);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:grab">
+        <img id="visorImg" src="" style="display:block;transition:transform .2s;transform-origin:center center">
+      </div>
       <button onclick="visorSiguiente()" style="background:rgba(255,255,255,.15);color:white;border:none;border-radius:50%;width:48px;height:48px;font-size:22px;cursor:pointer;flex-shrink:0">›</button>
     </div>
   </div>
@@ -465,7 +472,7 @@ function renderArt(){
       +"<td><strong>"+a.nom+"</strong>"+(a.cat?"<br><span style='font-size:10px;color:#aaa'>"+a.cat+"</span>":"")+"</td>"
       +"<td style='color:#888;font-size:11px'>"+a.ref+"</td>"
       +"<td style='color:#888;font-size:11px;white-space:nowrap'>"+a.med+"</td>"
-      +"<td style='font-weight:600;color:#2856c8' id='pts-"+a.prv+"-"+a.ref+"'>"+pts+"</td>"
+      +"<td style='font-weight:600;color:#2856c8' id='pts-"+a.prv+"-"+a.ref+"'>"+Math.round(pts)+"</td>"
       
       
       +"<td><div>"+telaHtml+"</div>"
@@ -491,7 +498,7 @@ function reCalcRow(sel,tela,prv,ref){
   var precio=calcPrecio(art,tela);
   var pEl=document.getElementById("pts-"+prv+"-"+ref);
   var rEl=document.getElementById("prec-"+prv+"-"+ref);
-  if(pEl)pEl.textContent=pts;
+  if(pEl)pEl.textContent=Math.round(pts);
   if(rEl)rEl.innerHTML=precio!==null?fmtEur(precio):"<span style='color:#aaa;font-size:11px'>Sin datos</span>";
 }
 
@@ -844,23 +851,42 @@ function abrirVisor(){
 }
 
 function renderVisor(){
-  document.getElementById("visorImg").src=visorImgs[visorIdx];
+  var img=document.getElementById("visorImg");
+  img.src=visorImgs[visorIdx];
+  img.style.maxWidth="100%";
+  img.style.maxHeight="68vh";
+  img.style.objectFit="contain";
+  visorZoom=1;
+  aplicarZoom();
   document.getElementById("visorCounter").textContent=(visorIdx+1)+" / "+visorImgs.length;
-  // Miniaturas
   var thumbs=document.getElementById("visorThumbs");
   thumbs.innerHTML="";
   visorImgs.forEach(function(src,i){
-    var img=document.createElement("img");
-    img.src=src;
-    img.style.cssText="width:60px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid "+(i===visorIdx?"#c4571a":"rgba(255,255,255,.3)");
-    img.onclick=function(){ visorIdx=i; renderVisor(); };
-    thumbs.appendChild(img);
+    var ti=document.createElement("img");
+    ti.src=src;
+    ti.style.cssText="width:60px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid "+(i===visorIdx?"#c4571a":"rgba(255,255,255,.3)");
+    ti.onclick=function(){ visorIdx=i; renderVisor(); };
+    thumbs.appendChild(ti);
   });
 }
 
-function visorAnterior(){ visorIdx=(visorIdx-1+visorImgs.length)%visorImgs.length; renderVisor(); }
-function visorSiguiente(){ visorIdx=(visorIdx+1)%visorImgs.length; renderVisor(); }
-function cerrarVisor(){ document.getElementById("visorOverlay").style.display="none"; }
+function visorAnterior(){ visorIdx=(visorIdx-1+visorImgs.length)%visorImgs.length; visorZoom=1; renderVisor(); }
+function visorSiguiente(){ visorIdx=(visorIdx+1)%visorImgs.length; visorZoom=1; renderVisor(); }
+function cerrarVisor(){ document.getElementById("visorOverlay").style.display="none"; visorZoom=1; }
+
+// Zoom
+var visorZoom=1;
+function aplicarZoom(){
+  var img=document.getElementById("visorImg");
+  img.style.transform="scale("+visorZoom+")";
+  img.style.transformOrigin="top left";
+  document.getElementById("visorZoomLbl").textContent=Math.round(visorZoom*100)+"%";
+  var wrap=document.getElementById("visorImgWrap");
+  wrap.style.cursor=visorZoom>1?"grab":"default";
+}
+function zoomMas(){ visorZoom=Math.min(visorZoom+0.25,4); aplicarZoom(); }
+function zoomMenos(){ visorZoom=Math.max(visorZoom-0.25,0.25); aplicarZoom(); }
+function zoomReset(){ visorZoom=1; aplicarZoom(); }
 
 // Teclas del visor
 document.addEventListener("keydown",function(e){
