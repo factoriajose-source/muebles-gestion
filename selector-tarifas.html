@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Selector Tarifas Meres</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:system-ui,sans-serif;background:#f4f1ec;color:#1a1714;font-size:14px;}
+header{background:#1a1714;color:white;padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.brand{font-weight:800;font-size:15px;}.brand span{color:#c4571a;}
+.tabs{display:flex;gap:6px;padding:10px 18px;background:white;border-bottom:1px solid #e8e4de;position:sticky;top:52px;z-index:90;}
+.tab-btn{padding:7px 14px;border:1.5px solid #ddd;border-radius:8px;background:white;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;}
+.tab-btn.act{background:#1a1714;color:white;border-color:#1a1714;}
+.app{max-width:1300px;margin:0 auto;padding:14px 18px;}
+.card{background:white;border-radius:10px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.07);}
+.card-title{font-size:14px;font-weight:700;margin-bottom:12px;}
+.btn{padding:8px 16px;border:none;border-radius:7px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+.btn:hover{opacity:.85;}.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn-dark{background:#1a1714;color:white;}.btn-green{background:#2d7a4f;color:white;}
+.btn-orange{background:#c4571a;color:white;}.btn-red{background:#c0392b;color:white;}
+.btn-gray{background:#f0ece6;color:#555;}
+input,select,textarea{padding:8px 10px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px;}
+input:focus,select:focus{outline:none;border-color:#c4571a;}
+.fg{display:flex;flex-direction:column;gap:4px;}
+.fg label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;}
+.fg input,.fg select{width:100%;}
+.filtros{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:12px;background:#f8f6f2;border-radius:8px;margin-bottom:12px;}
+.filtros .fg{min-width:120px;}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.tbl thead tr{background:#1a1714;color:white;}
+.tbl th{padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;}
+.tbl tbody tr{border-bottom:1px solid #f4f1ec;}
+.tbl tbody tr:hover{background:#fdf4ee;}
+.tbl td{padding:6px 10px;vertical-align:middle;}
+.sep-prv{background:#1a1714;color:white;padding:5px 10px;font-size:11px;font-weight:700;}
+.sep-mod{background:#2d3a4a;color:#ccc;padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:.06em;}
+.btn-add{padding:3px 10px;border:1.5px solid #c4571a;border-radius:5px;background:white;color:#c4571a;font-size:11px;font-weight:700;cursor:pointer;}
+.btn-add:hover{background:#c4571a;color:white;}
+.precio-pub{font-weight:700;color:#1a1714;}
+.info-precio{font-size:10px;color:#aaa;margin-top:1px;}
+.pres-empty{text-align:center;padding:24px;color:#bbb;font-size:13px;}
+.pres-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.pres-tbl th{padding:8px;text-align:left;border-bottom:2px solid #e8e4de;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#888;}
+.pres-tbl td{padding:7px 8px;border-bottom:1px solid #f4f1ec;vertical-align:middle;}
+.qty-ctrl{display:flex;align-items:center;gap:5px;}
+.qty-btn{width:22px;height:22px;border:1.5px solid #ddd;border-radius:4px;background:white;font-weight:700;cursor:pointer;font-size:13px;}
+.qty-num{width:28px;text-align:center;font-weight:700;font-size:13px;}
+.total-pres{font-size:18px;font-weight:800;color:#c4571a;}
+.drop-zone{border:2.5px dashed #c4571a;border-radius:10px;padding:28px;text-align:center;cursor:pointer;background:white;transition:background .2s;}
+.drop-zone.over{background:#fdf4ee;}
+.drop-zone input[type=file]{display:none;}
+.map-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+.preview-wrap{overflow:auto;max-height:200px;border:1px solid #eee;border-radius:8px;margin-bottom:14px;}
+.preview-tbl{width:100%;border-collapse:collapse;font-size:11px;}
+.preview-tbl th{background:#f4f1ec;padding:5px 8px;text-align:left;white-space:nowrap;}
+.preview-tbl td{padding:4px 8px;border-bottom:1px solid #f4f1ec;white-space:nowrap;}
+.col-check{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1.5px solid #eee;border-radius:7px;background:white;cursor:pointer;transition:all .2s;}
+.col-check.sel{border-color:#c4571a;background:#fdf4ee;}
+.tarifa-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid #e8e4de;border-radius:8px;margin-bottom:8px;background:#fafaf8;}
+.toast{position:fixed;bottom:20px;right:20px;background:#1a1714;color:white;padding:11px 18px;border-radius:8px;font-size:13px;z-index:999;display:none;max-width:320px;}
+.toast.ok{border-left:4px solid #2d7a4f;}.toast.err{border-left:4px solid #c0392b;}.toast.info{border-left:4px solid #2856c8;}
+@media print{header,.tabs,.filtros,.btn-add,.qty-ctrl,.no-print{display:none!important;}.card{box-shadow:none;border:1px solid #ddd;}}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<header>
+  <div class="brand">MERES &middot; <span>Selector de Tarifas</span></div>
+  <button class="btn btn-gray no-print" style="padding:5px 12px;font-size:12px" onclick="window.print()">Imprimir</button>
+</header>
+<div class="tabs no-print">
+  <button class="tab-btn act" id="tb-selector" onclick="showTab('selector')">Catalogo + Presupuesto</button>
+  <button class="tab-btn" id="tb-importar" onclick="showTab('importar')">Importar tarifa Excel</button>
+  <button class="tab-btn" id="tb-tarifas" onclick="showTab('tarifas')">Tarifas guardadas</button>
+</div>
+
+<!-- TAB SELECTOR -->
+<div id="sec-selector" class="app">
+  <div style="display:grid;grid-template-columns:1fr 360px;gap:14px;align-items:start">
+    <div>
+      <div class="card">
+        <div class="card-title">Catalogo de articulos</div>
+        <div class="filtros">
+          <div class="fg"><label>Proveedor</label><select id="f-prv" onchange="sincModelos()"></select></div>
+          <div class="fg"><label>Modelo</label><select id="f-mod" onchange="renderArt()"></select></div>
+          <div class="fg"><label>Categoria</label><select id="f-cat" onchange="renderArt()"><option value="">Todas</option></select></div>
+          <div class="fg"><label>Tela / Acabado</label><select id="f-tela" onchange="renderArt()"><option value="">-- Selecciona --</option></select></div>
+          <div class="fg" style="flex:1;min-width:160px"><label>Buscar</label><input type="text" id="f-bus" placeholder="Nombre articulo..." oninput="renderArt()"></div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr><th>Articulo</th><th>Ref</th><th>Medidas</th><th>Puntos</th><th>P.Coste/pt</th><th>Dto.Max</th><th>Precio publico</th><th></th></tr></thead>
+            <tbody id="art-body"><tr><td colspan="8" style="text-align:center;padding:30px;color:#bbb">Cargando tarifas...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div style="position:sticky;top:110px">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div class="card-title" style="margin:0">Presupuesto</div>
+          <div style="display:flex;gap:6px" class="no-print">
+            <button class="btn btn-gray" style="padding:5px 10px;font-size:11px" onclick="limpiarPres()">Vaciar</button>
+            <button class="btn btn-green" style="padding:5px 10px;font-size:11px" onclick="exportarCSV()">CSV</button>
+          </div>
+        </div>
+        <div class="pres-empty" id="pres-empty">Anade articulos del catalogo</div>
+        <table class="pres-tbl" id="pres-tbl" style="display:none">
+          <thead><tr><th>Articulo</th><th style="text-align:center">Cant</th><th style="text-align:right">Total</th><th class="no-print"></th></tr></thead>
+          <tbody id="pres-body"></tbody>
+        </table>
+        <div id="pres-footer" style="display:none;margin-top:12px;padding-top:10px;border-top:2px solid #e8e4de">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-weight:700;color:#888">TOTAL</span>
+            <span class="total-pres" id="pres-total">0,00 EUR</span>
+          </div>
+          <div style="font-size:11px;color:#bbb;margin-top:4px;text-align:right">Precios orientativos sin IVA</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB IMPORTAR -->
+<div id="sec-importar" class="app" style="display:none">
+  <div class="card">
+    <div class="card-title">Importar tarifa desde Excel</div>
+    <p style="font-size:13px;color:#666;margin-bottom:16px;line-height:1.6">
+      Sube el Excel del proveedor. Marca que columnas contienen los puntos por categoria de tela.
+      El programa calcula el precio publico usando los datos de la tabla Proveedores de Firebase.
+    </p>
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()"
+         ondragover="event.preventDefault();this.classList.add('over')"
+         ondragleave="this.classList.remove('over')"
+         ondrop="onDrop(event)">
+      <div style="font-size:42px;margin-bottom:8px">...</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px">Arrastra el Excel aqui o haz clic</div>
+      <div style="font-size:12px;color:#aaa">.xlsx / .xls</div>
+      <input type="file" id="file-input" accept=".xlsx,.xls" onchange="onFileSelect(event)">
+    </div>
+    <div id="import-form" style="display:none;margin-top:16px">
+      <div class="card-title">Configurar importacion</div>
+      <div class="map-grid">
+        <div class="fg"><label>Codigo proveedor (de tabla Proveedores)</label>
+          <input type="text" id="imp-prv-cod" placeholder="Ej: 6028" oninput="buscarProveedor()"></div>
+        <div class="fg"><label>Proveedor encontrado</label>
+          <div id="imp-prv-info" style="padding:8px 10px;border:1.5px solid #ddd;border-radius:7px;background:#f8f6f2;font-size:13px;min-height:38px">Introduce el codigo</div></div>
+        <div class="fg"><label>Nombre del modelo</label><input type="text" id="imp-modelo" placeholder="Ej: GEORGINA"></div>
+        <div class="fg"><label>Fila de cabeceras (numero)</label><input type="number" id="imp-row-head" value="2" min="1" max="10" oninput="actualizarPreview()"></div>
+        <div class="fg"><label>Columna nombre articulo</label><select id="imp-col-nom"></select></div>
+        <div class="fg"><label>Columna referencia (opcional)</label><select id="imp-col-ref"><option value="">-- Sin referencia --</option></select></div>
+        <div class="fg"><label>Columna medidas (opcional)</label><select id="imp-col-med"><option value="">-- Sin medidas --</option></select></div>
+        <div class="fg"><label>Columna categoria articulo (opcional)</label><select id="imp-col-cat"><option value="">-- Sin categoria --</option></select></div>
+      </div>
+      <div style="margin-top:14px">
+        <div class="card-title">Vista previa del Excel</div>
+        <div class="preview-wrap" id="preview-wrap"></div>
+        <div class="card-title">Columnas de PUNTOS por categoria de tela</div>
+        <p style="font-size:12px;color:#888;margin-bottom:10px">
+          Marca las columnas que contienen puntos. Ponle un nombre a cada categoria (PROMO, OF, A, B...).
+          Para articulos sin categorias de tela, marca una sola columna y llamala UNICO.
+        </p>
+        <div id="cols-puntos" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+      </div>
+      <div id="imp-resumen" style="display:none;background:#e8f5ee;color:#2d7a4f;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;line-height:1.6"></div>
+      <div id="imp-error" style="display:none;background:#fdecea;color:#c0392b;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px"></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-green" onclick="importarTarifa()">Importar y guardar tarifa</button>
+        <button class="btn btn-gray" onclick="cancelarImport()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB TARIFAS -->
+<div id="sec-tarifas" class="app" style="display:none">
+  <div class="card">
+    <div class="card-title">Tarifas guardadas</div>
+    <div id="lista-tarifas"><div style="color:#aaa;text-align:center;padding:20px">Cargando...</div></div>
+  </div>
+</div>
+
+<script>
+firebase.initializeApp({apiKey:"AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",authDomain:"muebles-presupuestos.firebaseapp.com",projectId:"muebles-presupuestos",storageBucket:"muebles-presupuestos.firebasestorage.app",messagingSenderId:"37365883872",appId:"1:37365883872:web:842ca4d318c01652684185"});
+var db=firebase.firestore();
+var ARTICULOS=[],PROVEEDORES_MAP={},PRESUPUESTO=[],XL_DATA=null,XL_COLS=[];
+var STORAGE_KEY="meres_tarifas_v3";
+
+// INICIO
+window.onload=function(){
+  cargarProveedoresFirebase();
+  cargarTarifasLocal();
+};
+
+function cargarProveedoresFirebase(){
+  db.collection("proveedores").get().then(function(sn){
+    PROVEEDORES_MAP={};
+    sn.forEach(function(d){
+      var p=d.data();
+      var cod=String(p.Codigo||p.codigo||"").trim();
+      if(!cod)return;
+      var pp=parseFloat(String(p.P_COSTE||"0").replace(",","."))||0;
+      var dto=parseFloat(String(p.MAX_DTO||"0").replace(",",".").replace("%",""))||0;
+      PROVEEDORES_MAP[cod]={nombre:p.Nombre||p.nombre||cod,precioPunto:pp,dtoMax:dto};
+    });
+    renderArt();
+  }).catch(function(){renderArt();});
+}
+
+function cargarTarifasLocal(){
+  var s=localStorage.getItem(STORAGE_KEY);
+  var gnesis=cargarGNESIS();
+  if(!s){ARTICULOS=gnesis;renderTarifas();return;}
+  try{
+    var imp=JSON.parse(s).filter(function(a){return a.prv!=="678";});
+    ARTICULOS=gnesis.concat(imp);
+  }catch(e){ARTICULOS=gnesis;}
+  renderTarifas();
+}
+
+function guardarTarifasLocal(){
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(ARTICULOS.filter(function(a){return a.prv!=="678";})));
+}
+
+function cargarGNESIS(){
+  return [{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"115",nom:"Bajo 2 cajones + 1 puerta",med:"126x53 cm F41",cat:"Bajos TV",categorias:{"UNICO":430}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"120",nom:"Bajo 2 cajones + 2 puertas",med:"154x53 cm F41",cat:"Bajos TV",categorias:{"UNICO":467}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"125",nom:"Bajo 2 cajones + 2 puertas",med:"181x53 cm F41",cat:"Bajos TV",categorias:{"UNICO":535}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"130",nom:"Bajo 1 puerta + 1 estante",med:"126x53 cm F41",cat:"Bajos TV",categorias:{"UNICO":335}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"135",nom:"Bajo 2 puertas + 1 estante",med:"154x53 cm F41",cat:"Bajos TV",categorias:{"UNICO":389}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"140",nom:"Bajo 2 puertas + 1 estante",med:"181x53 cm F41",cat:"Bajos TV",categorias:{"UNICO":399}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"500i",nom:"Modulo 1P cristal izquierda",med:"55x147 cm F36",cat:"Modulos",categorias:{"UNICO":430}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"500D",nom:"Modulo 1P cristal derecha",med:"55x147 cm F36",cat:"Modulos",categorias:{"UNICO":430}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"505i",nom:"Modulo 1P cristal izquierda",med:"82x147 cm F36",cat:"Modulos",categorias:{"UNICO":560}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"505D",nom:"Modulo 1P cristal derecha",med:"82x147 cm F36",cat:"Modulos",categorias:{"UNICO":560}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"600i",nom:"Modulo Supra izquierda 3P",med:"92x147 cm F36",cat:"Modulos",categorias:{"UNICO":695}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"600D",nom:"Modulo Supra derecha 3P",med:"92x147 cm F36",cat:"Modulos",categorias:{"UNICO":695}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"550i",nom:"Vitrina 1P cristal izquierda",med:"55x183 cm F36",cat:"Vitrinas",categorias:{"UNICO":565}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"550D",nom:"Vitrina 1P cristal derecha",med:"55x183 cm F36",cat:"Vitrinas",categorias:{"UNICO":565}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"555i",nom:"Vitrina 1P cristal izquierda",med:"82x183 cm F36",cat:"Vitrinas",categorias:{"UNICO":705}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"555D",nom:"Vitrina 1P cristal derecha",med:"82x183 cm F36",cat:"Vitrinas",categorias:{"UNICO":705}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"605i",nom:"Vitrina Supra izquierda 3P",med:"92x183 cm F36",cat:"Vitrinas",categorias:{"UNICO":820}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"605D",nom:"Vitrina Supra derecha 3P",med:"92x183 cm F36",cat:"Vitrinas",categorias:{"UNICO":820}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"640",nom:"Estanteria",med:"55x183 cm F36",cat:"Estanterias",categorias:{"UNICO":385}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"645",nom:"Estanteria",med:"82x183 cm F36",cat:"Estanterias",categorias:{"UNICO":505}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"650",nom:"Galeria",med:"126x16 cm F27",cat:"Estanterias",categorias:{"UNICO":113}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"655",nom:"Galeria",med:"154x16 cm F27",cat:"Estanterias",categorias:{"UNICO":136}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"700",nom:"Aparador 3 puertas",med:"154x90 cm F41",cat:"Aparadores",categorias:{"UNICO":640}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"701",nom:"Aparador 3 puertas + 1 cajon",med:"154x90 cm F41",cat:"Aparadores",categorias:{"UNICO":700}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"705",nom:"Aparador 3 puertas + 1 cajon",med:"181x90 cm F41",cat:"Aparadores",categorias:{"UNICO":795}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"710",nom:"Aparador 4 puertas + hueco",med:"126x126 cm F41",cat:"Aparadores",categorias:{"UNICO":750}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"800",nom:"Pata Marco 55 cm",med:"F33 14cm Grafito",cat:"Patas",categorias:{"UNICO":85}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"805",nom:"Pata Marco 82 cm",med:"F33 14cm Grafito",cat:"Patas",categorias:{"UNICO":97}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"810",nom:"Pata Marco 126 cm",med:"F38 14cm Grafito",cat:"Patas",categorias:{"UNICO":105}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"815",nom:"Pata Marco 153 cm",med:"F38 14cm Grafito",cat:"Patas",categorias:{"UNICO":123}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"820",nom:"Pata Marco 181 cm",med:"F38 14cm Grafito",cat:"Patas",categorias:{"UNICO":132}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"850",nom:"Juego 4 patas Recta",med:"Plateado 2cm",cat:"Patas",categorias:{"UNICO":20}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"851",nom:"Pata Recta 1 unidad",med:"Plateado 2cm",cat:"Patas",categorias:{"UNICO":7}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"855",nom:"Juego 4 patas Home",med:"Oscillo 12cm",cat:"Patas",categorias:{"UNICO":55}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"856",nom:"Pata Home 1 unidad",med:"Oscillo 12cm",cat:"Patas",categorias:{"UNICO":18}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"830",nom:"Base 30mm 55cm",med:"55x35 cm F35",cat:"Bases",categorias:{"UNICO":37}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"831",nom:"Base 30mm 82cm",med:"82x35 cm F35",cat:"Bases",categorias:{"UNICO":52}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"832",nom:"Base 30mm 126cm",med:"126x40 cm F40",cat:"Bases",categorias:{"UNICO":68}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"833",nom:"Base 30mm 154cm",med:"154x40 cm F40",cat:"Bases",categorias:{"UNICO":85}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"834",nom:"Base 30mm 181cm",med:"181x40 cm F40",cat:"Bases",categorias:{"UNICO":100}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"900",nom:"Mesa centro elevable Tierra",med:"110x56 alt46cm",cat:"Mesas centro",categorias:{"UNICO":250}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"910",nom:"Mesa Marte pata Marco",med:"100x50 alt49cm",cat:"Mesas centro",categorias:{"UNICO":267}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"911",nom:"Mesa Marte con zocalo",med:"100x50 alt43cm",cat:"Mesas centro",categorias:{"UNICO":200}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"912",nom:"Mesa Marte patas Recta",med:"100x50 alt35cm",cat:"Mesas centro",categorias:{"UNICO":170}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"913",nom:"Mesa Marte patas Home",med:"100x50 alt45cm",cat:"Mesas centro",categorias:{"UNICO":195}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"950",nom:"Mesa cuadrada extensible",med:"90x90-180x90 cm",cat:"Mesas comedor",categorias:{"UNICO":460}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"955",nom:"Mesa rectangular extensible",med:"140x90-200x90 cm",cat:"Mesas comedor",categorias:{"UNICO":515}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"960",nom:"Mesa Venus extensible",med:"140x90-200x90 cm",cat:"Mesas comedor",categorias:{"UNICO":1240}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"875",nom:"Kit 2 LEDs barra 51cm",med:"Iluminacion",cat:"Accesorios",categorias:{"UNICO":125}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"880",nom:"Kit LED barra 80cm",med:"Iluminacion",cat:"Accesorios",categorias:{"UNICO":100}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"885",nom:"Kit 2 LEDs barra 80cm",med:"Iluminacion",cat:"Accesorios",categorias:{"UNICO":125}}];
+}
+
+function calcPrecio(art,cat){
+  var pts=art.categorias[cat];
+  if(!pts&&pts!==0)return null;
+  var p=PROVEEDORES_MAP[art.prv]||{};
+  if(!p.precioPunto)return null;
+  return pts*p.precioPunto*(1-p.dtoMax/100);
+}
+
+function fmtEur(v){
+  if(v===null||v===undefined||isNaN(v))return"---";
+  return v.toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2})+" EUR";
+}
+
+function showTab(t){
+  ["selector","importar","tarifas"].forEach(function(x){
+    document.getElementById("sec-"+x).style.display=x===t?"block":"none";
+    document.getElementById("tb-"+x).classList.toggle("act",x===t);
+  });
+  if(t==="tarifas")renderTarifas();
+}
+
+function sincModelos(){
+  var prv=document.getElementById("f-prv").value;
+  var ms={};
+  ARTICULOS.forEach(function(a){if(!prv||a.prv===prv)ms[a.mod]=1;});
+  var sel=document.getElementById("f-mod");
+  sel.innerHTML="<option value=''>Todos</option>";
+  Object.keys(ms).sort().forEach(function(m){sel.innerHTML+="<option>"+m+"</option>";});
+  renderArt();
+}
+
+function renderArt(){
+  var prv=document.getElementById("f-prv").value;
+  var mod=document.getElementById("f-mod").value;
+  var cat=document.getElementById("f-cat").value;
+  var tela=document.getElementById("f-tela").value;
+  var bus=(document.getElementById("f-bus").value||"").toLowerCase().trim();
+
+  var cats={},telas={};
+  ARTICULOS.forEach(function(a){
+    if(prv&&a.prv!==prv)return;
+    if(mod&&a.mod!==mod)return;
+    if(a.cat)cats[a.cat]=1;
+    Object.keys(a.categorias||{}).forEach(function(t){telas[t]=1;});
+  });
+
+  var catSel=document.getElementById("f-cat");
+  var telaSel=document.getElementById("f-tela");
+  var cv=catSel.value,tv=telaSel.value;
+  catSel.innerHTML="<option value=''>Todas</option>";
+  Object.keys(cats).sort().forEach(function(c){catSel.innerHTML+="<option"+(c===cv?" selected":"")+">"+c+"</option>";});
+  telaSel.innerHTML="<option value=''>-- Selecciona tela --</option>";
+  Object.keys(telas).sort().forEach(function(t){telaSel.innerHTML+="<option"+(t===tv?" selected":"")+">"+t+"</option>";});
+
+  var arts=ARTICULOS.filter(function(a){
+    if(prv&&a.prv!==prv)return false;
+    if(mod&&a.mod!==mod)return false;
+    if(cat&&a.cat!==cat)return false;
+    if(bus&&a.nom.toLowerCase().indexOf(bus)===-1)return false;
+    return true;
+  });
+
+  var prvSel=document.getElementById("f-prv");
+  var pv=prvSel.value;
+  var prvs={};
+  ARTICULOS.forEach(function(a){prvs[a.prv]=a.prvNom;});
+  prvSel.innerHTML="<option value=''>Todos los proveedores</option>";
+  Object.keys(prvs).sort().forEach(function(p){
+    var pd=PROVEEDORES_MAP[p];
+    var nom=pd?pd.nombre:prvs[p];
+    prvSel.innerHTML+="<option value='"+p+"'"+(p===pv?" selected":"")+">"+p+" - "+nom+"</option>";
+  });
+
+  var tbody=document.getElementById("art-body");
+  if(!arts.length){tbody.innerHTML="<tr><td colspan='8' style='text-align:center;padding:20px;color:#aaa'>Sin articulos</td></tr>";return;}
+
+  var html="",lp="",lm="";
+  arts.forEach(function(a){
+    if(a.prv!==lp){
+      var pd=PROVEEDORES_MAP[a.prv]||{};
+      html+="<tr><td colspan='8' class='sep-prv'>"+a.prv+" - "+(pd.nombre||a.prvNom)
+        +(pd.precioPunto?" | P.Coste: "+pd.precioPunto.toFixed(3)+" EUR/pt":"")
+        +(pd.dtoMax?" | Dto.Max: "+pd.dtoMax+"%":"")
+        +"</td></tr>";
+      lp=a.prv;lm="";
+    }
+    if(a.mod!==lm){
+      html+="<tr><td colspan='8' class='sep-mod'>"+a.mod+"</td></tr>";
+      lm=a.mod;
+    }
+    var cats=Object.keys(a.categorias||{});
+    var ta=(tela&&a.categorias[tela]!==undefined)?tela:cats[0];
+    var pts=a.categorias[ta];
+    var precio=calcPrecio(a,ta);
+    var pd=PROVEEDORES_MAP[a.prv]||{};
+
+    var telaHtml="";
+    if(cats.length>1){
+      telaHtml="<select style='font-size:10px;padding:2px 4px;border:1px solid #ddd;border-radius:4px;max-width:80px' data-prv='"+a.prv+"' data-ref='"+a.ref+"' onchange='reCalcRowById(this)' id='tsel-"+a.prv+"-"+a.ref+"'>";
+      cats.forEach(function(c){telaHtml+="<option"+(c===ta?" selected":"")+">"+c+"</option>";});
+      telaHtml+="</select>";
+    }else{
+      telaHtml="<span style='font-size:10px;color:#888'>"+ta+"</span>";
+    }
+
+    // artJ eliminado
+    html+="<tr>"
+      +"<td><strong>"+a.nom+"</strong>"+(a.cat?"<br><span style='font-size:10px;color:#aaa'>"+a.cat+"</span>":"")+"</td>"
+      +"<td style='color:#888;font-size:11px'>"+a.ref+"</td>"
+      +"<td style='color:#888;font-size:11px;white-space:nowrap'>"+a.med+"</td>"
+      +"<td style='font-weight:600;color:#2856c8' id='pts-"+a.prv+"-"+a.ref+"'>"+pts+"</td>"
+      +"<td style='color:#888;font-size:11px'>"+(pd.precioPunto?pd.precioPunto.toFixed(3)+" EUR":"---")+"</td>"
+      +"<td style='color:#c4571a;font-size:11px'>"+(pd.dtoMax?pd.dtoMax+"%":"---")+"</td>"
+      +"<td><div>"+telaHtml+"</div>"
+        +"<div class='precio-pub' id='prec-"+a.prv+"-"+a.ref+"'>"+(precio!==null?fmtEur(precio):"<span style='color:#aaa;font-size:11px'>Sin datos proveedor</span>")+"</div>"
+      +"</td>"
+      +"<td><button class='btn-add' data-prv='"+a.prv+"' data-ref='"+a.ref+"' onclick='addPresFromRowBtn(this)'>+ Anadir</button></td>"
+      +"</tr>";
+  });
+  tbody.innerHTML=html;
+}
+
+function reCalcRowById(sel){
+  var prv=sel.getAttribute("data-prv");
+  var ref=sel.getAttribute("data-ref");
+  reCalcRow(sel,sel.value,prv,ref);
+}
+
+function reCalcRow(sel,tela,prv,ref){
+  var art=ARTICULOS.find(function(a){return a.prv===prv&&a.ref===ref;});
+  if(!art)return;
+  var pts=art.categorias[tela];
+  var precio=calcPrecio(art,tela);
+  var pEl=document.getElementById("pts-"+prv+"-"+ref);
+  var rEl=document.getElementById("prec-"+prv+"-"+ref);
+  if(pEl)pEl.textContent=pts;
+  if(rEl)rEl.innerHTML=precio!==null?fmtEur(precio):"<span style='color:#aaa;font-size:11px'>Sin datos</span>";
+}
+
+function addPresFromRowBtn(btn){
+  var prv=btn.getAttribute("data-prv");
+  var ref=btn.getAttribute("data-ref");
+  addPresFromRow(prv,ref);
+}
+
+function addPresFromRow(prv,ref){
+  var art=ARTICULOS.find(function(a){return a.prv===prv&&a.ref===ref;});
+  if(!art)return;
+  var sel=document.getElementById("tsel-"+prv+"-"+ref);
+  var tela=sel?sel.value:Object.keys(art.categorias)[0];
+  addPres(art,tela);
+}
+
+function addPres(art,tela){
+  var pts=(art.categorias||{})[tela];
+  var precio=calcPrecio(art,tela);
+  var idx=PRESUPUESTO.findIndex(function(l){return l.art.prv===art.prv&&l.art.ref===art.ref&&l.tela===tela;});
+  if(idx>=0){PRESUPUESTO[idx].qty++;}
+  else{PRESUPUESTO.push({art:art,tela:tela,pts:pts,precio:precio,qty:1});}
+  renderPres();
+  toast("Anadido: "+art.nom+" ("+tela+")","ok");
+}
+
+function renderPres(){
+  var empty=document.getElementById("pres-empty");
+  var tbl=document.getElementById("pres-tbl");
+  var footer=document.getElementById("pres-footer");
+  var tbody=document.getElementById("pres-body");
+  if(!PRESUPUESTO.length){empty.style.display="block";tbl.style.display="none";footer.style.display="none";return;}
+  empty.style.display="none";tbl.style.display="table";footer.style.display="block";
+  var total=0,html="";
+  PRESUPUESTO.forEach(function(l,i){
+    var sub=l.precio!==null?l.precio*l.qty:null;
+    if(sub)total+=sub;
+    var pd=PROVEEDORES_MAP[l.art.prv]||{};
+    html+="<tr>"
+      +"<td style='font-size:12px'><strong>"+l.art.nom+"</strong>"
+        +(l.tela!=="UNICO"?"<br><span style='font-size:10px;color:#c4571a'>"+l.tela+"</span>":"")
+        +"<br><span style='font-size:10px;color:#aaa'>"+l.art.prvNom+" ref."+l.art.ref+"</span>"
+        +"<br><span style='font-size:10px;color:#aaa'>"+l.pts+" pts x "+(pd.precioPunto||"?")+" - "+(pd.dtoMax||"?")+"% dto</span>"
+      +"</td>"
+      +"<td style='text-align:center'><div class='qty-ctrl'>"
+        +"<button class='qty-btn' onclick='qtyPres("+i+",-1)'>-</button>"
+        +"<span class='qty-num'>"+l.qty+"</span>"
+        +"<button class='qty-btn' onclick='qtyPres("+i+",1)'>+</button>"
+      +"</div></td>"
+      +"<td style='text-align:right;font-weight:700'>"+(sub!==null?fmtEur(sub):"---")+"</td>"
+      +"<td class='no-print'><button onclick='delPres("+i+")' style='background:none;border:none;cursor:pointer;color:#bbb;font-size:16px'>x</button></td>"
+      +"</tr>";
+  });
+  tbody.innerHTML=html;
+  document.getElementById("pres-total").textContent=fmtEur(total);
+}
+
+function qtyPres(i,d){PRESUPUESTO[i].qty=Math.max(1,PRESUPUESTO[i].qty+d);renderPres();}
+function delPres(i){PRESUPUESTO.splice(i,1);renderPres();}
+function limpiarPres(){PRESUPUESTO=[];renderPres();}
+
+function exportarCSV(){
+  var rows=[["Articulo","Proveedor","Ref","Tela","Puntos","P.Coste/pt","Dto%","Precio unit.","Cant.","Total"]];
+  PRESUPUESTO.forEach(function(l){
+    var pd=PROVEEDORES_MAP[l.art.prv]||{};
+    rows.push([l.art.nom,l.art.prvNom,l.art.ref,l.tela,l.pts,pd.precioPunto||"",pd.dtoMax||"",l.precio!==null?l.precio.toFixed(2):"",l.qty,l.precio!==null?(l.precio*l.qty).toFixed(2):""]);
+  });
+  var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c||"").replace(/"/g,'""')+'"';}).join(";");}).join("\r\n");
+  var blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
+  var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="presupuesto.csv";a.click();
+}
+
+// IMPORTADOR
+function onDrop(e){e.preventDefault();document.getElementById("drop-zone").classList.remove("over");var f=e.dataTransfer.files[0];if(f)procesarExcel(f);}
+function onFileSelect(e){if(e.target.files[0])procesarExcel(e.target.files[0]);}
+
+function procesarExcel(file){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var wb=XLSX.read(e.target.result,{type:"array"});
+    var ws=wb.Sheets[wb.SheetNames[0]];
+    XL_DATA=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+    XL_COLS=[];
+    document.getElementById("imp-modelo").value=file.name.replace(/\.[^.]+$/,"").toUpperCase();
+    document.getElementById("import-form").style.display="block";
+    actualizarPreview();
+    toast("Excel cargado: "+XL_DATA.length+" filas","info");
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function actualizarPreview(){
+  if(!XL_DATA)return;
+  var rowHead=parseInt(document.getElementById("imp-row-head").value)||2;
+  var cabRow=XL_DATA[rowHead-1]||[];
+  XL_COLS=cabRow.map(function(c,i){return{idx:i,name:String(c||"Col "+(i+1)).trim()};});
+  // Preview
+  var pw=document.getElementById("preview-wrap");
+  var h="<table class='preview-tbl'><thead><tr>";
+  XL_COLS.forEach(function(c){h+="<th>"+c.name+"</th>";});
+  h+="</tr></thead><tbody>";
+  for(var r=rowHead;r<Math.min(rowHead+6,XL_DATA.length);r++){
+    h+="<tr>";
+    XL_DATA[r].forEach(function(c){h+="<td>"+c+"</td>";});
+    h+="</tr>";
+  }
+  pw.innerHTML=h+"</tbody></table>";
+  // Selects
+  var opts="<option value=''>---</option>"+XL_COLS.map(function(c){return"<option value='"+c.idx+"'>"+c.name+"</option>";}).join("");
+  ["imp-col-nom","imp-col-ref","imp-col-med","imp-col-cat"].forEach(function(id){
+    var el=document.getElementById(id);var v=el.value;
+    el.innerHTML=(id==="imp-col-nom"?"":el.options[0].outerHTML)+opts;
+    if(v)el.value=v;
+  });
+  var nomEl=document.getElementById("imp-col-nom");
+  if(!nomEl.value){XL_COLS.forEach(function(c){if(/articu|nombre|descrip|model/i.test(c.name))nomEl.value=c.idx;});}
+  // Columnas de puntos
+  var cpDiv=document.getElementById("cols-puntos");
+  cpDiv.innerHTML="";
+  XL_COLS.forEach(function(c){
+    var div=document.createElement("div");
+    div.className="col-check";div.id="cpcol-"+c.idx;
+    div.innerHTML="<input type='checkbox' id='chk-"+c.idx+"' style='width:auto'>"
+      +"<span style='font-size:12px;font-weight:600'>"+c.name+"</span>"
+      +"<input type='text' placeholder='Nombre categoria' id='tlabel-"+c.idx+"' style='width:100px;font-size:11px;padding:3px 6px;display:none' onclick='event.stopPropagation()'>";
+    div.onclick=function(e){
+      if(e.target.tagName==="INPUT"&&e.target.type==="text")return;
+      var chk=document.getElementById("chk-"+c.idx);
+      chk.checked=!chk.checked;
+      var lbl=document.getElementById("tlabel-"+c.idx);
+      lbl.style.display=chk.checked?"inline-block":"none";
+      if(chk.checked&&!lbl.value)lbl.value=c.name;
+      div.classList.toggle("sel",chk.checked);
+    };
+    cpDiv.appendChild(div);
+  });
+}
+
+function buscarProveedor(){
+  var cod=document.getElementById("imp-prv-cod").value.trim();
+  var info=document.getElementById("imp-prv-info");
+  if(!cod){info.textContent="Introduce el codigo";info.style.color="#888";return;}
+  var p=PROVEEDORES_MAP[cod];
+  if(p){
+    info.innerHTML="OK "+p.nombre+" | P.Coste: "+p.precioPunto+" EUR/pt | Dto: "+p.dtoMax+"%";
+    info.style.color="#2d7a4f";
+  }else{
+    info.innerHTML="Codigo "+cod+" no encontrado en tabla Proveedores";
+    info.style.color="#c4571a";
+  }
+}
+
+function importarTarifa(){
+  var cod=document.getElementById("imp-prv-cod").value.trim();
+  var modelo=document.getElementById("imp-modelo").value.trim().toUpperCase();
+  var rowHead=parseInt(document.getElementById("imp-row-head").value)||2;
+  var colNom=document.getElementById("imp-col-nom").value;
+  var colRef=document.getElementById("imp-col-ref").value;
+  var colMed=document.getElementById("imp-col-med").value;
+  var colCat=document.getElementById("imp-col-cat").value;
+  var errEl=document.getElementById("imp-error");
+  var resEl=document.getElementById("imp-resumen");
+  errEl.style.display="none";resEl.style.display="none";
+  if(!cod){errEl.textContent="Introduce el codigo de proveedor";errEl.style.display="block";return;}
+  if(!modelo){errEl.textContent="Introduce el nombre del modelo";errEl.style.display="block";return;}
+  if(!colNom){errEl.textContent="Selecciona la columna de nombre de articulo";errEl.style.display="block";return;}
+  var colsPts={};
+  XL_COLS.forEach(function(c){
+    var chk=document.getElementById("chk-"+c.idx);
+    if(chk&&chk.checked){
+      var lbl=document.getElementById("tlabel-"+c.idx).value.trim()||c.name;
+      colsPts[c.idx]=lbl;
+    }
+  });
+  if(!Object.keys(colsPts).length){errEl.textContent="Marca al menos una columna de puntos";errEl.style.display="block";return;}
+  var pd=PROVEEDORES_MAP[cod]||{};
+  var arts=[];
+  for(var r=rowHead;r<XL_DATA.length;r++){
+    var row=XL_DATA[r];
+    var nom=String(row[parseInt(colNom)]||"").trim();
+    if(!nom)continue;
+    var categorias={};var valid=false;
+    Object.keys(colsPts).forEach(function(ci){
+      var v=parseFloat(String(row[parseInt(ci)]||"").replace(",","."));
+      if(!isNaN(v)&&v>0){categorias[colsPts[ci]]=v;valid=true;}
+    });
+    if(!valid)continue;
+    arts.push({prv:cod,prvNom:pd.nombre||cod,mod:modelo,ref:colRef?String(row[parseInt(colRef)]||"").trim():String(r-rowHead+1),nom:nom,med:colMed?String(row[parseInt(colMed)]||"").trim():"",cat:colCat?String(row[parseInt(colCat)]||"").trim():"",categorias:categorias});
+  }
+  if(!arts.length){errEl.textContent="No se encontraron articulos validos. Revisa la fila de cabeceras y las columnas de puntos.";errEl.style.display="block";return;}
+  ARTICULOS=ARTICULOS.filter(function(a){return!(a.prv===cod&&a.mod===modelo);});
+  ARTICULOS=ARTICULOS.concat(arts);
+  guardarTarifasLocal();
+  renderArt();
+  resEl.style.display="block";
+  resEl.innerHTML="IMPORTADOS "+arts.length+" articulos para "+cod+" - "+modelo
+    +(pd.precioPunto?" | P.Coste: "+pd.precioPunto+"EUR/pt | Dto.Max: "+pd.dtoMax+"%":" | AVISO: Proveedor sin datos de precio todavia")
+    +" | Guardado en este navegador.";
+  toast(""+arts.length+" articulos importados","ok");
+  setTimeout(function(){showTab("selector");},1500);
+}
+
+function cancelarImport(){document.getElementById("import-form").style.display="none";document.getElementById("file-input").value="";XL_DATA=null;}
+
+function renderTarifas(){
+  var cont=document.getElementById("lista-tarifas");
+  var grupos={};
+  ARTICULOS.forEach(function(a){var k=a.prv+"||"+a.mod;if(!grupos[k])grupos[k]={prv:a.prv,prvNom:a.prvNom,mod:a.mod,count:0};grupos[k].count++;});
+  var keys=Object.keys(grupos);
+  if(!keys.length){cont.innerHTML="<div style='color:#aaa;text-align:center;padding:20px'>Sin tarifas</div>";return;}
+  var html="";
+  keys.forEach(function(k){
+    var g=grupos[k];var pd=PROVEEDORES_MAP[g.prv]||{};var esG=g.prv==="678";
+    html+="<div class='tarifa-item'>"
+      +"<div><div style='font-weight:700;font-size:13px'>"+g.prv+" - "+(pd.nombre||g.prvNom)+" -- "+g.mod+"</div>"
+        +"<div style='font-size:11px;color:#888;margin-top:2px'>"+g.count+" articulos"
+          +(pd.precioPunto?" | P.Coste: "+pd.precioPunto+"EUR/pt | Dto: "+pd.dtoMax+"%":"")
+          +(esG?" | Tarifa base siempre incluida":"")
+        +"</div></div>"
+      +"<div>"+(esG?"":"<button class='btn btn-red' style='padding:5px 10px;font-size:11px' data-prv='"+g.prv+"' data-mod='"+g.mod+"' onclick='eliminarTarifaBtn(this)'>Eliminar</button>")+"</div>"
+      +"</div>";
+  });
+  cont.innerHTML=html;
+}
+
+function eliminarTarifaBtn(btn){
+  var prv=btn.getAttribute("data-prv");
+  var mod=btn.getAttribute("data-mod");
+  eliminarTarifa(prv,mod);
+}
+
+function eliminarTarifa(prv,mod){
+  if(!confirm("Eliminar tarifa "+mod+" de proveedor "+prv+"?"))return;
+  ARTICULOS=ARTICULOS.filter(function(a){return!(a.prv===prv&&a.mod===mod);});
+  guardarTarifasLocal();renderTarifas();renderArt();toast("Tarifa eliminada","ok");
+}
+
+function toast(msg,tipo){
+  var t=document.getElementById("toast");t.textContent=msg;t.className="toast "+(tipo||"ok");
+  t.style.display="block";clearTimeout(t._t);t._t=setTimeout(function(){t.style.display="none";},3000);
+}
+</script>
+</body>
+</html>
