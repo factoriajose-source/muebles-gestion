@@ -197,23 +197,26 @@ window.onload=function(){
 };
 
 function cargarProveedoresFirebase(){
-  db.collection("proveedores").get().then(function(sn){
+  // Usar REST API con API key — no requiere login
+  var url="https://firestore.googleapis.com/v1/projects/muebles-presupuestos/databases/(default)/documents/proveedores?pageSize=300&key=AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c";
+  fetch(url).then(function(r){return r.json();}).then(function(data){
     PROVEEDORES_MAP={};
-    console.log("Total proveedores Firebase:", sn.size);
-    sn.forEach(function(d){
-      var p=d.data();
-      // Log primeros 5 para ver estructura
-      console.log("DOC id="+d.id, "Codigo="+p.Codigo, "P_COSTE="+p.P_COSTE, "MAX_DTO="+p.MAX_DTO, "Nombre="+p.Nombre);
-      var cod=String(p.Codigo||p.codigo||d.id||"").trim();
+    if(!data.documents){console.log("Sin documentos:",JSON.stringify(data).slice(0,200));renderArt();return;}
+    console.log("Proveedores cargados via REST:",data.documents.length);
+    data.documents.forEach(function(d){
+      var f=d.fields||{};
+      var gs=function(k){return f[k]?f[k].stringValue||String(f[k].integerValue||f[k].doubleValue||"")||"":"";}
+      var cod=gs("Codigo")||gs("codigo");
       if(!cod)return;
-      var pp=parseFloat(String(p.P_COSTE||"0").replace(",","."))||0;
-      var dto=parseFloat(String(p.MAX_DTO||"0").replace(",",".").replace("%",""))||0;
-      PROVEEDORES_MAP[cod]={nombre:p.Nombre||p.nombre||cod,precioPunto:pp,dtoMax:dto};
-      PROVEEDORES_MAP[parseInt(cod)]={nombre:p.Nombre||p.nombre||cod,precioPunto:pp,dtoMax:dto};
+      var pp=parseFloat(gs("P_COSTE").replace(",","."))||0;
+      var dto=parseFloat(gs("MAX_DTO").replace(",",".").replace("%",""))||0;
+      var nom=gs("Nombre")||gs("nombre")||cod;
+      console.log("PRV cod="+cod+" pp="+pp+" dto="+dto+" nom="+nom);
+      PROVEEDORES_MAP[cod]={nombre:nom,precioPunto:pp,dtoMax:dto};
+      PROVEEDORES_MAP[parseInt(cod)]={nombre:nom,precioPunto:pp,dtoMax:dto};
     });
-    console.log("Claves MAP:", Object.keys(PROVEEDORES_MAP).slice(0,20).join(", "));
     renderArt();
-  }).catch(function(e){console.error("Error proveedores:",e);renderArt();});
+  }).catch(function(e){console.error("Error REST proveedores:",e);renderArt();});
 }
 
 function cargarTarifasLocal(){
