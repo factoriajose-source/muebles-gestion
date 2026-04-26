@@ -100,6 +100,7 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
   <button class="tab-btn act" id="tb-selector" onclick="showTab('selector')">Catalogo + Presupuesto</button>
   <button class="tab-btn" id="tb-importar" onclick="showTab('importar')">Importar tarifa Excel</button>
   <button class="tab-btn" id="tb-tarifas" onclick="showTab('tarifas')">Tarifas guardadas</button>
+  <button class="tab-btn" id="tb-imagenes" onclick="showTab('imagenes')" style="background:#2856c8;color:white;border-color:#2856c8">🖼️ Cargar Imagenes</button>
 </div>
 
 <!-- TAB SELECTOR -->
@@ -114,6 +115,10 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
           <div class="fg"><label>Categoria</label><select id="f-cat" onchange="renderArt()"><option value="">Todas</option></select></div>
           <div class="fg"><label>Tela / Acabado</label><select id="f-tela" onchange="renderArt()"><option value="">-- Selecciona --</option></select></div>
           <div class="fg" style="flex:1;min-width:160px"><label>Buscar</label><input type="text" id="f-bus" placeholder="Nombre articulo..." oninput="renderArt()"></div>
+          <div class="fg">
+            <label>&nbsp;</label>
+            <button class="btn" id="btn-ver-imgs" style="background:#2856c8;color:white;display:none" onclick="abrirVisor()">🖼️ Ver imágenes</button>
+          </div>
         </div>
         <div style="overflow-x:auto">
           <table class="tbl">
@@ -207,16 +212,86 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
     <div id="lista-tarifas"><div style="color:#aaa;text-align:center;padding:20px">Cargando...</div></div>
   </div>
 </div>
+
+<!-- TAB IMAGENES -->
+<div id="sec-imagenes" class="app" style="display:none">
+  <div class="card">
+    <div class="card-title">🖼️ Cargar imágenes por modelo</div>
+    <p style="font-size:13px;color:#666;margin-bottom:16px;line-height:1.6">
+      Selecciona el proveedor y modelo, luego carga hasta 5 imágenes JPG. Las imágenes se guardan en el navegador.
+    </p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;align-items:flex-end">
+      <div class="fg" style="min-width:200px">
+        <label>Proveedor</label>
+        <select id="img-prv" onchange="sincModelosImg()"></select>
+      </div>
+      <div class="fg" style="min-width:200px">
+        <label>Modelo</label>
+        <select id="img-mod"></select>
+      </div>
+    </div>
+    <div style="border:2px dashed #ddd;border-radius:10px;padding:20px;margin-bottom:16px;background:#fafaf8">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px">Selecciona hasta 5 imágenes:</div>
+      <input type="file" id="img-files" accept="image/*" multiple style="margin-bottom:12px">
+      <div id="img-preview" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"></div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-dark" onclick="guardarImagenes()">💾 Guardar imágenes</button>
+      <button class="btn btn-red" onclick="borrarImagenes()">🗑 Borrar imágenes de este modelo</button>
+    </div>
+    <div id="img-msg" style="margin-top:10px;font-size:13px;display:none"></div>
+  </div>
+</div>
 </div><!-- fin appBox -->
 
+<!-- VISOR DE IMÁGENES (ventana flotante) -->
+<div id="visorOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;flex-direction:column;align-items:center;justify-content:center">
+  <div style="position:relative;width:100%;max-width:900px;padding:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="color:white;font-size:15px;font-weight:700" id="visorTitulo"></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="color:#aaa;font-size:13px" id="visorCounter"></span>
+        <button onclick="cerrarVisor()" style="background:#c0392b;color:white;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer">✕ Cerrar</button>
+      </div>
+    </div>
+    <!-- Miniaturas -->
+    <div id="visorThumbs" style="display:flex;gap:8px;justify-content:center;margin-bottom:14px;flex-wrap:wrap"></div>
+    <!-- Imagen grande -->
+    <div style="display:flex;align-items:center;gap:12px">
+      <button onclick="visorAnterior()" style="background:rgba(255,255,255,.15);color:white;border:none;border-radius:50%;width:48px;height:48px;font-size:22px;cursor:pointer;flex-shrink:0">‹</button>
+      <img id="visorImg" src="" style="flex:1;max-height:70vh;object-fit:contain;border-radius:8px;display:block;margin:auto">
+      <button onclick="visorSiguiente()" style="background:rgba(255,255,255,.15);color:white;border:none;border-radius:50%;width:48px;height:48px;font-size:22px;cursor:pointer;flex-shrink:0">›</button>
+    </div>
+  </div>
+</div>
+
 <script>
-firebase.initializeApp({apiKey:"AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",authDomain:"muebles-presupuestos.firebaseapp.com",projectId:"muebles-presupuestos",storageBucket:"muebles-presupuestos.firebasestorage.app",messagingSenderId:"37365883872",appId:"1:37365883872:web:842ca4d318c01652684185"});
-var db=firebase.firestore();
-var auth=firebase.auth();
+var db, auth;
 var ARTICULOS=[],PROVEEDORES_MAP={},PRESUPUESTO=[],XL_DATA=null,XL_COLS=[];
 var STORAGE_KEY="meres_tarifas_v3";
 
-document.getElementById("lPass").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
+function initFirebase(){
+  firebase.initializeApp({apiKey:"AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",authDomain:"muebles-presupuestos.firebaseapp.com",projectId:"muebles-presupuestos",storageBucket:"muebles-presupuestos.firebasestorage.app",messagingSenderId:"37365883872",appId:"1:37365883872:web:842ca4d318c01652684185"});
+  db=firebase.firestore();
+  auth=firebase.auth();
+  // Adjuntar listener del login
+  document.getElementById("lPass").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
+  document.getElementById("img-files").addEventListener("change",function(){
+    var files=Array.from(this.files).slice(0,5);
+    var prev=document.getElementById("img-preview");
+    prev.innerHTML="";
+    files.forEach(function(f){
+      var reader=new FileReader();
+      reader.onload=function(e){
+        var img=document.createElement("img");
+        img.src=e.target.result;
+        img.style.cssText="height:80px;width:80px;object-fit:cover;border-radius:6px;border:2px solid #ddd";
+        prev.appendChild(img);
+      };
+      reader.readAsDataURL(f);
+    });
+  });
+}
 function doLogin(){
   var email=document.getElementById("lEmail").value.trim();
   var pass=document.getElementById("lPass").value;
@@ -282,15 +357,23 @@ function calcPrecio(art,cat){
 
 function fmtEur(v){
   if(v===null||v===undefined||isNaN(v))return"---";
-  return v.toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2})+" EUR";
+  return Math.round(v).toLocaleString("es-ES")+" €";
 }
 
 function showTab(t){
-  ["selector","importar","tarifas"].forEach(function(x){
-    document.getElementById("sec-"+x).style.display=x===t?"block":"none";
-    document.getElementById("tb-"+x).classList.toggle("act",x===t);
+  ["selector","importar","tarifas","imagenes"].forEach(function(x){
+    var el=document.getElementById("sec-"+x);
+    var tb=document.getElementById("tb-"+x);
+    if(el)el.style.display=x===t?"block":"none";
+    if(tb)tb.classList.toggle("act",x===t);
   });
   if(t==="tarifas")renderTarifas();
+  if(t==="imagenes")poblarSelectoresImg();
+}
+
+function toast(msg,tipo){
+  var t=document.getElementById("toast");t.textContent=msg;t.className="toast "+(tipo||"ok");
+  t.style.display="block";clearTimeout(t._t);t._t=setTimeout(function(){t.style.display="none";},3000);
 }
 
 function sincModelos(){
@@ -392,6 +475,7 @@ function renderArt(){
       +"</tr>";
   });
   tbody.innerHTML=html;
+  actualizarBtnVerImgs();
 }
 
 function reCalcRowById(sel){
@@ -474,7 +558,7 @@ function exportarCSV(){
   var rows=[["Articulo","Proveedor","Ref","Tela","Precio unit.","Cant.","Total"]];
   PRESUPUESTO.forEach(function(l){
     var pd=PROVEEDORES_MAP[l.art.prv]||{};
-    rows.push([l.art.nom,l.art.prvNom,l.art.ref,l.tela,l.precio!==null?l.precio.toFixed(2):"",l.qty,l.precio!==null?(l.precio*l.qty).toFixed(2):""]);
+    rows.push([l.art.nom,l.art.prvNom,l.art.ref,l.tela,l.precio!==null?Math.round(l.precio):"",l.qty,l.precio!==null?Math.round(l.precio*l.qty):""]);
   });
   var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c||"").replace(/"/g,'""')+'"';}).join(";");}).join("\r\n");
   var blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
@@ -646,9 +730,151 @@ function eliminarTarifa(prv,mod){
   guardarTarifasLocal();renderTarifas();renderArt();toast("Tarifa eliminada","ok");
 }
 
-function toast(msg,tipo){
-  var t=document.getElementById("toast");t.textContent=msg;t.className="toast "+(tipo||"ok");
-  t.style.display="block";clearTimeout(t._t);t._t=setTimeout(function(){t.style.display="none";},3000);
+// ─── IMÁGENES ─────────────────────────────────────────────────────────────────
+var IMG_KEY = "meres_imagenes_v1";
+var visorImgs = [], visorIdx = 0;
+
+function getImgKey(prv,mod){ return "img_"+prv+"_"+mod; }
+
+function cargarImagenesGuardadas(prv,mod){
+  var k=getImgKey(prv,mod);
+  try{ return JSON.parse(localStorage.getItem(k)||"[]"); }
+  catch(e){ return []; }
+}
+
+function sincModelosImg(){
+  var prv=document.getElementById("img-prv").value;
+  var mods={};
+  ARTICULOS.forEach(function(a){ if(!prv||a.prv===prv) mods[a.mod]=1; });
+  var sel=document.getElementById("img-mod");
+  sel.innerHTML="<option value=''>-- Selecciona modelo --</option>";
+  Object.keys(mods).sort().forEach(function(m){ sel.innerHTML+="<option>"+m+"</option>"; });
+}
+
+function poblarSelectoresImg(){
+  var prvs={};
+  ARTICULOS.forEach(function(a){ prvs[a.prv]=a.prvNom; });
+  var sel=document.getElementById("img-prv");
+  sel.innerHTML="<option value=''>-- Selecciona proveedor --</option>";
+  Object.keys(prvs).sort().forEach(function(p){
+    var pd=PROVEEDORES_MAP[p];
+    sel.innerHTML+="<option value='"+p+"'>"+p+" - "+(pd?pd.nombre:prvs[p])+"</option>";
+  });
+  sincModelosImg();
+}
+
+// Preview al seleccionar ficheros
+document.getElementById("img-files").addEventListener("change",function(){
+  var files=Array.from(this.files).slice(0,5);
+  var prev=document.getElementById("img-preview");
+  prev.innerHTML="";
+  files.forEach(function(f){
+    var reader=new FileReader();
+    reader.onload=function(e){
+      var img=document.createElement("img");
+      img.src=e.target.result;
+      img.style.cssText="height:80px;width:80px;object-fit:cover;border-radius:6px;border:2px solid #ddd;cursor:pointer";
+      prev.appendChild(img);
+    };
+    reader.readAsDataURL(f);
+  });
+});
+
+function guardarImagenes(){
+  var prv=document.getElementById("img-prv").value;
+  var mod=document.getElementById("img-mod").value;
+  var msg=document.getElementById("img-msg");
+  if(!prv||!mod){ msg.textContent="Selecciona proveedor y modelo primero"; msg.style.color="#c0392b"; msg.style.display="block"; return; }
+  var files=Array.from(document.getElementById("img-files").files).slice(0,5);
+  if(!files.length){ msg.textContent="Selecciona al menos una imagen"; msg.style.color="#c0392b"; msg.style.display="block"; return; }
+  var imgs=[];
+  var pending=files.length;
+  files.forEach(function(f,i){
+    var reader=new FileReader();
+    reader.onload=function(e){
+      imgs[i]=e.target.result;
+      pending--;
+      if(pending===0){
+        localStorage.setItem(getImgKey(prv,mod),JSON.stringify(imgs));
+        msg.textContent="✅ "+imgs.length+" imagen(es) guardadas para "+mod;
+        msg.style.color="#2d7a4f"; msg.style.display="block";
+        actualizarBtnVerImgs();
+        toast("Imágenes guardadas","ok");
+      }
+    };
+    reader.readAsDataURL(f);
+  });
+}
+
+function borrarImagenes(){
+  var prv=document.getElementById("img-prv").value;
+  var mod=document.getElementById("img-mod").value;
+  var msg=document.getElementById("img-msg");
+  if(!prv||!mod){ msg.textContent="Selecciona proveedor y modelo"; msg.style.color="#c0392b"; msg.style.display="block"; return; }
+  if(!confirm("¿Borrar las imágenes de "+mod+"?"))return;
+  localStorage.removeItem(getImgKey(prv,mod));
+  msg.textContent="Imágenes borradas"; msg.style.color="#888"; msg.style.display="block";
+  actualizarBtnVerImgs();
+  toast("Imágenes borradas","ok");
+}
+
+function actualizarBtnVerImgs(){
+  var prv=document.getElementById("f-prv").value;
+  var mod=document.getElementById("f-mod").value;
+  var btn=document.getElementById("btn-ver-imgs");
+  if(!btn)return;
+  if(prv&&mod){
+    var imgs=cargarImagenesGuardadas(prv,mod);
+    btn.style.display=imgs.length?"inline-block":"none";
+  } else {
+    btn.style.display="none";
+  }
+}
+
+// ─── VISOR ────────────────────────────────────────────────────────────────────
+function abrirVisor(){
+  var prv=document.getElementById("f-prv").value;
+  var mod=document.getElementById("f-mod").value;
+  visorImgs=cargarImagenesGuardadas(prv,mod);
+  if(!visorImgs.length){ toast("Sin imágenes para este modelo","err"); return; }
+  visorIdx=0;
+  document.getElementById("visorTitulo").textContent=mod+" — Imágenes";
+  renderVisor();
+  document.getElementById("visorOverlay").style.display="flex";
+}
+
+function renderVisor(){
+  document.getElementById("visorImg").src=visorImgs[visorIdx];
+  document.getElementById("visorCounter").textContent=(visorIdx+1)+" / "+visorImgs.length;
+  // Miniaturas
+  var thumbs=document.getElementById("visorThumbs");
+  thumbs.innerHTML="";
+  visorImgs.forEach(function(src,i){
+    var img=document.createElement("img");
+    img.src=src;
+    img.style.cssText="width:60px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid "+(i===visorIdx?"#c4571a":"rgba(255,255,255,.3)");
+    img.onclick=function(){ visorIdx=i; renderVisor(); };
+    thumbs.appendChild(img);
+  });
+}
+
+function visorAnterior(){ visorIdx=(visorIdx-1+visorImgs.length)%visorImgs.length; renderVisor(); }
+function visorSiguiente(){ visorIdx=(visorIdx+1)%visorImgs.length; renderVisor(); }
+function cerrarVisor(){ document.getElementById("visorOverlay").style.display="none"; }
+
+// Teclas del visor
+document.addEventListener("keydown",function(e){
+  if(document.getElementById("visorOverlay").style.display==="none")return;
+  if(e.key==="ArrowLeft")visorAnterior();
+  if(e.key==="ArrowRight")visorSiguiente();
+  if(e.key==="Escape")cerrarVisor();
+});
+
+// Iniciar Firebase cuando el DOM esté listo
+if(document.readyState==="loading"){
+  document.addEventListener("DOMContentLoaded", initFirebase);
+} else {
+  initFirebase();
 }
 </script>
 </body>
