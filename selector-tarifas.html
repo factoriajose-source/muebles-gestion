@@ -240,9 +240,10 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
       <input type="file" id="img-files" accept="image/*" multiple style="margin-bottom:12px">
       <div id="img-preview" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"></div>
     </div>
-    <div style="display:flex;gap:10px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn btn-dark" onclick="guardarImagenes()">💾 Guardar imágenes</button>
       <button class="btn btn-red" onclick="borrarImagenes()">🗑 Borrar imágenes de este modelo</button>
+      <button class="btn btn-blue" onclick="recomprimirTodas()" style="background:#2856c8">⚡ Recomprimir todas las guardadas</button>
     </div>
     <div id="img-msg" style="margin-top:10px;font-size:13px;display:none"></div>
   </div>
@@ -1038,23 +1039,91 @@ function guardarImagenes(){
   if(!prv||!mod){ msg.textContent="Selecciona proveedor y modelo primero"; msg.style.color="#c0392b"; msg.style.display="block"; return; }
   var files=Array.from(document.getElementById("img-files").files).slice(0,6);
   if(!files.length){ msg.textContent="Selecciona al menos una imagen"; msg.style.color="#c0392b"; msg.style.display="block"; return; }
-  msg.textContent="Cargando "+files.length+" imagen(es)..."; msg.style.color="#2856c8"; msg.style.display="block";
-  // Leer todas con Promise para garantizar orden
-  var promesas=files.map(function(f){
+  msg.textContent="Comprimiendo y guardando "+files.length+" imagen(es)..."; msg.style.color="#2856c8"; msg.style.display="block";
+
+  function comprimirImagen(file){
     return new Promise(function(resolve){
-      var r=new FileReader();
-      r.onload=function(e){ resolve(e.target.result); };
-      r.readAsDataURL(f);
+      var reader=new FileReader();
+      reader.onload=function(e){
+        var img=new Image();
+        img.onload=function(){
+          var canvas=document.createElement("canvas");
+          var MAX=900; // max píxeles lado largo
+          var w=img.width, h=img.height;
+          if(w>h){ if(w>MAX){h=Math.round(h*MAX/w);w=MAX;} }
+          else { if(h>MAX){w=Math.round(w*MAX/h);h=MAX;} }
+          canvas.width=w; canvas.height=h;
+          var ctx=canvas.getContext("2d");
+          ctx.drawImage(img,0,0,w,h);
+          resolve(canvas.toDataURL("image/jpeg",0.75)); // calidad 75%
+        };
+        img.src=e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  Promise.all(files.map(comprimirImagen)).then(function(imgs){
+    try {
+      localStorage.setItem(getImgKey(prv,mod),JSON.stringify(imgs));
+      msg.textContent="✅ "+imgs.length+" imagen(es) guardadas para "+mod;
+      msg.style.color="#2d7a4f"; msg.style.display="block";
+      actualizarBtnVerImgs();
+      toast("✅ "+imgs.length+" imágenes guardadas","ok");
+    } catch(e) {
+      msg.textContent="❌ Error: imágenes demasiado grandes. Prueba con menos imágenes o de menor tamaño.";
+      msg.style.color="#c0392b"; msg.style.display="block";
+      console.error("localStorage lleno:",e);
+    }
+  });
+}
+
+function recomprimirTodas(){
+  var msg=document.getElementById("img-msg");
+  // Buscar todas las claves de imágenes en localStorage
+  var claves=[];
+  for(var i=0;i<localStorage.length;i++){
+    var k=localStorage.key(i);
+    if(k&&k.indexOf("img_")===0) claves.push(k);
+  }
+  if(!claves.length){ msg.textContent="No hay imágenes guardadas para recomprimir"; msg.style.color="#888"; msg.style.display="block"; return; }
+  msg.textContent="Recomprimiendo "+claves.length+" modelo(s)... por favor espera"; msg.style.color="#2856c8"; msg.style.display="block";
+
+  function comprimirBase64(src){
+    return new Promise(function(resolve){
+      var img=new Image();
+      img.onload=function(){
+        var canvas=document.createElement("canvas");
+        var MAX=900;
+        var w=img.width,h=img.height;
+        if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}
+        else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
+        canvas.width=w;canvas.height=h;
+        canvas.getContext("2d").drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL("image/jpeg",0.75));
+      };
+      img.onerror=function(){ resolve(src); }; // si falla, dejar como está
+      img.src=src;
+    });
+  }
+
+  var procesadas=0;
+  var promesasModelos=claves.map(function(k){
+    var datos;
+    try{ datos=JSON.parse(localStorage.getItem(k)||"[]"); }
+    catch(e){ return Promise.resolve(); }
+    if(!Array.isArray(datos)||!datos.length) return Promise.resolve();
+    return Promise.all(datos.map(comprimirBase64)).then(function(nuevas){
+      try{ localStorage.setItem(k,JSON.stringify(nuevas)); }
+      catch(e){ console.error("No se pudo guardar "+k,e); }
+      procesadas++;
     });
   });
-  Promise.all(promesas).then(function(imgs){
-    // Filtrar nulos y verificar que todas cargaron
-    imgs=imgs.filter(function(x){return !!x;});
-    localStorage.setItem(getImgKey(prv,mod),JSON.stringify(imgs));
-    msg.textContent="✅ "+imgs.length+" imagen(es) guardadas para "+mod;
+
+  Promise.all(promesasModelos).then(function(){
+    msg.textContent="✅ Recompresión completada — "+procesadas+" modelo(s) procesados. El localStorage ocupa mucho menos ahora.";
     msg.style.color="#2d7a4f"; msg.style.display="block";
-    actualizarBtnVerImgs();
-    toast("✅ "+imgs.length+" imágenes guardadas","ok");
+    toast("✅ Imágenes recomprimidas","ok");
   });
 }
 
