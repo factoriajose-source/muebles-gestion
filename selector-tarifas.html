@@ -223,7 +223,7 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
   <div class="card">
     <div class="card-title">🖼️ Cargar imágenes por modelo</div>
     <p style="font-size:13px;color:#666;margin-bottom:16px;line-height:1.6">
-      Selecciona el proveedor y modelo, luego carga hasta 5 imágenes JPG. Las imágenes se guardan en el navegador.
+      Selecciona el proveedor y modelo, luego carga hasta 6 imágenes JPG. Las imágenes se guardan en el navegador.
     </p>
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;align-items:flex-end">
       <div class="fg" style="min-width:200px">
@@ -236,7 +236,7 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
       </div>
     </div>
     <div style="border:2px dashed #ddd;border-radius:10px;padding:20px;margin-bottom:16px;background:#fafaf8">
-      <div style="font-size:13px;font-weight:700;margin-bottom:10px">Selecciona hasta 5 imágenes:</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px">Selecciona hasta 6 imágenes:</div>
       <input type="file" id="img-files" accept="image/*" multiple style="margin-bottom:12px">
       <div id="img-preview" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"></div>
     </div>
@@ -323,21 +323,6 @@ function initFirebase(){
   auth=firebase.auth();
   // Adjuntar listener del login
   document.getElementById("lPass").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
-  document.getElementById("img-files").addEventListener("change",function(){
-    var files=Array.from(this.files).slice(0,5);
-    var prev=document.getElementById("img-preview");
-    prev.innerHTML="";
-    files.forEach(function(f){
-      var reader=new FileReader();
-      reader.onload=function(e){
-        var img=document.createElement("img");
-        img.src=e.target.result;
-        img.style.cssText="height:80px;width:80px;object-fit:cover;border-radius:6px;border:2px solid #ddd";
-        prev.appendChild(img);
-      };
-      reader.readAsDataURL(f);
-    });
-  });
 }
 function doLogin(){
   var email=document.getElementById("lEmail").value.trim();
@@ -1031,7 +1016,7 @@ function poblarSelectoresImg(){
 
 // Preview al seleccionar ficheros
 document.getElementById("img-files").addEventListener("change",function(){
-  var files=Array.from(this.files).slice(0,5);
+  var files=Array.from(this.files).slice(0,6);
   var prev=document.getElementById("img-preview");
   prev.innerHTML="";
   files.forEach(function(f){
@@ -1051,24 +1036,25 @@ function guardarImagenes(){
   var mod=document.getElementById("img-mod").value;
   var msg=document.getElementById("img-msg");
   if(!prv||!mod){ msg.textContent="Selecciona proveedor y modelo primero"; msg.style.color="#c0392b"; msg.style.display="block"; return; }
-  var files=Array.from(document.getElementById("img-files").files).slice(0,5);
+  var files=Array.from(document.getElementById("img-files").files).slice(0,6);
   if(!files.length){ msg.textContent="Selecciona al menos una imagen"; msg.style.color="#c0392b"; msg.style.display="block"; return; }
-  var imgs=[];
-  var pending=files.length;
-  files.forEach(function(f,i){
-    var reader=new FileReader();
-    reader.onload=function(e){
-      imgs[i]=e.target.result;
-      pending--;
-      if(pending===0){
-        localStorage.setItem(getImgKey(prv,mod),JSON.stringify(imgs));
-        msg.textContent="✅ "+imgs.length+" imagen(es) guardadas para "+mod;
-        msg.style.color="#2d7a4f"; msg.style.display="block";
-        actualizarBtnVerImgs();
-        toast("Imágenes guardadas","ok");
-      }
-    };
-    reader.readAsDataURL(f);
+  msg.textContent="Cargando "+files.length+" imagen(es)..."; msg.style.color="#2856c8"; msg.style.display="block";
+  // Leer todas con Promise para garantizar orden
+  var promesas=files.map(function(f){
+    return new Promise(function(resolve){
+      var r=new FileReader();
+      r.onload=function(e){ resolve(e.target.result); };
+      r.readAsDataURL(f);
+    });
+  });
+  Promise.all(promesas).then(function(imgs){
+    // Filtrar nulos y verificar que todas cargaron
+    imgs=imgs.filter(function(x){return !!x;});
+    localStorage.setItem(getImgKey(prv,mod),JSON.stringify(imgs));
+    msg.textContent="✅ "+imgs.length+" imagen(es) guardadas para "+mod;
+    msg.style.color="#2d7a4f"; msg.style.display="block";
+    actualizarBtnVerImgs();
+    toast("✅ "+imgs.length+" imágenes guardadas","ok");
   });
 }
 
