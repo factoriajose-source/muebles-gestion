@@ -585,7 +585,9 @@ function reCalcRowById(sel){
 }
 
 function reCalcRow(sel,tela,prv,ref){
-  var art=ARTICULOS.find(function(a){return a.prv===prv&&a.ref===ref;});
+  var mod=document.getElementById("f-mod").value;
+  var art=ARTICULOS.find(function(a){return a.prv===prv&&a.ref===ref&&(!mod||a.mod===mod);});
+  if(!art)art=ARTICULOS.find(function(a){return a.prv===prv&&a.ref===ref;});
   if(!art)return;
   var pts=art.categorias[tela];
   var precio=calcPrecio(art,tela);
@@ -602,7 +604,10 @@ function addPresFromRowBtn(btn){
 }
 
 function addPresFromRow(prv,ref){
-  var art=ARTICULOS.find(function(a){return a.prv===prv&&a.ref===ref;});
+  var mod=document.getElementById("f-mod").value;
+  // Buscar con modelo activo primero, luego sin modelo
+  var art=ARTICULOS.find(function(a){return a.prv===prv&&a.ref===ref&&(!mod||a.mod===mod);});
+  if(!art)art=ARTICULOS.find(function(a){return a.prv===prv&&a.ref===ref;});
   if(!art)return;
   var sel=document.getElementById("tsel-"+prv+"-"+ref);
   var tela=sel?sel.value:Object.keys(art.categorias)[0];
