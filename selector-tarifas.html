@@ -374,10 +374,10 @@ function cargarProveedoresFirebase(){
 
 function cargarTarifasFirestore(){
   var gnesis=cargarGNESIS();
-  ARTICULOS=gnesis; // cargamos GNESIS inmediatamente
+  ARTICULOS=gnesis;
   renderArt();
-  // Luego cargamos el resto desde Firebase
-  db.collection("tarifas_modelos").get().then(function(sn){
+  // Cargar tarifas Y precargar imágenes en paralelo
+  var p1=db.collection("tarifas_modelos").get().then(function(sn){
     var importadas=[];
     sn.forEach(function(d){
       var data=d.data();
@@ -386,12 +386,21 @@ function cargarTarifasFirestore(){
       }
     });
     ARTICULOS=gnesis.concat(importadas);
-    console.log("Tarifas cargadas desde Firebase:",importadas.length,"artículos en",sn.size,"modelos");
+    console.log("Tarifas cargadas:",importadas.length,"artículos");
     renderTarifas();
     renderArt();
-  }).catch(function(e){
-    console.error("Error cargando tarifas:",e);
-    toast("Error cargando tarifas: "+e.message,"err");
+  });
+  // Precargar TODAS las imágenes en cache para que estén disponibles al imprimir
+  var p2=db.collection("imagenes_modelos").get().then(function(sn){
+    sn.forEach(function(d){
+      var data=d.data();
+      IMGS_CACHE[d.id]=data.imgs||[];
+      console.log("Imgs precargadas:",d.id,"→",IMGS_CACHE[d.id].length,"fotos");
+    });
+  });
+  return Promise.all([p1,p2]).catch(function(e){
+    console.error("Error cargando datos:",e);
+    toast("Error cargando datos: "+e.message,"err");
   });
 }
 
@@ -651,7 +660,7 @@ function renderPres(){
     html+="<tr>"
       +"<td style='font-size:12px'><strong>"+l.art.nom+"</strong>"
         +(l.tela!=="UNICO"?"<br><span style='font-size:10px;color:#c4571a'>"+l.tela+"</span>":"")
-        +"<br><span style='font-size:10px;color:#aaa'>"+l.art.prvNom+" ref."+l.art.ref+"</span>"
+        +"<br><span style='font-size:10px;color:#aaa'>"+l.art.prv+" · "+l.art.mod+" ref."+l.art.ref+"</span>"
       +"</td>"
       +"<td style='text-align:center'><div class='qty-ctrl'>"
         +"<button class='qty-btn' onclick='qtyPres("+i+",-1)'>-</button>"
@@ -1027,9 +1036,12 @@ function ejecutarImpresion(){
       if(!modelosVistos[key]){
         modelosVistos[key]=true;
         modelosUnicos.push({prv:l.art.prv, mod:l.art.mod});
+        console.log("Modelo para fotos:",l.art.prv, l.art.mod, "→ docId:",getDocId(l.art.prv,l.art.mod));
       }
     });
   });
+  console.log("Total modelos únicos:",modelosUnicos.length);
+  console.log("Claves en cache:",Object.keys(IMGS_CACHE));
 
   // Cargar fotos de todos los modelos en paralelo
   var promesasFotos=modelosUnicos.map(function(m){
