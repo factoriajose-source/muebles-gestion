@@ -243,9 +243,20 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn btn-dark" onclick="guardarImagenes()">💾 Guardar imágenes</button>
       <button class="btn btn-red" onclick="borrarImagenes()">🗑 Borrar imágenes de este modelo</button>
-      <button class="btn btn-blue" onclick="recomprimirTodas()" style="background:#2856c8">⚡ Recomprimir todas las guardadas</button>
+      <button class="btn" style="background:#2856c8;color:white" onclick="recomprimirTodas()">⚡ Recomprimir todas las guardadas</button>
     </div>
     <div id="img-msg" style="margin-top:10px;font-size:13px;display:none"></div>
+
+    <!-- Panel de espacio -->
+    <div style="margin-top:18px;padding-top:14px;border-top:1px solid #eee">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:10px">📊 Uso del almacenamiento local</div>
+      <div id="espacio-info" style="font-size:13px;color:#555;margin-bottom:10px">Calculando...</div>
+      <div id="espacio-detalle" style="font-size:12px;color:#888;line-height:1.8"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn btn-gray" style="font-size:12px;padding:6px 12px" onclick="mostrarEspacio()">🔄 Actualizar</button>
+        <button class="btn btn-red" style="font-size:12px;padding:6px 12px" onclick="borrarTodasImagenes()">🗑 Borrar TODAS las imágenes</button>
+      </div>
+    </div>
   </div>
 </div>
 </div><!-- fin appBox -->
@@ -334,7 +345,7 @@ function doLogin(){
     document.getElementById("loginBox").style.display="none";
     document.getElementById("appBox").style.display="block";
     cargarProveedoresFirebase();
-    cargarTarifasLocal();
+    cargarTarifasFirestore();
   }).catch(function(){
     err.textContent="Email o contraseña incorrectos";
     err.style.display="block";
@@ -361,19 +372,51 @@ function cargarProveedoresFirebase(){
   }).catch(function(e){console.error("Error:",e);renderArt();});
 }
 
-function cargarTarifasLocal(){
-  var s=localStorage.getItem(STORAGE_KEY);
+function cargarTarifasFirestore(){
   var gnesis=cargarGNESIS();
-  if(!s){ARTICULOS=gnesis;renderTarifas();return;}
-  try{
-    var imp=JSON.parse(s).filter(function(a){return a.prv!=="678";});
-    ARTICULOS=gnesis.concat(imp);
-  }catch(e){ARTICULOS=gnesis;}
-  renderTarifas();
+  ARTICULOS=gnesis; // cargamos GNESIS inmediatamente
+  renderArt();
+  // Luego cargamos el resto desde Firebase
+  db.collection("tarifas_modelos").get().then(function(sn){
+    var importadas=[];
+    sn.forEach(function(d){
+      var data=d.data();
+      if(data.articulos&&Array.isArray(data.articulos)){
+        importadas=importadas.concat(data.articulos);
+      }
+    });
+    ARTICULOS=gnesis.concat(importadas);
+    console.log("Tarifas cargadas desde Firebase:",importadas.length,"artículos en",sn.size,"modelos");
+    renderTarifas();
+    renderArt();
+  }).catch(function(e){
+    console.error("Error cargando tarifas:",e);
+    toast("Error cargando tarifas: "+e.message,"err");
+  });
 }
 
-function guardarTarifasLocal(){
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(ARTICULOS.filter(function(a){return a.prv!=="678";})));
+function guardarTarifaFirestore(prv, mod, arts, callback){
+  // Cada proveedor+modelo es un documento separado
+  var docId="tarifa_"+String(prv)+"_"+mod.replace(/[^a-zA-Z0-9]/g,"_");
+  var pd=PROVEEDORES_MAP[prv]||PROVEEDORES_MAP[parseInt(prv)]||{};
+  db.collection("tarifas_modelos").doc(docId).set({
+    prv:prv, mod:mod,
+    prvNom:pd.nombre||prv,
+    articulos:arts,
+    actualizado:new Date().toISOString(),
+    total:arts.length
+  }).then(function(){
+    if(callback)callback(null);
+  }).catch(function(e){
+    if(callback)callback(e);
+  });
+}
+
+function eliminarTarifaFirestore(prv, mod, callback){
+  var docId="tarifa_"+String(prv)+"_"+mod.replace(/[^a-zA-Z0-9]/g,"_");
+  db.collection("tarifas_modelos").doc(docId).delete()
+    .then(function(){ if(callback)callback(null); })
+    .catch(function(e){ if(callback)callback(e); });
 }
 
 function cargarGNESIS(){
@@ -401,7 +444,7 @@ function showTab(t){
     if(tb)tb.classList.toggle("act",x===t);
   });
   if(t==="tarifas")renderTarifas();
-  if(t==="imagenes")poblarSelectoresImg();
+  if(t==="imagenes"){poblarSelectoresImg();mostrarEspacio();}
 }
 
 function toast(msg,tipo){
@@ -756,16 +799,28 @@ function importarTarifa(){
     arts.push({prv:cod,prvNom:pd.nombre||cod,mod:modelo,ref:colRef?String(row[parseInt(colRef)]||"").trim():String(r-rowHead+1),nom:nom,med:colMed?String(row[parseInt(colMed)]||"").trim():"",cat:colCat?String(row[parseInt(colCat)]||"").trim():"",categorias:categorias});
   }
   if(!arts.length){errEl.textContent="No se encontraron articulos validos. Revisa la fila de cabeceras y las columnas de puntos.";errEl.style.display="block";return;}
-  ARTICULOS=ARTICULOS.filter(function(a){return!(a.prv===cod&&a.mod===modelo);});
-  ARTICULOS=ARTICULOS.concat(arts);
-  guardarTarifasLocal();
-  renderArt();
+  // Mostrar progreso
   resEl.style.display="block";
-  resEl.innerHTML="IMPORTADOS "+arts.length+" articulos para "+cod+" - "+modelo
-    +(pd.precioPunto?" | P.Coste: "+pd.precioPunto+"EUR/pt | Dto.Max: "+pd.dtoMax+"%":" | AVISO: Proveedor sin datos de precio todavia")
-    +" | Guardado en este navegador.";
-  toast(""+arts.length+" articulos importados","ok");
-  setTimeout(function(){showTab("selector");},1500);
+  resEl.innerHTML="⏳ Guardando "+arts.length+" artículos en Firebase...";
+  resEl.style.cssText="display:block;background:#e8f0ff;color:#2856c8;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px";
+  // Guardar en Firestore
+  guardarTarifaFirestore(cod, modelo, arts, function(err){
+    if(err){
+      errEl.textContent="Error al guardar en Firebase: "+err.message;
+      errEl.style.display="block";
+      resEl.style.display="none";
+      return;
+    }
+    // Actualizar ARTICULOS en memoria
+    ARTICULOS=ARTICULOS.filter(function(a){return!(a.prv===cod&&a.mod===modelo);});
+    ARTICULOS=ARTICULOS.concat(arts);
+    renderArt();
+    resEl.style.cssText="display:block;background:#e8f5ee;color:#2d7a4f;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;line-height:1.6";
+    resEl.innerHTML="✅ "+arts.length+" artículos guardados en Firebase para "+cod+" · "+modelo
+      +(pd.precioPunto?" | "+pd.precioPunto+" €/pt · Dto: "+pd.dtoMax+"%":" | ⚠️ Proveedor sin precio/punto todavía");
+    toast("✅ "+arts.length+" artículos en Firebase","ok");
+    setTimeout(function(){showTab("selector");},1500);
+  });
 }
 
 function cancelarImport(){document.getElementById("import-form").style.display="none";document.getElementById("file-input").value="";XL_DATA=null;}
@@ -841,7 +896,7 @@ function renderTarifas(){
   }).forEach(function(k){
     alguno=true;
     var g=grupos[k];var pd=PROVEEDORES_MAP[g.prv]||{};var esG=g.prv==="678";
-    var imgs=cargarImagenesGuardadas(g.prv,g.mod);
+    var imgs=IMGS_CACHE[getDocId(g.prv,g.mod)]||[];
     html+="<div class='tarifa-item'>"
       +"<div><div style='font-weight:700;font-size:13px'>"+g.prv+" · "+(pd.nombre||g.prvNom)+" — "+g.mod+"</div>"
         +"<div style='font-size:11px;color:#888;margin-top:2px'>"+g.count+" artículos"
@@ -949,7 +1004,12 @@ function ejecutarImpresion(){
   });
   var prv=document.getElementById("f-prv").value;
   var mod=document.getElementById("f-mod").value;
-  var imgs=prv&&mod?cargarImagenesGuardadas(prv,mod):[];
+  cargarImagenesFirestore(prv,mod,function(imgs){
+    _generarVentanaImpresion(paginas,imgs,mod,st,mkCabecera);
+  });
+}
+
+function _generarVentanaImpresion(paginas,imgs,mod,st,mkCabecera){
   if(imgs.length){
     var cols=Math.min(imgs.length,2);
     var fotosHtml=imgs.map(function(src,i){
@@ -978,20 +1038,44 @@ function eliminarTarifaBtn(btn){
 
 function eliminarTarifa(prv,mod){
   if(!confirm("Eliminar tarifa "+mod+" de proveedor "+prv+"?"))return;
-  ARTICULOS=ARTICULOS.filter(function(a){return!(a.prv===prv&&a.mod===mod);});
-  guardarTarifasLocal();renderTarifas();renderArt();toast("Tarifa eliminada","ok");
+  eliminarTarifaFirestore(prv, mod, function(err){
+    if(err){ toast("Error: "+err.message,"err"); return; }
+    ARTICULOS=ARTICULOS.filter(function(a){return!(a.prv===prv&&a.mod===mod);});
+    renderTarifas();renderArt();
+    toast("Tarifa eliminada de Firebase","ok");
+  });
 }
 
 // ─── IMÁGENES ─────────────────────────────────────────────────────────────────
-var IMG_KEY = "meres_imagenes_v1";
+// ─── IMÁGENES EN FIRESTORE ────────────────────────────────────────────────────
 var visorImgs = [], visorIdx = 0;
+var IMGS_CACHE = {}; // cache local para no re-descargar en la misma sesión
 
-function getImgKey(prv,mod){ return "img_"+prv+"_"+mod; }
+function getDocId(prv,mod){ return "img_"+String(prv)+"_"+mod.replace(/[^a-zA-Z0-9]/g,"_"); }
 
 function cargarImagenesGuardadas(prv,mod){
-  var k=getImgKey(prv,mod);
-  try{ return JSON.parse(localStorage.getItem(k)||"[]"); }
-  catch(e){ return []; }
+  // Devuelve del cache si ya las tenemos
+  var key=getDocId(prv,mod);
+  return IMGS_CACHE[key]||[];
+}
+
+function cargarImagenesFirestore(prv,mod,callback){
+  var docId=getDocId(prv,mod);
+  // Si están en cache, usar directamente
+  if(IMGS_CACHE[docId]!==undefined){ if(callback)callback(IMGS_CACHE[docId]); return; }
+  db.collection("imagenes_modelos").doc(docId).get().then(function(doc){
+    if(doc.exists){
+      var imgs=doc.data().imgs||[];
+      IMGS_CACHE[docId]=imgs;
+      if(callback)callback(imgs);
+    } else {
+      IMGS_CACHE[docId]=[];
+      if(callback)callback([]);
+    }
+  }).catch(function(e){
+    console.error("Error cargando imágenes:",e);
+    if(callback)callback([]);
+  });
 }
 
 function sincModelosImg(){
@@ -1001,6 +1085,51 @@ function sincModelosImg(){
   var sel=document.getElementById("img-mod");
   sel.innerHTML="<option value=''>-- Selecciona modelo --</option>";
   Object.keys(mods).sort().forEach(function(m){ sel.innerHTML+="<option>"+m+"</option>"; });
+}
+
+function mostrarEspacio(){
+  var total=0;
+  var imgTotal=0;
+  var imgClaves=[];
+  var tarifaSize=0;
+  for(var i=0;i<localStorage.length;i++){
+    var k=localStorage.key(i);
+    var v=localStorage.getItem(k)||"";
+    var kb=Math.round((k.length+v.length)*2/1024);
+    total+=kb;
+    if(k&&k.indexOf("img_")===0){ imgTotal+=kb; imgClaves.push({k:k,kb:kb}); }
+    if(k===STORAGE_KEY) tarifaSize=kb;
+  }
+  var MAX=5120; // ~5MB
+  var pct=Math.min(100,Math.round(total/MAX*100));
+  var color=pct>80?"#c0392b":pct>60?"#e67e22":"#2d7a4f";
+  var infoEl=document.getElementById("espacio-info");
+  var detEl=document.getElementById("espacio-detalle");
+  if(!infoEl)return;
+  infoEl.innerHTML="<div style='background:#f0ece6;border-radius:8px;overflow:hidden;margin-bottom:6px'>"
+    +"<div style='background:"+color+";height:10px;width:"+pct+"%'></div></div>"
+    +"<strong style='color:"+color+"'>"+total+" KB usados de ~5.120 KB ("+pct+"%)</strong>"
+    +(pct>80?" &nbsp;<span style='color:#c0392b;font-weight:700'>⚠️ CASI LLENO — recomprime o borra imágenes</span>":"");
+  var det="<div>📦 Tarifas: "+tarifaSize+" KB</div>"
+    +"<div>🖼️ Imágenes totales: "+imgTotal+" KB en "+imgClaves.length+" modelo(s)</div>";
+  imgClaves.sort(function(a,b){return b.kb-a.kb;}).slice(0,5).forEach(function(x){
+    var parts=x.k.replace("img_","").split("_");
+    det+="<div style='margin-left:12px'>· "+x.k.replace("img_","prv:")+" → "+x.kb+" KB</div>";
+  });
+  detEl.innerHTML=det;
+}
+
+function borrarTodasImagenes(){
+  if(!confirm("¿Borrar TODAS las imágenes guardadas de todos los modelos?\nLas tarifas NO se borran."))return;
+  var claves=[];
+  for(var i=0;i<localStorage.length;i++){
+    var k=localStorage.key(i);
+    if(k&&k.indexOf("img_")===0) claves.push(k);
+  }
+  claves.forEach(function(k){ localStorage.removeItem(k); });
+  toast("✅ "+claves.length+" modelos de imágenes borrados","ok");
+  mostrarEspacio();
+  actualizarBtnVerImgs();
 }
 
 function poblarSelectoresImg(){
@@ -1039,7 +1168,7 @@ function guardarImagenes(){
   if(!prv||!mod){ msg.textContent="Selecciona proveedor y modelo primero"; msg.style.color="#c0392b"; msg.style.display="block"; return; }
   var files=Array.from(document.getElementById("img-files").files).slice(0,6);
   if(!files.length){ msg.textContent="Selecciona al menos una imagen"; msg.style.color="#c0392b"; msg.style.display="block"; return; }
-  msg.textContent="Comprimiendo y guardando "+files.length+" imagen(es)..."; msg.style.color="#2856c8"; msg.style.display="block";
+  msg.textContent="Comprimiendo y subiendo "+files.length+" imagen(es)..."; msg.style.color="#2856c8"; msg.style.display="block";
 
   function comprimirImagen(file){
     return new Promise(function(resolve){
@@ -1048,14 +1177,13 @@ function guardarImagenes(){
         var img=new Image();
         img.onload=function(){
           var canvas=document.createElement("canvas");
-          var MAX=900; // max píxeles lado largo
-          var w=img.width, h=img.height;
-          if(w>h){ if(w>MAX){h=Math.round(h*MAX/w);w=MAX;} }
-          else { if(h>MAX){w=Math.round(w*MAX/h);h=MAX;} }
-          canvas.width=w; canvas.height=h;
-          var ctx=canvas.getContext("2d");
-          ctx.drawImage(img,0,0,w,h);
-          resolve(canvas.toDataURL("image/jpeg",0.75)); // calidad 75%
+          var MAX=900;
+          var w=img.width,h=img.height;
+          if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}
+          else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
+          canvas.width=w;canvas.height=h;
+          canvas.getContext("2d").drawImage(img,0,0,w,h);
+          resolve(canvas.toDataURL("image/jpeg",0.75));
         };
         img.src=e.target.result;
       };
@@ -1064,66 +1192,24 @@ function guardarImagenes(){
   }
 
   Promise.all(files.map(comprimirImagen)).then(function(imgs){
-    try {
-      localStorage.setItem(getImgKey(prv,mod),JSON.stringify(imgs));
-      msg.textContent="✅ "+imgs.length+" imagen(es) guardadas para "+mod;
+    var docId=getDocId(prv,mod);
+    var pd=PROVEEDORES_MAP[prv]||PROVEEDORES_MAP[parseInt(prv)]||{};
+    db.collection("imagenes_modelos").doc(docId).set({
+      prv:prv, mod:mod,
+      prvNom:pd.nombre||prv,
+      imgs:imgs,
+      actualizado:new Date().toISOString()
+    }).then(function(){
+      IMGS_CACHE[docId]=imgs;
+      msg.textContent="✅ "+imgs.length+" imagen(es) guardadas en Firebase para "+mod;
       msg.style.color="#2d7a4f"; msg.style.display="block";
       actualizarBtnVerImgs();
-      toast("✅ "+imgs.length+" imágenes guardadas","ok");
-    } catch(e) {
-      msg.textContent="❌ Error: imágenes demasiado grandes. Prueba con menos imágenes o de menor tamaño.";
+      toast("✅ "+imgs.length+" imágenes subidas a Firebase","ok");
+    }).catch(function(e){
+      console.error("Error guardando en Firestore:",e);
+      msg.textContent="❌ Error al subir: "+e.message;
       msg.style.color="#c0392b"; msg.style.display="block";
-      console.error("localStorage lleno:",e);
-    }
-  });
-}
-
-function recomprimirTodas(){
-  var msg=document.getElementById("img-msg");
-  // Buscar todas las claves de imágenes en localStorage
-  var claves=[];
-  for(var i=0;i<localStorage.length;i++){
-    var k=localStorage.key(i);
-    if(k&&k.indexOf("img_")===0) claves.push(k);
-  }
-  if(!claves.length){ msg.textContent="No hay imágenes guardadas para recomprimir"; msg.style.color="#888"; msg.style.display="block"; return; }
-  msg.textContent="Recomprimiendo "+claves.length+" modelo(s)... por favor espera"; msg.style.color="#2856c8"; msg.style.display="block";
-
-  function comprimirBase64(src){
-    return new Promise(function(resolve){
-      var img=new Image();
-      img.onload=function(){
-        var canvas=document.createElement("canvas");
-        var MAX=900;
-        var w=img.width,h=img.height;
-        if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}
-        else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
-        canvas.width=w;canvas.height=h;
-        canvas.getContext("2d").drawImage(img,0,0,w,h);
-        resolve(canvas.toDataURL("image/jpeg",0.75));
-      };
-      img.onerror=function(){ resolve(src); }; // si falla, dejar como está
-      img.src=src;
     });
-  }
-
-  var procesadas=0;
-  var promesasModelos=claves.map(function(k){
-    var datos;
-    try{ datos=JSON.parse(localStorage.getItem(k)||"[]"); }
-    catch(e){ return Promise.resolve(); }
-    if(!Array.isArray(datos)||!datos.length) return Promise.resolve();
-    return Promise.all(datos.map(comprimirBase64)).then(function(nuevas){
-      try{ localStorage.setItem(k,JSON.stringify(nuevas)); }
-      catch(e){ console.error("No se pudo guardar "+k,e); }
-      procesadas++;
-    });
-  });
-
-  Promise.all(promesasModelos).then(function(){
-    msg.textContent="✅ Recompresión completada — "+procesadas+" modelo(s) procesados. El localStorage ocupa mucho menos ahora.";
-    msg.style.color="#2d7a4f"; msg.style.display="block";
-    toast("✅ Imágenes recomprimidas","ok");
   });
 }
 
@@ -1132,11 +1218,57 @@ function borrarImagenes(){
   var mod=document.getElementById("img-mod").value;
   var msg=document.getElementById("img-msg");
   if(!prv||!mod){ msg.textContent="Selecciona proveedor y modelo"; msg.style.color="#c0392b"; msg.style.display="block"; return; }
-  if(!confirm("¿Borrar las imágenes de "+mod+"?"))return;
-  localStorage.removeItem(getImgKey(prv,mod));
-  msg.textContent="Imágenes borradas"; msg.style.color="#888"; msg.style.display="block";
-  actualizarBtnVerImgs();
-  toast("Imágenes borradas","ok");
+  if(!confirm("¿Borrar las imágenes de "+mod+" de Firebase?"))return;
+  var docId=getDocId(prv,mod);
+  db.collection("imagenes_modelos").doc(docId).delete().then(function(){
+    delete IMGS_CACHE[docId];
+    msg.textContent="Imágenes borradas de Firebase"; msg.style.color="#888"; msg.style.display="block";
+    actualizarBtnVerImgs();
+    toast("Imágenes borradas","ok");
+  }).catch(function(e){
+    msg.textContent="❌ Error: "+e.message; msg.style.color="#c0392b"; msg.style.display="block";
+  });
+}
+
+function mostrarEspacio(){
+  var infoEl=document.getElementById("espacio-info");
+  var detEl=document.getElementById("espacio-detalle");
+  if(!infoEl)return;
+  infoEl.textContent="Consultando Firebase...";
+  db.collection("imagenes_modelos").get().then(function(sn){
+    var total=0;
+    var detalle="";
+    sn.forEach(function(d){
+      var dat=d.data();
+      var imgs=dat.imgs||[];
+      var kb=Math.round(imgs.reduce(function(s,i){return s+i.length;},0)*0.75/1024);
+      total+=kb;
+      detalle+="<div>🖼️ "+( dat.prvNom||dat.prv)+" · "+dat.mod+" — "+imgs.length+" img · "+kb+" KB</div>";
+    });
+    infoEl.innerHTML="<strong>📦 "+sn.size+" modelos con imágenes en Firebase · "+Math.round(total/1024*10)/10+" MB totales</strong>"
+      +"<div style='font-size:11px;color:#888;margin-top:2px'>Límite gratuito: 1 GB — estás muy lejos del límite</div>";
+    detEl.innerHTML=detalle||"<div style='color:#aaa'>Sin imágenes en Firebase todavía</div>";
+  }).catch(function(e){ infoEl.textContent="Error: "+e.message; });
+}
+
+function borrarTodasImagenes(){
+  if(!confirm("¿Borrar TODAS las imágenes de Firebase de todos los modelos?"))return;
+  db.collection("imagenes_modelos").get().then(function(sn){
+    var promesas=[];
+    sn.forEach(function(d){ promesas.push(d.ref.delete()); });
+    return Promise.all(promesas);
+  }).then(function(){
+    IMGS_CACHE={};
+    toast("✅ Todas las imágenes borradas de Firebase","ok");
+    mostrarEspacio();
+    actualizarBtnVerImgs();
+  }).catch(function(e){ toast("❌ Error: "+e.message,"err"); });
+}
+
+function recomprimirTodas(){
+  var msg=document.getElementById("img-msg");
+  msg.textContent="Esta función ya no es necesaria — las imágenes ahora van a Firebase comprimidas automáticamente al subirlas.";
+  msg.style.color="#888"; msg.style.display="block";
 }
 
 function actualizarBtnVerImgs(){
@@ -1145,8 +1277,9 @@ function actualizarBtnVerImgs(){
   var btn=document.getElementById("btn-ver-imgs");
   if(!btn)return;
   if(prv&&mod){
-    var imgs=cargarImagenesGuardadas(prv,mod);
-    btn.style.display=imgs.length?"inline-block":"none";
+    cargarImagenesFirestore(prv,mod,function(imgs){
+      btn.style.display=imgs.length?"inline-block":"none";
+    });
   } else {
     btn.style.display="none";
   }
@@ -1156,12 +1289,14 @@ function actualizarBtnVerImgs(){
 function abrirVisor(){
   var prv=document.getElementById("f-prv").value;
   var mod=document.getElementById("f-mod").value;
-  visorImgs=cargarImagenesGuardadas(prv,mod);
-  if(!visorImgs.length){ toast("Sin imágenes para este modelo","err"); return; }
-  visorIdx=0;
-  document.getElementById("visorTitulo").textContent=mod+" — Imágenes";
-  renderVisor();
-  document.getElementById("visorOverlay").style.display="flex";
+  toast("Cargando imágenes...","info");
+  cargarImagenesFirestore(prv,mod,function(imgs){
+    if(!imgs.length){ toast("Sin imágenes para este modelo","err"); return; }
+    visorImgs=imgs; visorIdx=0;
+    document.getElementById("visorTitulo").textContent=mod+" — Imágenes";
+    renderVisor();
+    document.getElementById("visorOverlay").style.display="flex";
+  });
 }
 
 function renderVisor(){
