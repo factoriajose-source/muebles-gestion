@@ -205,7 +205,10 @@ function cargarProveedoresFirebase(){
       if(!cod)return;
       var pp=parseFloat(String(p.P_COSTE||"0").replace(",","."))||0;
       var dto=parseFloat(String(p.MAX_DTO||"0").replace(",",".").replace("%",""))||0;
+      // Guardar con y sin ceros iniciales por si acaso
       PROVEEDORES_MAP[cod]={nombre:p.Nombre||p.nombre||cod,precioPunto:pp,dtoMax:dto};
+      // También guardar como número por si viene así
+      PROVEEDORES_MAP[parseInt(cod)]={nombre:p.Nombre||p.nombre||cod,precioPunto:pp,dtoMax:dto};
     });
     renderArt();
   }).catch(function(){renderArt();});
@@ -233,8 +236,8 @@ function cargarGNESIS(){
 function calcPrecio(art,cat){
   var pts=art.categorias[cat];
   if(!pts&&pts!==0)return null;
-  var p=PROVEEDORES_MAP[art.prv]||{};
-  if(!p.precioPunto)return null;
+  var p=PROVEEDORES_MAP[art.prv]||PROVEEDORES_MAP[parseInt(art.prv)]||PROVEEDORES_MAP[String(parseInt(art.prv))];
+  if(!p||!p.precioPunto)return null;
   return pts*p.precioPunto*(1-p.dtoMax/100);
 }
 
@@ -509,7 +512,7 @@ function buscarProveedor(){
   var cod=document.getElementById("imp-prv-cod").value.trim();
   var info=document.getElementById("imp-prv-info");
   if(!cod){info.textContent="Introduce el codigo";info.style.color="#888";return;}
-  var p=PROVEEDORES_MAP[cod];
+  var p=PROVEEDORES_MAP[cod]||PROVEEDORES_MAP[parseInt(cod)]||PROVEEDORES_MAP[String(parseInt(cod))];
   if(p){
     info.innerHTML="OK "+p.nombre+" | P.Coste: "+p.precioPunto+" EUR/pt | Dto: "+p.dtoMax+"%";
     info.style.color="#2d7a4f";
