@@ -1017,23 +1017,50 @@ function ejecutarImpresion(){
       +"<td style=\'padding:10px 8px;text-align:right;font-weight:800;font-size:18px;color:"+st.color+";border-top:2px solid #1a1714\'>"+Math.round(total)+" €</td></tr></tfoot></table>"
       +(pi===presConContenido.length-1?"<div style=\'margin-top:12px;font-size:11px;color:#aaa;text-align:center\'>Precios orientativos · Válido 14 días</div></div>":"</div>");
   });
-  var prv=document.getElementById("f-prv").value;
-  var mod=document.getElementById("f-mod").value;
-  cargarImagenesFirestore(prv,mod,function(imgs){
-    _generarVentanaImpresion(paginas,imgs,mod,st,mkCabecera);
+
+  // Recoger todos los modelos únicos de TODAS las opciones
+  var modelosVistos={};
+  var modelosUnicos=[];
+  presConContenido.forEach(function(pres){
+    pres.forEach(function(l){
+      var key=l.art.prv+"||"+l.art.mod;
+      if(!modelosVistos[key]){
+        modelosVistos[key]=true;
+        modelosUnicos.push({prv:l.art.prv, mod:l.art.mod});
+      }
+    });
+  });
+
+  // Cargar fotos de todos los modelos en paralelo
+  var promesasFotos=modelosUnicos.map(function(m){
+    return new Promise(function(resolve){
+      cargarImagenesFirestore(m.prv,m.mod,function(imgs){
+        resolve({prv:m.prv, mod:m.mod, imgs:imgs});
+      });
+    });
+  });
+
+  Promise.all(promesasFotos).then(function(resultados){
+    // Filtrar solo los que tienen fotos
+    var conFotos=resultados.filter(function(r){return r.imgs.length>0;});
+    _generarVentanaImpresion(paginas,conFotos,st,mkCabecera);
   });
 }
 
-function _generarVentanaImpresion(paginas,imgs,mod,st,mkCabecera){
-  if(imgs.length){
-    var cols=Math.min(imgs.length,2);
-    var fotosHtml=imgs.map(function(src,i){
-      return "<div style=\'text-align:center\'><img src=\'"+src+"\' style=\'max-width:100%;max-height:240px;object-fit:contain\'>"
-        +"<div style=\'font-size:10px;color:#aaa;margin-top:4px\'>"+(i+1)+"/"+imgs.length+"</div></div>";
-    }).join("");
-    paginas+="<div style=\'page-break-before:always;padding:20px\'>"+mkCabecera()
-      +"<div style=\'font-size:13px;font-weight:700;margin-bottom:14px\'>Imágenes: "+mod.replace(/[aeiouáéíóúAEIOUÁÉÍÓÚ]/g,"")+"</div>"
-      +"<div style=\'display:grid;grid-template-columns:repeat("+cols+",1fr);gap:14px\'>"+fotosHtml+"</div></div>";
+function _generarVentanaImpresion(paginas,conFotos,st,mkCabecera){
+  // conFotos = array de {prv, mod, imgs}
+  if(conFotos.length){
+    conFotos.forEach(function(r){
+      var cols=Math.min(r.imgs.length,2);
+      var modCodigo=r.mod.replace(/[aeiouáéíóúAEIOUÁÉÍÓÚ]/g,"");
+      var fotosHtml=r.imgs.map(function(src,i){
+        return "<div style=\'text-align:center\'><img src=\'"+src+"\' style=\'max-width:100%;max-height:240px;object-fit:contain\'>"
+          +"<div style=\'font-size:10px;color:#aaa;margin-top:4px\'>"+(i+1)+"/"+r.imgs.length+"</div></div>";
+      }).join("");
+      paginas+="<div style=\'page-break-before:always;padding:20px\'>"+mkCabecera()
+        +"<div style=\'font-size:13px;font-weight:700;margin-bottom:14px\'>Imágenes: "+modCodigo+"</div>"
+        +"<div style=\'display:grid;grid-template-columns:repeat("+cols+",1fr);gap:14px\'>"+fotosHtml+"</div></div>";
+    });
   }
   var win=window.open("","_blank","width=900,height=750");
   win.document.write("<!DOCTYPE html><html><head><meta charset=\'UTF-8\'><title>Presupuesto</title>"
