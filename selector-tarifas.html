@@ -675,7 +675,7 @@ function renderPres(){
     html+="<tr>"
       +"<td style='font-size:12px'><strong>"+l.art.nom+"</strong>"
         +(l.tela!=="UNICO"?"<br><span style='font-size:10px;color:#c4571a'>"+l.tela+"</span>":"")
-        +"<br><span style='font-size:10px;color:#aaa'>"+l.art.prv+" · "+l.art.mod+" ref."+l.art.ref+"</span>"
+        +"<br><span style='font-size:10px;color:#aaa'>"+l.art.prv+" · "+l.art.mod.replace(/_/g," ")+" ref."+l.art.ref+"</span>"
       +"</td>"
       +"<td style='text-align:center'><div class='qty-ctrl'>"
         +"<button class='qty-btn' onclick='qtyPres("+i+",-1)'>-</button>"
