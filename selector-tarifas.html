@@ -974,12 +974,27 @@ function ejecutarImpresion(){
       var sub=l.precio!==null?Math.round(l.precio*l.qty):null;
       if(sub)total+=sub;
       var modCodigo=l.art.mod.replace(/[aeiouáéíóúAEIOUÁÉÍÓÚ]/g,"");
+      var pd=PROVEEDORES_MAP[l.art.prv]||PROVEEDORES_MAP[parseInt(l.art.prv)]||{};
+      var dto=pd.dtoMax||0;
+      var pp=pd.precioPunto||0;
+      // Precio sin descuento = puntos × precio/punto
+      var precioSinDto=l.pts&&pp?Math.round(l.pts*pp):null;
+      // Precio con descuento (precio neto)
+      var precioNeto=l.precio!==null?Math.round(l.precio):null;
+      var filaPrecio="";
+      if(precioSinDto&&dto>0){
+        filaPrecio="<div style=\'color:#aaa;font-size:11px;text-decoration:line-through\'>"+precioSinDto+" €</div>"
+          +"<div style=\'color:"+st.color+";font-size:10px;font-weight:700\'>-"+dto+"% dto.</div>"
+          +"<div style=\'font-weight:800;font-size:13px\'>"+(precioNeto!==null?precioNeto+" €":"—")+"</div>";
+      } else {
+        filaPrecio="<div style=\'font-weight:700\'>"+(precioNeto!==null?precioNeto+" €":"—")+"</div>";
+      }
       return "<tr>"
         +"<td style=\'padding:7px 8px;border-bottom:1px solid #f0ece6;font-size:12px\'><strong>"+l.art.nom+"</strong>"
         +(l.tela!=="UNICO"?"<br><span style=\'color:"+st.color+";font-size:11px\'>"+l.tela+"</span>":"")
         +"<br><span style=\'font-size:10px;color:#aaa\'>Ref. "+l.art.prv+"-"+modCodigo+"-"+l.art.ref+"</span></td>"
         +"<td style=\'padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center\'>"+l.qty+"</td>"
-        +"<td style=\'padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right\'>"+(l.precio!==null?Math.round(l.precio)+" €":"—")+"</td>"
+        +"<td style=\'padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right\'>"+filaPrecio+"</td>"
         +"<td style=\'padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700\'>"+(sub!==null?sub+" €":"—")+"</td>"
         +"</tr>";
     }).join("");
@@ -1218,6 +1233,7 @@ function borrarImagenes(){
   var mod=document.getElementById("img-mod").value;
   var msg=document.getElementById("img-msg");
   if(!prv||!mod){ msg.textContent="Selecciona proveedor y modelo"; msg.style.color="#c0392b"; msg.style.display="block"; return; }
+  var clave=prompt("Introduce la clave para borrar imágenes:");if(clave!=="7557"){ toast("Clave incorrecta","err"); return; }
   if(!confirm("¿Borrar las imágenes de "+mod+" de Firebase?"))return;
   var docId=getDocId(prv,mod);
   db.collection("imagenes_modelos").doc(docId).delete().then(function(){
@@ -1252,6 +1268,7 @@ function mostrarEspacio(){
 }
 
 function borrarTodasImagenes(){
+  var clave=prompt("Introduce la clave para borrar TODAS las imágenes:");if(clave!=="7557"){ toast("Clave incorrecta","err"); return; }
   if(!confirm("¿Borrar TODAS las imágenes de Firebase de todos los modelos?"))return;
   db.collection("imagenes_modelos").get().then(function(sn){
     var promesas=[];
