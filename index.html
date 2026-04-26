@@ -1185,7 +1185,7 @@ function renderLines() {
 function calcTotals() {
   const desc = (parseFloat(document.getElementById("desc-pct").value) / 100) || 0;
   const mo = parseFloat(document.getElementById("mo-precio").value) || 0;
-  let base = lines.reduce((s,l) => s + l.qty * l.price, 0);
+  let base = lines.reduce((s,l) => s + l.qty * (l.price||l.precio||0), 0);
   const descAmt = base * desc; base -= descAmt; const total = base + mo;
   document.getElementById("t-base").textContent = fmt(base + descAmt);
   document.getElementById("t-mo").textContent = fmt(mo);
@@ -1197,7 +1197,7 @@ function calcTotals() {
 
 function calcTotal(p) {
   const desc = (p.descuento||0)/100;
-  let base = (p.lines||[]).reduce((s,l) => s + l.qty * l.price, 0);
+  let base = (p.lines||[]).reduce((s,l) => s + l.qty * (l.price||l.precio||0), 0);
   base -= base * desc; return base + (p.mo ? p.mo.precio : 0);
 }
 
@@ -1761,13 +1761,43 @@ function generatePrint(p) {
   const logoHtml=st.logo?"<img src='"+st.logo+"' style='max-height:60px;max-width:200px;object-fit:contain' '>":"<div style='font-size:22px;font-weight:800;color:"+c+"'>"+p.tienda+"</div>";
   const contactParts=[]; if(st.tel) contactParts.push("Tel: "+st.tel); if(st.whatsapp) contactParts.push("WhatsApp: "+st.whatsapp); if(st.email) contactParts.push(st.email); if(st.web) contactParts.push(st.web);
   let lineas="";
+  // Si es presupuesto Express con múltiples opciones, agrupar por opción
+  const tieneOpciones=(p.lines||[]).some(function(l){return l.opcion>1;});
+  if(tieneOpciones){
+    const opciones={};
+    (p.lines||[]).forEach(function(l){
+      var op=l.opcion||1;
+      if(!opciones[op])opciones[op]=[];
+      opciones[op].push(l);
+    });
+    Object.keys(opciones).sort().forEach(function(op){
+      lineas+="<tr><td colspan='5' style='padding:8px;background:#1a1714;color:white;font-weight:700;font-size:11px;letter-spacing:.06em'>OPCIÓN "+op+"</td></tr>";
+      var subtotal=0;
+      opciones[op].forEach(function(l){
+        var pr=l.price||l.precio||0;
+        subtotal+=l.qty*pr;
+        var extraInfo=[l.fabrica?("<strong>Ref:</strong> "+l.fabrica):""].filter(Boolean).join("");
+        var extraHtml=extraInfo?"<div style='font-size:10px;color:#666;margin-top:2px'>"+extraInfo+"</div>":"";
+        var precioHtml=l.precioSinDto&&l.dto?"<span style='text-decoration:line-through;color:#aaa;font-size:10px'>"+fmt(l.precioSinDto)+"</span><br><span style='color:#c4571a;font-size:10px;font-weight:700'>-"+l.dto+"%</span><br>"+fmt(pr):fmt(pr);
+        lineas+="<tr><td style='vertical-align:top;text-align:center;padding:8px'><div style='width:52px;height:52px;background:#f5f4f0;border-radius:6px;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:10px;color:#bbb'>Sin foto</div></td>"
+          +"<td style='vertical-align:top;padding:8px'>"+l.desc+extraHtml+"</td>"
+          +"<td style='text-align:center;vertical-align:top;padding:8px'>"+l.qty+"</td>"
+          +"<td style='text-align:right;vertical-align:top;padding:8px'>"+precioHtml+"</td>"
+          +"<td style='text-align:right;vertical-align:top;padding:8px;font-weight:700'>"+fmt(l.qty*pr)+"</td></tr>";
+      });
+      lineas+="<tr><td colspan='4' style='text-align:right;padding:6px 8px;font-weight:700;font-size:13px;border-top:1px solid #e8e4de'>TOTAL OPCIÓN "+op+"</td>"
+        +"<td style='text-align:right;padding:6px 8px;font-weight:800;font-size:15px;color:"+c+";border-top:1px solid #e8e4de'>"+fmt(subtotal)+"</td></tr>"
+        +"<tr><td colspan='5' style='padding:4px'></td></tr>";
+    });
+  } else {
   (p.lines||[]).forEach(l=>{
     const imgHtml=l.img?"<img src='"+l.img+"' style='width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid #ddd'>":"<div style='width:72px;height:72px;background:#f5f4f0;border-radius:6px;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:10px;color:#bbb;text-align:center'>Sin foto</div>";
     let chBlock=""; if(isCheslon(l.desc)&&l.cheslon){ const chImg=l.cheslon==="izq"?IMG_IZQ:IMG_DER; chBlock="<div style='margin-top:6px;padding:6px 8px;background:#fff8e6;border:1px solid #f0c060;border-radius:6px;display:inline-flex;align-items:center;gap:8px'><img src='"+chImg+"' style='width:90px;height:70px;object-fit:contain'><div style='font-size:11px;font-weight:700;color:#8a6000'>Chaise a la "+(l.cheslon==="izq"?"IZQUIERDA":"DERECHA")+"<br>(visto de frente)</div></div>"; }
     const extraInfo = [l.fabrica?("<strong>Fabrica:</strong> "+l.fabrica):"", l.medidas?("<strong>Medidas:</strong> "+l.medidas):"", l.color?("<strong>Color/Acabado:</strong> "+l.color):""].filter(Boolean).join(" &nbsp;|&nbsp; ");
     const extraHtml = extraInfo ? "<div style='font-size:10px;color:#666;margin-top:3px'>"+extraInfo+"</div>" : "";
-    lineas+="<tr><td style='vertical-align:top;text-align:center;padding:10px 8px'>"+imgHtml+"</td><td style='vertical-align:top;padding:10px 8px'>"+l.desc+extraHtml+chBlock+"</td><td style='text-align:center;vertical-align:top;padding:10px 8px'>"+l.qty+"</td><td style='text-align:right;vertical-align:top;padding:10px 8px'>"+fmt(l.price)+"</td><td style='text-align:right;vertical-align:top;padding:10px 8px;font-weight:700'>"+fmt(l.qty*l.price)+"</td></tr>";
+    lineas+="<tr><td style='vertical-align:top;text-align:center;padding:10px 8px'>"+imgHtml+"</td><td style='vertical-align:top;padding:10px 8px'>"+l.desc+extraHtml+chBlock+"</td><td style='text-align:center;vertical-align:top;padding:10px 8px'>"+l.qty+"</td><td style='text-align:right;vertical-align:top;padding:10px 8px'>"+fmt(l.price||l.precio||0)+"</td><td style='text-align:right;vertical-align:top;padding:10px 8px;font-weight:700'>"+fmt(l.qty*(l.price||l.precio||0))+"</td></tr>";
   });
+  } // fin else tieneOpciones
   if(mo) lineas+="<tr><td style='text-align:center;padding:10px 8px'>-</td><td style='padding:10px 8px'>"+(p.mo.desc||"Transporte y Montaje")+"</td><td style='text-align:center;padding:10px 8px'>1</td><td style='text-align:right;padding:10px 8px'>"+fmt(mo)+"</td><td style='text-align:right;padding:10px 8px;font-weight:700'>"+fmt(mo)+"</td></tr>";
   const promoBlock=st.promo?"<div style='margin-top:1.5rem;padding:16px 20px;background:"+c+";border-radius:10px;color:#fff;text-align:center;font-size:15px;font-weight:700;line-height:1.5'>"+st.promo+"</div>":"";
   const legalPage="<div style='page-break-before:always;padding-top:1rem'>"
@@ -1802,7 +1832,7 @@ function whatsappPresupuesto() {
   if (!data.cliente.nombre) { showToast("Introduce el nombre del cliente"); return; }
   const st = STORES[data.tienda]||STORES["Muebles La Factoría"];
   const total = calcTotal(data);
-  const lineas = (data.lines||[]).map(l => { let t="- "+l.desc+(l.fabrica?" | "+l.fabrica:"")+(l.medidas?" | "+l.medidas:"")+(l.color?" | "+l.color:"")+" x"+l.qty+" - "+fmt(l.price); if(isCheslon(l.desc)&&l.cheslon) t+=" (chaise a la "+(l.cheslon==="izq"?"IZQUIERDA":"DERECHA")+")"; return t; }).join("\n");
+  const lineas = (data.lines||[]).map(l => { let t="- "+l.desc+(l.fabrica?" | "+l.fabrica:"")+(l.medidas?" | "+l.medidas:"")+(l.color?" | "+l.color:"")+" x"+l.qty+" - "+fmt(l.price||l.precio||0); if(isCheslon(l.desc)&&l.cheslon) t+=" (chaise a la "+(l.cheslon==="izq"?"IZQUIERDA":"DERECHA")+")"; return t; }).join("\n");
   const msg = "Presupuesto #"+(data.num||"BORRADOR")+" - "+data.tienda+"\n"+st.address+"\nTel: "+st.tel+"\n\nCliente: "+data.cliente.nombre+"\nFecha: "+fmtDate(data.fecha)+"\n\nProductos:\n"+lineas+(data.mo&&data.mo.precio?"\n- "+(data.mo.desc||"Transporte y Montaje")+" - "+fmt(data.mo.precio):"")+(data.descuento?"\nDescuento: "+data.descuento+"%":"")+"\n\nTOTAL (imp. incluidos): "+fmt(total)+"\nForma de pago: "+(data.pagos||[]).join(", ")+"\nValido "+data.validez+" dias";
   const tel=data.cliente.tel.replace(/\D/g,"");
   window.open(tel?"https://wa.me/34"+tel+"?text="+encodeURIComponent(msg):"https://wa.me/?text="+encodeURIComponent(msg),"_blank");
