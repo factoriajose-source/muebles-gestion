@@ -199,19 +199,21 @@ window.onload=function(){
 function cargarProveedoresFirebase(){
   db.collection("proveedores").get().then(function(sn){
     PROVEEDORES_MAP={};
+    console.log("Total proveedores Firebase:", sn.size);
     sn.forEach(function(d){
       var p=d.data();
-      var cod=String(p.Codigo||p.codigo||"").trim();
+      // Log primeros 5 para ver estructura
+      console.log("DOC id="+d.id, "Codigo="+p.Codigo, "P_COSTE="+p.P_COSTE, "MAX_DTO="+p.MAX_DTO, "Nombre="+p.Nombre);
+      var cod=String(p.Codigo||p.codigo||d.id||"").trim();
       if(!cod)return;
       var pp=parseFloat(String(p.P_COSTE||"0").replace(",","."))||0;
       var dto=parseFloat(String(p.MAX_DTO||"0").replace(",",".").replace("%",""))||0;
-      // Guardar con y sin ceros iniciales por si acaso
       PROVEEDORES_MAP[cod]={nombre:p.Nombre||p.nombre||cod,precioPunto:pp,dtoMax:dto};
-      // También guardar como número por si viene así
       PROVEEDORES_MAP[parseInt(cod)]={nombre:p.Nombre||p.nombre||cod,precioPunto:pp,dtoMax:dto};
     });
+    console.log("Claves MAP:", Object.keys(PROVEEDORES_MAP).slice(0,20).join(", "));
     renderArt();
-  }).catch(function(){renderArt();});
+  }).catch(function(e){console.error("Error proveedores:",e);renderArt();});
 }
 
 function cargarTarifasLocal(){
