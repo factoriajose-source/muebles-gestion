@@ -759,33 +759,25 @@ function guardarEspecial() {
     trabAfectados.forEach(function(alias) {
       fechas.forEach(function(fecha) {
         var docId = "fichaje_" + alias.replace(/ /g,"_") + "_" + fecha;
-        promesas.push(
-          db.collection("fichajes").doc(docId).get().then(function(doc) {
-            if (doc.exists) return {alias:alias, fecha:fecha, resultado:"omitido"};
-            var tipoFinal = tipo;
-            if (conVac[alias] && conVac[alias][fecha]) {
-              tipoFinal = conVac[alias][fecha]==="vacacion"?"VAC":"BAJA";
-            }
-
-        // Guardar fichaje especial
-        var datos = {
-          alias: alias,
-          fecha: fecha,
-          especial: tipoFinal,
-          ini_m: "", fin_m: "", ini_t: "", fin_t: "",
-          firma_ini_m: tipoFinal,
-          firma_fin_m: tipoFinal,
-          firma_ini_t: tipoFinal,
-          firma_fin_t: tipoFinal,
-          manual: true,
-          manual_por: "Sistema",
-          manual_ts: new Date().toISOString()
-        };
-        return db.collection("fichajes").doc(docId).set(datos).then(function() {
-          return {alias:alias, fecha:fecha, resultado:tipoFinal};
+        var tipoFinal = tipo;
+        if (conVac[alias] && conVac[alias][fecha]) {
+          tipoFinal = conVac[alias][fecha]==="vacacion" ? "VAC" : "BAJA";
+        }
+        var p = db.collection("fichajes").doc(docId).get().then(function(doc) {
+          if (doc.exists) return {alias:alias, fecha:fecha, resultado:"omitido"};
+          var datos = {
+            alias: alias, fecha: fecha, especial: tipoFinal,
+            ini_m:"", fin_m:"", ini_t:"", fin_t:"",
+            firma_ini_m: tipoFinal, firma_fin_m: tipoFinal,
+            firma_ini_t: tipoFinal, firma_fin_t: tipoFinal,
+            manual: true, manual_por: "Sistema",
+            manual_ts: new Date().toISOString()
+          };
+          return db.collection("fichajes").doc(docId).set(datos).then(function() {
+            return {alias:alias, fecha:fecha, resultado:tipoFinal};
+          });
         });
-          })
-        );
+        promesas.push(p);
       });
     });
 
