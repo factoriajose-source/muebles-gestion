@@ -289,6 +289,61 @@ header { background: #1a1714; color: white; padding: 0 24px; height: 54px; displ
   </div>
 </div>
 
+<!-- MODAL GESTIÓN DE FIESTAS -->
+<div id="fiestasOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:flex-start;justify-content:center;padding-top:60px;overflow-y:auto">
+  <div style="background:white;border-radius:14px;max-width:680px;width:95%;box-shadow:0 8px 40px rgba(0,0,0,.2);margin-bottom:40px">
+    <!-- Cabecera -->
+    <div style="background:#c4571a;color:white;padding:18px 22px;border-radius:14px 14px 0 0;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-weight:800;font-size:16px">📅 Fiestas <span id="fiestas-anio">2026</span></div>
+        <div style="font-size:12px;opacity:.85;margin-top:2px">Nacionales · Asturias · Siero/Local</div>
+      </div>
+      <button onclick="cerrarGestionFiestas()" style="background:rgba(255,255,255,.2);border:none;color:white;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer">✕ Cerrar</button>
+    </div>
+    <!-- Formulario nueva fiesta -->
+    <div style="padding:18px 22px;border-bottom:1px solid #f0ece6">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:10px">Nueva fiesta</div>
+      <div style="display:grid;grid-template-columns:1fr 2fr 1fr auto;gap:10px;align-items:end">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#888;display:block;margin-bottom:4px">Fecha</label>
+          <input type="date" id="fiesta-fecha" style="padding:9px 10px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px;width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#888;display:block;margin-bottom:4px">Nombre de la fiesta</label>
+          <input type="text" id="fiesta-nombre" placeholder="Ej: Día del Trabajo" style="padding:9px 10px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px;width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#888;display:block;margin-bottom:4px">Tipo</label>
+          <select id="fiesta-tipo" style="padding:9px 10px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px;width:100%">
+            <option value="Nacional">Nacional</option>
+            <option value="Asturias">Asturias</option>
+            <option value="Siero/Local">Siero/Local</option>
+          </select>
+        </div>
+        <button onclick="guardarFiesta()" style="padding:9px 16px;background:#c4571a;color:white;border:none;border-radius:7px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">+ Añadir</button>
+      </div>
+      <div id="fiesta-err" style="display:none;color:#c0392b;font-size:12px;margin-top:8px"></div>
+    </div>
+    <!-- Lista de fiestas -->
+    <div style="padding:14px 22px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888">Fiestas registradas</div>
+        <button onclick="copiarFiestasAnio()" style="padding:5px 12px;background:#f0ece6;border:none;border-radius:7px;font-family:inherit;font-size:12px;cursor:pointer;color:#555" title="Copiar fiestas Nacionales y de Asturias de otro año">📋 Copiar de otro año</button>
+      </div>
+      <div id="fiestas-lista" style="border:1px solid #f0ece6;border-radius:8px;overflow:hidden;max-height:380px;overflow-y:auto">
+        <div style="color:#aaa;text-align:center;padding:20px;font-size:13px">Cargando...</div>
+      </div>
+    </div>
+    <!-- Leyenda -->
+    <div style="padding:12px 22px;background:#f8f6f2;border-radius:0 0 14px 14px;display:flex;gap:16px;font-size:11px">
+      <span style="color:#2856c8;font-weight:700">● Nacional</span>
+      <span style="color:#2d7a4f;font-weight:700">● Asturias</span>
+      <span style="color:#c4571a;font-weight:700">● Siero/Local</span>
+    </div>
+  </div>
+</div>
+
+
 <script>
 firebase.initializeApp({
   apiKey:"AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
@@ -1052,59 +1107,6 @@ function copiarFiestasAnio(){
     cargarFiestas(anioDestino, renderFiestas);
   }).catch(function(e){ toast("Error: "+e.message,"err"); });
 }
-
-<!-- MODAL GESTIÓN DE FIESTAS -->
-<div id="fiestasOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:flex-start;justify-content:center;padding-top:60px;overflow-y:auto">
-  <div style="background:white;border-radius:14px;max-width:680px;width:95%;box-shadow:0 8px 40px rgba(0,0,0,.2);margin-bottom:40px">
-    <!-- Cabecera -->
-    <div style="background:#c4571a;color:white;padding:18px 22px;border-radius:14px 14px 0 0;display:flex;justify-content:space-between;align-items:center">
-      <div>
-        <div style="font-weight:800;font-size:16px">📅 Fiestas <span id="fiestas-anio">2026</span></div>
-        <div style="font-size:12px;opacity:.85;margin-top:2px">Nacionales · Asturias · Siero/Local</div>
-      </div>
-      <button onclick="cerrarGestionFiestas()" style="background:rgba(255,255,255,.2);border:none;color:white;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer">✕ Cerrar</button>
-    </div>
-    <!-- Formulario nueva fiesta -->
-    <div style="padding:18px 22px;border-bottom:1px solid #f0ece6">
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:10px">Nueva fiesta</div>
-      <div style="display:grid;grid-template-columns:1fr 2fr 1fr auto;gap:10px;align-items:end">
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#888;display:block;margin-bottom:4px">Fecha</label>
-          <input type="date" id="fiesta-fecha" style="padding:9px 10px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px;width:100%">
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#888;display:block;margin-bottom:4px">Nombre de la fiesta</label>
-          <input type="text" id="fiesta-nombre" placeholder="Ej: Día del Trabajo" style="padding:9px 10px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px;width:100%">
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#888;display:block;margin-bottom:4px">Tipo</label>
-          <select id="fiesta-tipo" style="padding:9px 10px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px;width:100%">
-            <option value="Nacional">Nacional</option>
-            <option value="Asturias">Asturias</option>
-            <option value="Siero/Local">Siero/Local</option>
-          </select>
-        </div>
-        <button onclick="guardarFiesta()" style="padding:9px 16px;background:#c4571a;color:white;border:none;border-radius:7px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">+ Añadir</button>
-      </div>
-      <div id="fiesta-err" style="display:none;color:#c0392b;font-size:12px;margin-top:8px"></div>
-    </div>
-    <!-- Lista de fiestas -->
-    <div style="padding:14px 22px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888">Fiestas registradas</div>
-        <button onclick="copiarFiestasAnio()" style="padding:5px 12px;background:#f0ece6;border:none;border-radius:7px;font-family:inherit;font-size:12px;cursor:pointer;color:#555" title="Copiar fiestas Nacionales y de Asturias de otro año">📋 Copiar de otro año</button>
-      </div>
-      <div id="fiestas-lista" style="border:1px solid #f0ece6;border-radius:8px;overflow:hidden;max-height:380px;overflow-y:auto">
-        <div style="color:#aaa;text-align:center;padding:20px;font-size:13px">Cargando...</div>
-      </div>
-    </div>
-    <!-- Leyenda -->
-    <div style="padding:12px 22px;background:#f8f6f2;border-radius:0 0 14px 14px;display:flex;gap:16px;font-size:11px">
-      <span style="color:#2856c8;font-weight:700">● Nacional</span>
-      <span style="color:#2d7a4f;font-weight:700">● Asturias</span>
-      <span style="color:#c4571a;font-weight:700">● Siero/Local</span>
-    </div>
-  </div>
-</div>
+</script>
 </body>
 </html>
