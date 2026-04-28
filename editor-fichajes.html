@@ -699,7 +699,9 @@ function abrirModalEspecial() {
     sel.innerHTML += "<option value='"+v.alias+"'>"+v.alias+(v.nombre?" — "+v.nombre:"")+"</option>";
   });
   // Fecha por defecto: hoy
-  document.getElementById("esp-fecha").value = new Date().toISOString().slice(0,10);
+  var hoy = new Date().toISOString().slice(0,10);
+  document.getElementById("esp-desde").value = hoy;
+  document.getElementById("esp-hasta").value = hoy;
   document.getElementById("esp-tipo").value = "FIESTA";
   document.getElementById("esp-msg").style.display = "none";
   document.getElementById("esp-msg").textContent = "";
@@ -712,12 +714,21 @@ function cerrarModalEspecial() {
 
 function guardarEspecial() {
   var aliasOpc = document.getElementById("esp-tr").value;
-  var fecha    = document.getElementById("esp-fecha").value;
-  var tipo     = document.getElementById("esp-tipo-val").value; // FIESTA, BAJA, VAC
+  var desde    = document.getElementById("esp-desde").value;
+  var hasta    = document.getElementById("esp-hasta").value;
+  var tipo     = document.getElementById("esp-tipo-val").value;
   var msgEl    = document.getElementById("esp-msg");
   msgEl.style.display = "none";
 
-  if (!fecha) { msgEl.textContent = "Indica la fecha"; msgEl.style.display = "block"; return; }
+  if (!desde||!hasta) { msgEl.textContent="Indica las fechas"; msgEl.style.display="block"; return; }
+  if (desde>hasta)    { msgEl.textContent="La fecha Desde debe ser anterior a Hasta"; msgEl.style.display="block"; return; }
+
+  // Generar lista de fechas del rango
+  var fechas = [];
+  var cur = new Date(desde+"T00:00:00");
+  var fin = new Date(hasta+"T00:00:00");
+  while (cur <= fin) { fechas.push(cur.toISOString().slice(0,10)); cur.setDate(cur.getDate()+1); }
+  if (fechas.length > 31) { msgEl.textContent="Máximo 31 días por operación"; msgEl.style.display="block"; return; }
 
   // Determinar qué trabajadores afectar
   var trabAfectados = aliasOpc === "TODOS" ? vendedores.map(function(v){return v.alias;}) : [aliasOpc];
@@ -726,35 +737,35 @@ function guardarEspecial() {
   btnGuardar.disabled = true;
   btnGuardar.textContent = "Procesando...";
 
-  // Cargar vacaciones del mes para respetar prioridad
-  var anio = fecha.slice(0,4);
+  // Cargar vacaciones del año para respetar prioridad
+  var anio = desde.slice(0,4);
   db.collection("vacaciones_bajas").where("anio","==",parseInt(anio)).get()
   .then(function(snVac) {
+    // conVac[alias][fecha] = tipo
     var conVac = {};
     snVac.forEach(function(d) {
       var v = d.data();
       if (!v.alias || !v.fechaIni || !v.fechaFin) return;
-      // Comprobar si la fecha cae dentro del rango
-      if (fecha >= v.fechaIni && fecha <= v.fechaFin) {
-        conVac[v.alias] = v.tipo;
-      }
+      fechas.forEach(function(f) {
+        if (f >= v.fechaIni && f <= v.fechaFin) {
+          if (!conVac[v.alias]) conVac[v.alias] = {};
+          conVac[v.alias][f] = v.tipo;
+        }
+      });
     });
 
-    // Para cada trabajador, verificar si ya tiene fichaje ese día
-    var promesas = trabAfectados.map(function(alias) {
-      var docId = "fichaje_" + alias.replace(/ /g,"_") + "_" + fecha;
-
-      return db.collection("fichajes").doc(docId).get().then(function(doc) {
-        if (doc.exists) {
-          // Ya tiene fichaje — no tocar
-          return {alias: alias, resultado: "omitido (ya tiene fichaje)"};
-        }
-
-        // Determinar qué tipo guardar: vacación prevalece sobre fiesta
-        var tipoFinal = tipo;
-        if (conVac[alias]) {
-          tipoFinal = conVac[alias] === "vacacion" ? "VAC" : "BAJA";
-        }
+    // Para cada trabajador y cada fecha
+    var promesas = [];
+    trabAfectados.forEach(function(alias) {
+      fechas.forEach(function(fecha) {
+        var docId = "fichaje_" + alias.replace(/ /g,"_") + "_" + fecha;
+        promesas.push(
+          db.collection("fichajes").doc(docId).get().then(function(doc) {
+            if (doc.exists) return {alias:alias, fecha:fecha, resultado:"omitido"};
+            var tipoFinal = tipo;
+            if (conVac[alias] && conVac[alias][fecha]) {
+              tipoFinal = conVac[alias][fecha]==="vacacion"?"VAC":"BAJA";
+            }
 
         // Guardar fichaje especial
         var datos = {
@@ -770,23 +781,24 @@ function guardarEspecial() {
           manual_por: "Sistema",
           manual_ts: new Date().toISOString()
         };
-
         return db.collection("fichajes").doc(docId).set(datos).then(function() {
-          return {alias: alias, resultado: tipoFinal};
+          return {alias:alias, fecha:fecha, resultado:tipoFinal};
         });
+          })
+        );
       });
     });
 
     return Promise.all(promesas);
   })
   .then(function(resultados) {
-    var guardados = resultados.filter(function(r){ return r.resultado !== "omitido (ya tiene fichaje)"; });
-    var omitidos  = resultados.filter(function(r){ return r.resultado === "omitido (ya tiene fichaje)"; });
+    var guardados = resultados.filter(function(r){ return r.resultado !== "omitido"; });
+    var omitidos  = resultados.filter(function(r){ return r.resultado === "omitido"; });
     var msg = "✅ "+guardados.length+" fichaje(s) guardados";
     if (omitidos.length) msg += " · "+omitidos.length+" omitidos (ya tenían fichaje)";
     toast(msg, "ok");
     cerrarModalEspecial();
-    cargarTabla(); // recargar tabla
+    cargarTabla();
   })
   .catch(function(e) {
     msgEl.textContent = "Error: " + e.message;
@@ -812,9 +824,15 @@ function guardarEspecial() {
           <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:5px">Trabajador</label>
           <select id="esp-tr" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-family:inherit;font-size:14px"></select>
         </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:5px">Fecha</label>
-          <input type="date" id="esp-fecha" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-family:inherit;font-size:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:5px">Desde</label>
+            <input type="date" id="esp-desde" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-family:inherit;font-size:14px">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:5px">Hasta</label>
+            <input type="date" id="esp-hasta" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-family:inherit;font-size:14px">
+          </div>
         </div>
         <div>
           <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:5px">Tipo</label>
