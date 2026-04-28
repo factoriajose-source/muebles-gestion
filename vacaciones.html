@@ -154,6 +154,7 @@ header { background: #1a1714; color: white; padding: 0 24px; height: 54px; displ
     <button class="btn btn-green no-print" style="margin-bottom:1px" onclick="abrirModal()">+ Añadir vacaciones / baja</button>
     <button class="btn btn-dark no-print" style="margin-bottom:1px" onclick="abrirModalTrabajador()">👤 Gestionar trabajadores</button>
     <button class="btn no-print" style="margin-bottom:1px;background:#6b4fc8;color:white" onclick="abrirCalendarioGeneral()">📆 Ver todos juntos</button>
+    <button class="btn no-print" style="margin-bottom:1px;background:#c4571a;color:white" onclick="abrirGestionFiestas()">📅 Gestionar Fiestas</button>
   </div>
 
   <div class="app">
@@ -932,6 +933,178 @@ function cerrarCalendarioGeneral(){
 document.getElementById("calGenOverlay").addEventListener("click",function(e){
   if(e.target===this) cerrarCalendarioGeneral();
 });
-</script>
+
+// ══════════════════════════════════════════════════════════════════════════════
+// GESTIÓN DE FIESTAS
+// ══════════════════════════════════════════════════════════════════════════════
+var FIESTAS_CARGADAS = []; // cache de fiestas del año actual
+
+function abrirGestionFiestas(){
+  var anio = parseInt(document.getElementById("selYear").value) || new Date().getFullYear();
+  document.getElementById("fiestas-anio").textContent = anio;
+  document.getElementById("fiesta-fecha").value = "";
+  document.getElementById("fiesta-nombre").value = "";
+  document.getElementById("fiesta-tipo").value = "Nacional";
+  cargarFiestas(anio, function(){
+    renderFiestas();
+    document.getElementById("fiestasOverlay").style.display = "flex";
+  });
+}
+
+function cerrarGestionFiestas(){
+  document.getElementById("fiestasOverlay").style.display = "none";
+}
+
+function cargarFiestas(anio, callback){
+  db.collection("fiestas_anuales")
+    .where("anio","==",anio)
+    .orderBy("fecha","asc")
+    .get()
+    .then(function(sn){
+      FIESTAS_CARGADAS = [];
+      sn.forEach(function(d){
+        FIESTAS_CARGADAS.push(Object.assign({_id: d.id}, d.data()));
+      });
+      if(callback) callback();
+    }).catch(function(e){
+      console.error("Error cargando fiestas:",e);
+      if(callback) callback();
+    });
+}
+
+function renderFiestas(){
+  var anio = parseInt(document.getElementById("selYear").value) || new Date().getFullYear();
+  var cont = document.getElementById("fiestas-lista");
+  if(!FIESTAS_CARGADAS.length){
+    cont.innerHTML = "<div style='color:#aaa;text-align:center;padding:20px;font-size:13px'>No hay fiestas registradas para "+anio+"</div>";
+    return;
+  }
+  var TIPOS_COLOR = { "Nacional":"#2856c8", "Asturias":"#2d7a4f", "Siero/Local":"#c4571a" };
+  var html = "";
+  FIESTAS_CARGADAS.forEach(function(f){
+    var d = new Date(f.fecha+"T00:00:00");
+    var dias = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+    var nomDia = dias[d.getDay()];
+    var color = TIPOS_COLOR[f.tipo] || "#888";
+    html += "<div style='display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #f4f1ec;font-size:13px'>"
+      +"<div style='width:48px;text-align:center;font-weight:700;color:#1a1714'>"+f.fecha.slice(8)+"/"+f.fecha.slice(5,7)+"</div>"
+      +"<div style='width:30px;text-align:center;color:#888;font-size:11px'>"+nomDia+"</div>"
+      +"<div style='flex:1;font-weight:600'>"+f.nombre+"</div>"
+      +"<div style='padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;background:"+color+"20;color:"+color+"'>"+f.tipo+"</div>"
+      +"<button onclick='borrarFiesta(\""+f._id+"\")' style='background:none;border:none;cursor:pointer;color:#bbb;font-size:16px;padding:2px 6px' title='Eliminar'>✕</button>"
+      +"</div>";
+  });
+  cont.innerHTML = html;
+}
+
+function guardarFiesta(){
+  var anio = parseInt(document.getElementById("selYear").value) || new Date().getFullYear();
+  var fecha  = document.getElementById("fiesta-fecha").value;
+  var nombre = document.getElementById("fiesta-nombre").value.trim();
+  var tipo   = document.getElementById("fiesta-tipo").value;
+  var err    = document.getElementById("fiesta-err");
+  err.style.display = "none";
+  if(!fecha){ err.textContent = "Indica la fecha"; err.style.display="block"; return; }
+  if(!nombre){ err.textContent = "Indica el nombre de la fiesta"; err.style.display="block"; return; }
+  if(fecha.slice(0,4) != anio){ err.textContent = "La fecha debe ser del año "+anio; err.style.display="block"; return; }
+  // Comprobar si ya existe esa fecha
+  var existe = FIESTAS_CARGADAS.find(function(f){ return f.fecha===fecha; });
+  if(existe){ err.textContent = "Ya existe una fiesta en esa fecha ("+existe.nombre+")"; err.style.display="block"; return; }
+  var doc = { anio:anio, fecha:fecha, nombre:nombre, tipo:tipo, creadoPor:currentAlias, creadoTs:new Date().toISOString() };
+  db.collection("fiestas_anuales").add(doc).then(function(ref){
+    FIESTAS_CARGADAS.push(Object.assign({_id:ref.id}, doc));
+    FIESTAS_CARGADAS.sort(function(a,b){ return a.fecha.localeCompare(b.fecha); });
+    renderFiestas();
+    document.getElementById("fiesta-fecha").value = "";
+    document.getElementById("fiesta-nombre").value = "";
+    toast("Fiesta añadida: "+nombre, "ok");
+  }).catch(function(e){
+    err.textContent = "Error: "+e.message; err.style.display="block";
+  });
+}
+
+function borrarFiesta(id){
+  if(!confirm("¿Eliminar esta fiesta?")) return;
+  db.collection("fiestas_anuales").doc(id).delete().then(function(){
+    FIESTAS_CARGADAS = FIESTAS_CARGADAS.filter(function(f){ return f._id!==id; });
+    renderFiestas();
+    toast("Fiesta eliminada","ok");
+  }).catch(function(e){ toast("Error: "+e.message,"err"); });
+}
+
+function copiarFiestasAnio(){
+  var anioOrigen = parseInt(prompt("¿De qué año quieres copiar las fiestas?\n(Solo copia las Nacionales y de Asturias, no las locales)"));
+  if(!anioOrigen || isNaN(anioOrigen)) return;
+  var anioDestino = parseInt(document.getElementById("selYear").value) || new Date().getFullYear();
+  if(anioOrigen === anioDestino){ toast("El año origen y destino son iguales","err"); return; }
+  db.collection("fiestas_anuales").where("anio","==",anioOrigen).get().then(function(sn){
+    var fiestas = [];
+    sn.forEach(function(d){ var f=d.data(); if(f.tipo!=="Siero/Local") fiestas.push(f); });
+    if(!fiestas.length){ toast("No hay fiestas en "+anioOrigen,"err"); return; }
+    var promesas = fiestas.map(function(f){
+      // Ajustar año en la fecha
+      var nuevaFecha = anioDestino+f.fecha.slice(4);
+      return db.collection("fiestas_anuales").add(Object.assign({},f,{anio:anioDestino,fecha:nuevaFecha,creadoTs:new Date().toISOString()}));
+    });
+    return Promise.all(promesas);
+  }).then(function(){
+    toast("Fiestas copiadas de "+anioOrigen+" a "+anioDestino,"ok");
+    cargarFiestas(anioDestino, renderFiestas);
+  }).catch(function(e){ toast("Error: "+e.message,"err"); });
+}
+
+<!-- MODAL GESTIÓN DE FIESTAS -->
+<div id="fiestasOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:flex-start;justify-content:center;padding-top:60px;overflow-y:auto">
+  <div style="background:white;border-radius:14px;max-width:680px;width:95%;box-shadow:0 8px 40px rgba(0,0,0,.2);margin-bottom:40px">
+    <!-- Cabecera -->
+    <div style="background:#c4571a;color:white;padding:18px 22px;border-radius:14px 14px 0 0;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-weight:800;font-size:16px">📅 Fiestas <span id="fiestas-anio">2026</span></div>
+        <div style="font-size:12px;opacity:.85;margin-top:2px">Nacionales · Asturias · Siero/Local</div>
+      </div>
+      <button onclick="cerrarGestionFiestas()" style="background:rgba(255,255,255,.2);border:none;color:white;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer">✕ Cerrar</button>
+    </div>
+    <!-- Formulario nueva fiesta -->
+    <div style="padding:18px 22px;border-bottom:1px solid #f0ece6">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:10px">Nueva fiesta</div>
+      <div style="display:grid;grid-template-columns:1fr 2fr 1fr auto;gap:10px;align-items:end">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#888;display:block;margin-bottom:4px">Fecha</label>
+          <input type="date" id="fiesta-fecha" style="padding:9px 10px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px;width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#888;display:block;margin-bottom:4px">Nombre de la fiesta</label>
+          <input type="text" id="fiesta-nombre" placeholder="Ej: Día del Trabajo" style="padding:9px 10px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px;width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#888;display:block;margin-bottom:4px">Tipo</label>
+          <select id="fiesta-tipo" style="padding:9px 10px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px;width:100%">
+            <option value="Nacional">Nacional</option>
+            <option value="Asturias">Asturias</option>
+            <option value="Siero/Local">Siero/Local</option>
+          </select>
+        </div>
+        <button onclick="guardarFiesta()" style="padding:9px 16px;background:#c4571a;color:white;border:none;border-radius:7px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">+ Añadir</button>
+      </div>
+      <div id="fiesta-err" style="display:none;color:#c0392b;font-size:12px;margin-top:8px"></div>
+    </div>
+    <!-- Lista de fiestas -->
+    <div style="padding:14px 22px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888">Fiestas registradas</div>
+        <button onclick="copiarFiestasAnio()" style="padding:5px 12px;background:#f0ece6;border:none;border-radius:7px;font-family:inherit;font-size:12px;cursor:pointer;color:#555" title="Copiar fiestas Nacionales y de Asturias de otro año">📋 Copiar de otro año</button>
+      </div>
+      <div id="fiestas-lista" style="border:1px solid #f0ece6;border-radius:8px;overflow:hidden;max-height:380px;overflow-y:auto">
+        <div style="color:#aaa;text-align:center;padding:20px;font-size:13px">Cargando...</div>
+      </div>
+    </div>
+    <!-- Leyenda -->
+    <div style="padding:12px 22px;background:#f8f6f2;border-radius:0 0 14px 14px;display:flex;gap:16px;font-size:11px">
+      <span style="color:#2856c8;font-weight:700">● Nacional</span>
+      <span style="color:#2d7a4f;font-weight:700">● Asturias</span>
+      <span style="color:#c4571a;font-weight:700">● Siero/Local</span>
+    </div>
+  </div>
+</div>
 </body>
 </html>
