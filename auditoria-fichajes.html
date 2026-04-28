@@ -283,7 +283,7 @@ function analizar() {
   btn.disabled = true; btn.textContent = "⏳ Cargando...";
   setStatus("Leyendo datos de Firebase...","info");
 
-  Promise.all([fsGet("vendedores"), fsGet("fichajes")])
+  Promise.all([fsGet("vendedores"), fsGet("fichajes"), fsGet("fiestas_anuales")])
   .then(function(results) {
     var vends = results[0].filter(function(v) {
       return v.alias && v.alias !== "Jose Angel" && v.activo !== false;
@@ -295,9 +295,17 @@ function analizar() {
       return f.fecha >= desde && f.fecha <= hasta && f.alias !== "Jose Angel";
     });
 
+    // Mapa de fiestas: fecha → {nombre, tipo}
+    var fiestas = {};
+    results[2].forEach(function(f) {
+      if (f.fecha >= desde && f.fecha <= hasta) {
+        fiestas[f.fecha] = {nombre: f.nombre||"Fiesta", tipo: f.tipo||"Nacional"};
+      }
+    });
+
     setStatus("Analizando " + fics.length + " fichajes de " + vends.length + " trabajadores...","info");
-    var res = calcular(vends, fics);
-    render(res, desde, hasta);
+    var res = calcular(vends, fics, fiestas);
+    render(res, desde, hasta, fiestas);
     document.getElementById("btnPrint").disabled = false;
     btn.disabled = false; btn.textContent = "🔍 Analizar";
     setStatus("✅ Análisis completado — " + res.semsFuera + " semanas con diferencia detectadas.","ok");
@@ -308,7 +316,8 @@ function analizar() {
   });
 }
 
-function calcular(vends, fics) {
+function calcular(vends, fics, fiestas) {
+  fiestas = fiestas || {};
   var porAlias = {};
   fics.forEach(function(f) {
     if (!porAlias[f.alias]) porAlias[f.alias] = [];
@@ -319,6 +328,9 @@ function calcular(vends, fics) {
     var alias  = v.alias;
     var horas  = v.horas ? parseInt(v.horas) : null;
     var minsC  = horas ? horas*60 : null;
+    // Calcular minutos por día según horario de la ficha
+    var minsDia = calcMinsDia(v);
+    var minsDiaSab = calcMinsDiaSab(v);
     var misF   = porAlias[alias] || [];
     var semsMap = {};
     misF.forEach(function(f) {
@@ -327,18 +339,64 @@ function calcular(vends, fics) {
       semsMap[s].push(f);
     });
     var sems = Object.keys(semsMap).sort().map(function(sem) {
-      var dias    = semsMap[sem].sort(function(a,b) { return a.fecha.localeCompare(b.fecha); });
+      var dias = semsMap[sem].sort(function(a,b) { return a.fecha.localeCompare(b.fecha); });
       var minsReg = dias.reduce(function(s,d) { return s + horasDia(d); }, 0);
-      var diff    = minsC !== null ? minsReg - minsC : null;
+
+      // Calcular descuento por días especiales (fichajes con especial o fiestas)
+      var descuento = 0;
+      dias.forEach(function(d) {
+        var esFiesta = fiestas[d.fecha];
+        var esEspecial = d.especial; // FIESTA, VAC, BAJA del fichaje
+        if (esEspecial || esFiesta) {
+          var diaSem = new Date(d.fecha+"T12:00:00").getDay(); // 0=dom,6=sab
+          var mins = diaSem === 6 ? minsDiaSab : minsDia;
+          descuento += mins;
+        }
+      });
+      // También descuentar fiestas del calendario que no tienen fichaje ese trabajador
+      Object.keys(fiestas).forEach(function(fecha) {
+        var semFiesta = semanaISO(fecha);
+        if (semFiesta !== sem) return;
+        // ¿Ya está en los días del trabajador?
+        var yaContado = dias.some(function(d){ return d.fecha===fecha; });
+        if (!yaContado) {
+          var diaSem = new Date(fecha+"T12:00:00").getDay();
+          var mins = diaSem === 6 ? minsDiaSab : minsDia;
+          descuento += mins;
+        }
+      });
+
+      var minsEsperado = minsC !== null ? Math.max(0, minsC - descuento) : null;
+      var diff    = minsEsperado !== null ? minsReg - minsEsperado : null;
       var cumple  = diff === null ? null : Math.abs(diff) <= 5;
       diasTotal += dias.length;
       if (cumple === false) { semsFuera++; if (afectados.indexOf(alias)===-1) afectados.push(alias); }
       else if (cumple) semsOk++;
-      return { sem:sem, dias:dias, minsReg:minsReg, minsC:minsC, diff:diff, cumple:cumple };
+      return { sem:sem, dias:dias, minsReg:minsReg, minsC:minsEsperado, minsContrato:minsC, descuento:descuento, diff:diff, cumple:cumple };
     });
     return { v:v, alias:alias, horas:horas, minsC:minsC, sems:sems, tieneProblema:sems.some(function(s){return s.cumple===false;}) };
   });
   return { porTr:porTr, semsFuera:semsFuera, semsOk:semsOk, diasTotal:diasTotal, afectados:afectados };
+}
+
+// Calcular minutos por día L-V desde el horario de la ficha
+function calcMinsDia(v) {
+  var h = v.horario || {};
+  var t = 0;
+  if (h.ini_m && h.fin_m) t += toMins(h.fin_m) - toMins(h.ini_m);
+  if (h.ini_t && h.fin_t) t += toMins(h.fin_t) - toMins(h.ini_t);
+  // Si no hay horario, calcular por horas semanales / 6 días
+  if (!t && v.horas) t = Math.round(parseInt(v.horas)*60/6);
+  return t;
+}
+
+// Calcular minutos del sábado desde el horario de la ficha
+function calcMinsDiaSab(v) {
+  var h = v.horario || {};
+  var t = 0;
+  if (h.ini_m_sab && h.fin_m_sab) t += toMins(h.fin_m_sab) - toMins(h.ini_m_sab);
+  if (h.ini_t_sab && h.fin_t_sab) t += toMins(h.fin_t_sab) - toMins(h.ini_t_sab);
+  return t;
 }
 
 function estadoBadge(diff, minsC) {
@@ -348,7 +406,8 @@ function estadoBadge(diff, minsC) {
   return {cls:"b-warn",txt:"⬆ Horas extra"};
 }
 
-function render(res, desde, hasta) {
+function render(res, desde, hasta, fiestas) {
+  fiestas = fiestas || {};
   document.getElementById("resultado").style.display = "block";
   document.getElementById("resGrid").innerHTML =
     '<div class="res-item"><div class="num">'+res.porTr.length+'</div><div class="lbl">Trabajadores</div></div>'+
@@ -429,27 +488,42 @@ function render(res, desde, hasta) {
         var mins  = horasDia(d);
         var dow   = DIAS[new Date(d.fecha+"T12:00:00").getDay()];
         var firma = !!(d.firma_ini_m||d.firma_fin_m||d.firma_ini_t||d.firma_fin_t);
-        return '<tr>'+
+        // Detectar día especial
+        var especial = d.especial || (fiestas[d.fecha] ? "FIESTA" : null);
+        var COLORES = {FIESTA:"#2856c8", VAC:"#2d7a4f", BAJA:"#c0392b"};
+        var ICONOS  = {FIESTA:"🎉", VAC:"🏖️", BAJA:"🤒"};
+        var nombreFiesta = fiestas[d.fecha] ? fiestas[d.fecha].nombre : "";
+        var estiloFila   = especial ? "background:"+(COLORES[especial]||"#eee")+"15;" : "";
+
+        var celdaFirma = especial
+          ? '<span style="padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:'+(COLORES[especial]||"#888")+'20;color:'+(COLORES[especial]||"#888")+';border:1px solid '+(COLORES[especial]||"#888")+'40">'
+            +(ICONOS[especial]||"")+" "+especial+(nombreFiesta?" — "+nombreFiesta:"")+'</span>'
+          : '<span class="badge '+(firma?"b-ok":"b-err")+'">'+(firma?"✓ Firmado":"Sin firma")+'</span>'
+            +(d.manual?'<span class="badge b-dark" style="margin-left:3px">Manual</span>':"");
+
+        return '<tr style="'+estiloFila+'">'+
           '<td style="font-weight:600">'+d.fecha+'</td>'+
           '<td style="color:#888">'+dow+'</td>'+
-          '<td style="text-align:center">'+(d.ini_m||"—")+'</td>'+
-          '<td style="text-align:center">'+(d.fin_m||"—")+'</td>'+
-          '<td style="text-align:center">'+(d.ini_t||"—")+'</td>'+
-          '<td style="text-align:center">'+(d.fin_t||"—")+'</td>'+
-          '<td style="text-align:center;font-weight:600">'+fmtMins(mins)+'</td>'+
-          '<td style="text-align:center">'+
-            '<span class="badge '+(firma?"b-ok":"b-err")+'">'+(firma?"✓ Firmado":"Sin firma")+'</span>'+
-            (d.manual?'<span class="badge b-dark" style="margin-left:3px">Manual</span>':"")+
-          '</td></tr>';
+          '<td style="text-align:center">'+(especial?'<span style="color:'+COLORES[especial]+'">'+especial+'</span>':d.ini_m||"—")+'</td>'+
+          '<td style="text-align:center">'+(especial?"":d.fin_m||"—")+'</td>'+
+          '<td style="text-align:center">'+(especial?"":d.ini_t||"—")+'</td>'+
+          '<td style="text-align:center">'+(especial?"":d.fin_t||"—")+'</td>'+
+          '<td style="text-align:center;font-weight:600">'+(especial?'<span style="color:'+COLORES[especial]+'">—</span>':fmtMins(mins))+'</td>'+
+          '<td style="text-align:center">'+celdaFirma+'</td></tr>';
       }).join("");
       var semDiv = document.createElement("div");
       semDiv.className = "sem-block";
+      // Texto de descuento si hay fiestas/vac/baja
+      var textoDescuento = "";
+      if (s.descuento > 0) {
+        textoDescuento = ' &nbsp;<span style="font-size:11px;color:#2856c8;font-weight:600">(−'+fmtMins(s.descuento)+' por festivos/vac/baja)</span>';
+      }
       semDiv.innerHTML =
         '<div class="sem-titulo">'+
           '<span>Semana '+semNum+' &nbsp;<span style="font-weight:400;color:#888;font-size:12px">'+rangoSemana(s.sem)+'</span></span>'+
           '<span style="font-size:13px">'+
             'Registrado: <strong>'+fmtMins(s.minsReg)+'</strong> &nbsp;/&nbsp; '+
-            'Contrato: <strong style="color:#888">'+(s.minsC!==null?fmtMins(s.minsC):"—")+'</strong> &nbsp;/&nbsp; '+
+            'Contrato: <strong style="color:#888">'+(s.minsC!==null?fmtMins(s.minsC):"—")+'</strong>'+textoDescuento+' &nbsp;/&nbsp; '+
             'Diferencia: <strong style="color:'+dc+'">'+ds+'</strong> &nbsp;'+
             '<span class="badge '+e.cls+'">'+e.txt+'</span>'+
           '</span>'+
