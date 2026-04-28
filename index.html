@@ -2249,6 +2249,28 @@ async function verificarHorasSemana(vendedor, fechaFichaje) {
     d2.setDate(d2.getDate() + 1);
   }
 
+  // Verificar si hay días especiales (Fiesta/Vac/Baja) en la semana
+  // Si los hay, no generamos alerta
+  for (const f of fechas) {
+    try {
+      const snap = await getDoc(doc(db, "fichajes", fichajeKey(vendedor.alias, f)));
+      if (!snap.exists()) continue;
+      const r = snap.data();
+      if (r.especial) return; // Hay día especial — no alertar esta semana
+    } catch(e) {}
+  }
+  // También comprobar si hay fiestas en el calendario de fiestas_anuales
+  try {
+    const anio = parseInt(lunesStr.slice(0,4));
+    const snF = await getDocs(collection(db, "fiestas_anuales"));
+    for (const fd of snF.docs) {
+      const fdata = fd.data();
+      if (fdata.fecha >= lunesStr && fdata.fecha <= domingoStr) {
+        return; // Hay fiesta en esta semana — no alertar
+      }
+    }
+  } catch(e) {}
+
   for (const f of fechas) {
     try {
       const snap = await getDoc(doc(db, "fichajes", fichajeKey(vendedor.alias, f)));
