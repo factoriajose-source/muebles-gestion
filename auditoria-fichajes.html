@@ -379,24 +379,23 @@ function calcular(vends, fics, fiestas) {
   return { porTr:porTr, semsFuera:semsFuera, semsOk:semsOk, diasTotal:diasTotal, afectados:afectados };
 }
 
-// Calcular minutos por día L-V desde el horario de la ficha
+// Calcular minutos por día L-V desde el contrato semanal
 function calcMinsDia(v) {
+  // Determinar cuántos días trabaja a la semana
   var h = v.horario || {};
-  var t = 0;
-  if (h.ini_m && h.fin_m) t += toMins(h.fin_m) - toMins(h.ini_m);
-  if (h.ini_t && h.fin_t) t += toMins(h.fin_t) - toMins(h.ini_t);
-  // Si no hay horario, calcular por horas semanales / 6 días
-  if (!t && v.horas) t = Math.round(parseInt(v.horas)*60/6);
-  return t;
+  var trabajaSab = !!(h.ini_m_sab || h.fin_m_sab || h.ini_t_sab || h.fin_t_sab);
+  var diasSemana = trabajaSab ? 6 : 5;
+  // Minutos por día = contrato semanal / días que trabaja
+  if (v.horas) return Math.round(parseInt(v.horas)*60 / diasSemana);
+  return 0;
 }
 
-// Calcular minutos del sábado desde el horario de la ficha
+// Calcular minutos del sábado — mismo valor que día L-V
 function calcMinsDiaSab(v) {
   var h = v.horario || {};
-  var t = 0;
-  if (h.ini_m_sab && h.fin_m_sab) t += toMins(h.fin_m_sab) - toMins(h.ini_m_sab);
-  if (h.ini_t_sab && h.fin_t_sab) t += toMins(h.fin_t_sab) - toMins(h.ini_t_sab);
-  return t;
+  var trabajaSab = !!(h.ini_m_sab || h.fin_m_sab || h.ini_t_sab || h.fin_t_sab);
+  if (!trabajaSab) return 0; // no trabaja sábados
+  return calcMinsDia(v); // mismo valor que día L-V
 }
 
 function estadoBadge(diff, minsC) {
