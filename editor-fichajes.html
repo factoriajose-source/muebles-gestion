@@ -451,10 +451,21 @@ function renderCelFirma(td, f, campo) {
   td.innerHTML = "";
   var wrap = document.createElement("div");
   wrap.className = "firma-cel";
-  if (f[campo]) {
+  var valor = f[campo];
+  // Si es texto especial (FIESTA, VAC, BAJA) mostrar como etiqueta
+  var ESPECIALES = ["FIESTA","VAC","BAJA"];
+  if (valor && ESPECIALES.indexOf(valor) >= 0) {
+    var colores = {FIESTA:"#2856c8", VAC:"#2d7a4f", BAJA:"#c0392b"};
+    var iconos  = {FIESTA:"🎉", VAC:"🏖️", BAJA:"🤒"};
+    var etq = document.createElement("div");
+    etq.style.cssText = "padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;background:"
+      +colores[valor]+"20;color:"+colores[valor]+";text-align:center;border:1px solid "+colores[valor]+"40";
+    etq.textContent = (iconos[valor]||"") + " " + valor;
+    wrap.appendChild(etq);
+  } else if (valor) {
     var img = document.createElement("img");
     img.className = "firma-img";
-    img.src = f[campo];
+    img.src = valor;
     img.title = "Ver / editar firma";
     img.addEventListener("click", function() { abrirFirma(f, campo); });
     wrap.appendChild(img);
