@@ -366,13 +366,17 @@ function calcular(vends, fics, fiestas) {
         }
       });
 
+      // ¿Hay algún día especial en esta semana?
+      var tieneEspecial = dias.some(function(d){ return d.especial; }) ||
+        Object.keys(fiestas).some(function(f){ return semanaISO(f)===sem; });
+
       var minsEsperado = minsC !== null ? Math.max(0, minsC - descuento) : null;
-      var diff    = minsEsperado !== null ? minsReg - minsEsperado : null;
-      var cumple  = diff === null ? null : Math.abs(diff) <= 5;
+      var diff    = (tieneEspecial || minsEsperado === null) ? null : minsReg - minsEsperado;
+      var cumple  = tieneEspecial ? null : (diff === null ? null : Math.abs(diff) <= 5);
       diasTotal += dias.length;
       if (cumple === false) { semsFuera++; if (afectados.indexOf(alias)===-1) afectados.push(alias); }
       else if (cumple) semsOk++;
-      return { sem:sem, dias:dias, minsReg:minsReg, minsC:minsEsperado, minsContrato:minsC, descuento:descuento, diff:diff, cumple:cumple };
+      return { sem:sem, dias:dias, minsReg:minsReg, minsC:minsEsperado, minsContrato:minsC, descuento:descuento, diff:diff, cumple:cumple, tieneEspecial:tieneEspecial };
     });
     return { v:v, alias:alias, horas:horas, minsC:minsC, sems:sems, tieneProblema:sems.some(function(s){return s.cumple===false;}) };
   });
@@ -479,7 +483,7 @@ function render(res, desde, hasta, fiestas) {
     }
 
     tr.sems.forEach(function(s) {
-      var e  = estadoBadge(s.diff, s.minsC);
+      var e  = estadoBadge(s.diff, s.tieneEspecial ? null : s.minsC);
       var ds = s.diff!==null ? (s.diff>=0?"+":"")+fmtMins(s.diff) : "—";
       var dc = s.diff!==null ? (s.diff<-5?"#c0392b":s.diff>5?"#2d7a4f":"#888") : "#888";
       var semNum = s.sem.split("-W")[1];
@@ -513,18 +517,16 @@ function render(res, desde, hasta, fiestas) {
       var semDiv = document.createElement("div");
       semDiv.className = "sem-block";
       // Texto de descuento si hay fiestas/vac/baja
-      var textoDescuento = "";
-      if (s.descuento > 0) {
-        textoDescuento = ' &nbsp;<span style="font-size:11px;color:#2856c8;font-weight:600">(−'+fmtMins(s.descuento)+' por festivos/vac/baja)</span>';
-      }
+      var infoDif = s.tieneEspecial
+        ? '<span style="font-size:11px;color:#2856c8;font-weight:600">📅 Semana con días especiales — sin cómputo de diferencia</span>'
+        : 'Diferencia: <strong style="color:'+dc+'">'+ds+'</strong> &nbsp;<span class="badge '+e.cls+'">'+e.txt+'</span>';
       semDiv.innerHTML =
         '<div class="sem-titulo">'+
           '<span>Semana '+semNum+' &nbsp;<span style="font-weight:400;color:#888;font-size:12px">'+rangoSemana(s.sem)+'</span></span>'+
           '<span style="font-size:13px">'+
-            'Registrado: <strong>'+fmtMins(s.minsReg)+'</strong> &nbsp;/&nbsp; '+
-            'Contrato: <strong style="color:#888">'+(s.minsC!==null?fmtMins(s.minsC):"—")+'</strong>'+textoDescuento+' &nbsp;/&nbsp; '+
-            'Diferencia: <strong style="color:'+dc+'">'+ds+'</strong> &nbsp;'+
-            '<span class="badge '+e.cls+'">'+e.txt+'</span>'+
+            'Registrado: <strong>'+fmtMins(s.minsReg)+'</strong>'+
+            (s.tieneEspecial ? '' : ' &nbsp;/&nbsp; Contrato: <strong style="color:#888">'+(s.minsC!==null?fmtMins(s.minsC):'—')+'</strong>')+
+            ' &nbsp;/&nbsp; '+infoDif+
           '</span>'+
         '</div>'+
         '<table><thead><tr>'+
