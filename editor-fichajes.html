@@ -715,13 +715,18 @@ function guardarEspecial() {
   btnGuardar.disabled = true;
   btnGuardar.textContent = "Procesando...";
 
-  // Primero cargar vacaciones del día para respetar prioridad
-  db.collection("vacaciones_bajas").where("fechaIni","<=",fecha).where("fechaFin",">=",fecha).get()
+  // Cargar vacaciones del mes para respetar prioridad
+  var anio = fecha.slice(0,4);
+  db.collection("vacaciones_bajas").where("anio","==",parseInt(anio)).get()
   .then(function(snVac) {
     var conVac = {};
     snVac.forEach(function(d) {
       var v = d.data();
-      if (v.alias) conVac[v.alias] = v.tipo; // 'vacacion' o 'baja'
+      if (!v.alias || !v.fechaIni || !v.fechaFin) return;
+      // Comprobar si la fecha cae dentro del rango
+      if (fecha >= v.fechaIni && fecha <= v.fechaFin) {
+        conVac[v.alias] = v.tipo;
+      }
     });
 
     // Para cada trabajador, verificar si ya tiene fichaje ese día
