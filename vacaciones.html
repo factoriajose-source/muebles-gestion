@@ -1013,13 +1013,14 @@ function cerrarGestionFiestas(){
 function cargarFiestas(anio, callback){
   db.collection("fiestas_anuales")
     .where("anio","==",anio)
-    .orderBy("fecha","asc")
     .get()
     .then(function(sn){
       FIESTAS_CARGADAS = [];
       sn.forEach(function(d){
         FIESTAS_CARGADAS.push(Object.assign({_id: d.id}, d.data()));
       });
+      // Ordenar por fecha localmente
+      FIESTAS_CARGADAS.sort(function(a,b){ return a.fecha.localeCompare(b.fecha); });
       if(callback) callback();
     }).catch(function(e){
       console.error("Error cargando fiestas:",e);
