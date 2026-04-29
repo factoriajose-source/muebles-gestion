@@ -199,7 +199,8 @@ canvas { border: 1.5px solid #ddd; border-radius: 8px; touch-action: none; curso
           <option value="firma_ini_t">Entrada Tarde</option>
           <option value="firma_fin_t">Salida Tarde</option>
         </select>
-        <button class="btn btn-purple" style="padding:7px 14px;font-size:12px" onclick="pegarFirmaCopiada()">📋 Pegar</button>
+        <button class="btn btn-purple" style="padding:7px 14px;font-size:12px" onclick="pegarFirmaCopiada()">📋 Pegar esta</button>
+        <button class="btn" style="padding:7px 14px;font-size:12px;background:#2d7a4f;color:white" onclick="copiarTodasFirmas()">📋 Copiar las 4 firmas</button>
       </div>
       <div id="prevFirmaCopiar" style="margin-top:8px;min-height:20px"></div>
     </div>
@@ -651,12 +652,35 @@ function pegarFirmaCopiada() {
   if (!fx) { toast("Fichaje no encontrado","err"); return; }
   var firma = fx[campoCop];
   if (!firma) { toast("Sin firma en ese campo y fecha","err"); return; }
-  // Pegar en el canvas
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   var img = new Image();
   img.onload = function() { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); };
   img.src = firma;
-  toast("✅ Firma pegada en el canvas — pulsa 'Usar esta firma' para confirmar","ok");
+  toast("✅ Firma pegada — pulsa 'Usar esta firma' para confirmar","ok");
+}
+
+function copiarTodasFirmas() {
+  var selFecha = document.getElementById("copiarDeFecha").value;
+  if (!selFecha) { toast("Selecciona una fecha origen","err"); return; }
+  var fx = filas.find(function(x) { return x._id === selFecha; });
+  if (!fx) { toast("Fichaje no encontrado","err"); return; }
+  var campos = ["firma_ini_m","firma_fin_m","firma_ini_t","firma_fin_t"];
+  var copiadas = 0;
+  campos.forEach(function(campo) {
+    if (fx[campo] && fx[campo].length > 10) { // es una firma real (base64)
+      firmaActualFila[campo] = fx[campo];
+      marcarCambio(firmaActualFila._id);
+      var td = document.getElementById("td-"+firmaActualFila._id+"-"+campo);
+      if (td) renderCelFirma(td, firmaActualFila, campo);
+      copiadas++;
+    }
+  });
+  if (copiadas > 0) {
+    cerrarFirma();
+    toast("✅ "+copiadas+" firma(s) copiadas de "+fx.fecha+" — recuerda guardar todo","ok");
+  } else {
+    toast("Sin firmas disponibles en esa fecha","err");
+  }
 }
 
 function getPos(e) {
