@@ -383,8 +383,23 @@ function crearFila(f) {
   tdAlias.appendChild(sel);
   tr.appendChild(tdAlias);
 
-  // Col 2: Fecha
-  tr.appendChild(celInput(f, "fecha", "date", f._id));
+  // Col 2: Día + Fecha
+  var tdFecha = document.createElement("td");
+  var INICIALES = ["D","L","M","X","J","V","S"];
+  var diaSem = f.fecha ? new Date(f.fecha+"T12:00:00").getDay() : -1;
+  var inicialDia = diaSem >= 0 ? INICIALES[diaSem] : "";
+  var spanDia = document.createElement("span");
+  spanDia.textContent = inicialDia;
+  spanDia.style.cssText = "font-weight:700;font-size:12px;color:#555;margin-right:5px;display:inline-block;width:12px;text-align:center";
+  tdFecha.appendChild(spanDia);
+  var inputFecha = celInput(f, "fecha", "date", f._id);
+  // Actualizar inicial al cambiar fecha
+  inputFecha.querySelector("input") && inputFecha.querySelector("input").addEventListener("change", function(e){
+    var d = new Date(e.target.value+"T12:00:00");
+    spanDia.textContent = isNaN(d) ? "" : INICIALES[d.getDay()];
+  });
+  while(inputFecha.firstChild) tdFecha.appendChild(inputFecha.firstChild);
+  tr.appendChild(tdFecha);
 
   // Cols 3-6: Horas
   tr.appendChild(celInput(f, "ini_m", "time", f._id));
