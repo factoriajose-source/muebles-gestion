@@ -122,7 +122,7 @@ canvas { border: 1.5px solid #ddd; border-radius: 8px; touch-action: none; curso
     <div style="display:flex;gap:10px;align-items:center">
       <span id="cambiosPend" style="font-size:12px;color:#f1c40f;display:none">● Cambios sin guardar</span>
       <button class="btn btn-green" id="btnGuardarTodo" onclick="guardarTodo()" disabled>💾 Guardar todo</button>
-      <button class="btn btn-gray" onclick="window.close()" style="padding:6px 12px;font-size:12px">✕ Cerrar</button>
+      <button class="btn btn-gray" onclick="history.back()" style="padding:6px 12px;font-size:12px">✕ Cerrar</button>
     </div>
   </header>
 
@@ -739,6 +739,61 @@ function guardarCambioTipo() {
 }
 </script>
 
+<!-- MODAL FIESTA/BAJA/VAC -->
+<div id="modalEspecial" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;align-items:center;justify-content:center">
+  <div style="background:white;border-radius:14px;max-width:460px;width:94%;box-shadow:0 8px 40px rgba(0,0,0,.25);overflow:hidden">
+    <div style="background:#c4571a;color:white;padding:16px 22px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-weight:800;font-size:15px">📅 Añadir Fiesta / Baja / Vacación</div>
+      <button onclick="cerrarModalEspecial()" style="background:rgba(255,255,255,.2);border:none;color:white;border-radius:8px;padding:5px 10px;cursor:pointer;font-size:13px">✕</button>
+    </div>
+    <div style="padding:22px">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:5px">Trabajador</label>
+          <select id="esp-tr" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-family:inherit;font-size:14px"></select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:5px">Desde</label>
+            <input type="date" id="esp-desde" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-family:inherit;font-size:14px">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:5px">Hasta</label>
+            <input type="date" id="esp-hasta" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-family:inherit;font-size:14px">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:8px">Tipo — selecciona uno:</label>
+          <div style="display:flex;gap:10px">
+            <label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #ddd;border-radius:8px;cursor:pointer">
+              <input type="radio" name="esp-tipo-r" value="FIESTA" style="width:auto" onchange="document.getElementById('esp-tipo-val').value=this.value">
+              <div><div style="font-weight:700;font-size:13px">🎉 Fiesta</div><div style="font-size:11px;color:#888">Día festivo</div></div>
+            </label>
+            <label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #ddd;border-radius:8px;cursor:pointer">
+              <input type="radio" name="esp-tipo-r" value="BAJA" style="width:auto" onchange="document.getElementById('esp-tipo-val').value=this.value">
+              <div><div style="font-weight:700;font-size:13px">🤒 Baja</div><div style="font-size:11px;color:#888">Baja médica</div></div>
+            </label>
+            <label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #ddd;border-radius:8px;cursor:pointer">
+              <input type="radio" name="esp-tipo-r" value="VAC" style="width:auto" onchange="document.getElementById('esp-tipo-val').value=this.value">
+              <div><div style="font-weight:700;font-size:13px">🏖️ Vac</div><div style="font-size:11px;color:#888">Vacación</div></div>
+            </label>
+          </div>
+          <input type="hidden" id="esp-tipo-val" value="">
+        </div>
+        <div id="esp-info" style="background:#fff8e6;border:1px solid #f0c060;border-radius:8px;padding:10px 12px;font-size:12px;color:#8a6000;line-height:1.5">
+          💡 Si un trabajador ya tiene fichaje ese día no se modifica.<br>
+          Si tiene vacaciones anotadas prevalece <strong>VAC</strong> aunque sea Fiesta.
+        </div>
+        <div id="esp-msg" style="display:none;color:#c0392b;font-size:13px;background:#fdecea;padding:10px;border-radius:8px"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:18px">
+        <button id="esp-btn-guardar" onclick="guardarEspecial()" style="flex:1;padding:12px;background:#c4571a;color:white;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">✅ Guardar</button>
+        <button onclick="cerrarModalEspecial()" style="padding:12px 18px;background:#f0ece6;border:none;border-radius:8px;font-family:inherit;font-size:14px;cursor:pointer;color:#555">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL CAMBIAR TIPO -->
 <div id="modalCambioTipo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;align-items:center;justify-content:center">
   <div style="background:white;border-radius:14px;max-width:400px;width:94%;box-shadow:0 8px 40px rgba(0,0,0,.25);overflow:hidden">
@@ -769,5 +824,141 @@ function guardarCambioTipo() {
     </div>
   </div>
 </div>
+
+<script>
+function abrirModalEspecial() {
+  var sel = document.getElementById("esp-tr");
+  sel.innerHTML = "<option value='TODOS'>👥 Todos los trabajadores</option>";
+  vendedores.forEach(function(v) {
+    sel.innerHTML += "<option value='"+v.alias+"'>"+v.alias+(v.nombre?" — "+v.nombre:"")+"</option>";
+  });
+  var hoy = new Date().toISOString().slice(0,10);
+  document.getElementById("esp-desde").value = hoy;
+  document.getElementById("esp-hasta").value = hoy;
+  document.getElementById("esp-tipo-val").value = "";
+  document.querySelectorAll("input[name='esp-tipo-r']").forEach(function(r){ r.checked=false; });
+  document.getElementById("esp-msg").style.display = "none";
+  document.getElementById("modalEspecial").style.display = "flex";
+}
+
+function cerrarModalEspecial() {
+  document.getElementById("modalEspecial").style.display = "none";
+}
+
+function guardarEspecial() {
+  var aliasOpc = document.getElementById("esp-tr").value;
+  var desde    = document.getElementById("esp-desde").value;
+  var hasta    = document.getElementById("esp-hasta").value;
+  var tipo     = document.getElementById("esp-tipo-val").value;
+  var msgEl    = document.getElementById("esp-msg");
+  msgEl.style.display = "none";
+
+  if (!desde||!hasta) { msgEl.textContent="Indica las fechas"; msgEl.style.color="#c0392b"; msgEl.style.display="block"; return; }
+  if (desde>hasta)    { msgEl.textContent="La fecha Desde debe ser anterior a Hasta"; msgEl.style.color="#c0392b"; msgEl.style.display="block"; return; }
+  if (!tipo)          { msgEl.textContent="⚠️ Debes seleccionar el tipo: Fiesta, Baja o Vac"; msgEl.style.color="#c0392b"; msgEl.style.display="block"; return; }
+
+  var fechas = [];
+  var cur = new Date(desde+"T00:00:00");
+  var fin = new Date(hasta+"T00:00:00");
+  while (cur <= fin) { fechas.push(cur.toISOString().slice(0,10)); cur.setDate(cur.getDate()+1); }
+  if (fechas.length > 31) { msgEl.textContent="Máximo 31 días por operación"; msgEl.style.color="#c0392b"; msgEl.style.display="block"; return; }
+
+  var trabAfectados = aliasOpc === "TODOS" ? vendedores.map(function(v){return v.alias;}) : [aliasOpc];
+  var btnGuardar = document.getElementById("esp-btn-guardar");
+  btnGuardar.disabled = true; btnGuardar.textContent = "Procesando...";
+
+  var anio = desde.slice(0,4);
+  db.collection("vacaciones_bajas").where("anio","==",parseInt(anio)).get()
+  .then(function(snVac) {
+    var conVac = {};
+    snVac.forEach(function(d) {
+      var v = d.data();
+      if (!v.alias || !v.fechaIni || !v.fechaFin) return;
+      fechas.forEach(function(f) {
+        if (f >= v.fechaIni && f <= v.fechaFin) {
+          if (!conVac[v.alias]) conVac[v.alias] = {};
+          conVac[v.alias][f] = v.tipo;
+        }
+      });
+    });
+    var promesas = [];
+    trabAfectados.forEach(function(alias) {
+      fechas.forEach(function(fecha) {
+        var docId = "fichaje_" + alias.replace(/ /g,"_") + "_" + fecha;
+        var tipoFinal = tipo;
+        if (conVac[alias] && conVac[alias][fecha]) {
+          tipoFinal = conVac[alias][fecha]==="vacacion" ? "VAC" : "BAJA";
+        }
+        var p = db.collection("fichajes").doc(docId).get().then(function(doc) {
+          if (doc.exists) return {alias:alias, fecha:fecha, resultado:"omitido"};
+          var datos = {
+            alias:alias, fecha:fecha, especial:tipoFinal,
+            ini_m:"", fin_m:"", ini_t:"", fin_t:"",
+            firma_ini_m:tipoFinal, firma_fin_m:tipoFinal,
+            firma_ini_t:tipoFinal, firma_fin_t:tipoFinal,
+            manual:true, manual_por:"Sistema",
+            manual_ts:new Date().toISOString()
+          };
+          return db.collection("fichajes").doc(docId).set(datos).then(function() {
+            return {alias:alias, fecha:fecha, resultado:tipoFinal};
+          });
+        });
+        promesas.push(p);
+      });
+    });
+    return Promise.all(promesas);
+  })
+  .then(function(resultados) {
+    var guardados = resultados.filter(function(r){ return r.resultado !== "omitido"; });
+    var omitidos  = resultados.filter(function(r){ return r.resultado === "omitido"; });
+    var msg = "✅ "+guardados.length+" fichaje(s) guardados";
+    if (omitidos.length) msg += " · "+omitidos.length+" omitidos (ya tenían fichaje)";
+    toast(msg, "ok");
+    cerrarModalEspecial();
+    cargarTabla();
+  })
+  .catch(function(e) {
+    msgEl.textContent = "Error: " + e.message;
+    msgEl.style.color="#c0392b"; msgEl.style.display = "block";
+  })
+  .finally(function() {
+    btnGuardar.disabled = false;
+    btnGuardar.textContent = "✅ Guardar";
+  });
+}
+
+var _fichaCambioTipo = null;
+
+function abrirCambioTipo(f) {
+  _fichaCambioTipo = f;
+  document.getElementById("ct-info").textContent = f.alias + " · " + f.fecha + " · Tipo actual: " + f.especial;
+  document.querySelectorAll("input[name='ct-tipo-r']").forEach(function(r){ r.checked = r.value === f.especial; });
+  document.getElementById("modalCambioTipo").style.display = "flex";
+}
+
+function cerrarCambioTipo() {
+  document.getElementById("modalCambioTipo").style.display = "none";
+  _fichaCambioTipo = null;
+}
+
+function guardarCambioTipo() {
+  var nuevoTipo = "";
+  document.querySelectorAll("input[name='ct-tipo-r']").forEach(function(r){ if(r.checked) nuevoTipo=r.value; });
+  if (!nuevoTipo) { toast("Selecciona un tipo","err"); return; }
+  if (!_fichaCambioTipo) return;
+  var f = _fichaCambioTipo;
+  db.collection("fichajes").doc(f._id).update({
+    especial: nuevoTipo,
+    firma_ini_m: nuevoTipo, firma_fin_m: nuevoTipo,
+    firma_ini_t: nuevoTipo, firma_fin_t: nuevoTipo
+  }).then(function() {
+    toast("✅ Tipo cambiado a "+nuevoTipo+" para "+f.alias+" el "+f.fecha, "ok");
+    cerrarCambioTipo();
+    cargarTabla();
+  }).catch(function(e) {
+    toast("Error: "+e.message, "err");
+  });
+}
+</script>
 </body>
 </html>
