@@ -408,6 +408,20 @@ function crearFila(f) {
   var tdAcc = document.createElement("td");
   tdAcc.className = "center";
   tdAcc.style.whiteSpace = "nowrap";
+
+  // Botón cambiar tipo si es registro especial
+  var ESPECIALES = ["FIESTA","VAC","BAJA"];
+  if (f.especial && ESPECIALES.indexOf(f.especial) >= 0) {
+    var btnCambio = document.createElement("button");
+    btnCambio.className = "btn";
+    btnCambio.style.cssText = "padding:4px 10px;font-size:11px;background:#2856c8;color:white;margin-right:4px";
+    btnCambio.textContent = "✏️ Tipo";
+    btnCambio.addEventListener("click", function() {
+      abrirCambioTipo(f);
+    });
+    tdAcc.appendChild(btnCambio);
+  }
+
   var btnDel = document.createElement("button");
   btnDel.className = "btn btn-red";
   btnDel.style.cssText = "padding:4px 10px;font-size:11px";
@@ -688,171 +702,69 @@ document.getElementById("firmaOverlay").addEventListener("click", function(e) {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// AÑADIR FIESTA / BAJA / VAC
-// ══════════════════════════════════════════════════════════════════════════════
+var _fichaCambioTipo = null;
 
-function abrirModalEspecial() {
-  // Rellenar selector de trabajadores
-  var sel = document.getElementById("esp-tr");
-  sel.innerHTML = "<option value='TODOS'>👥 Todos los trabajadores</option>";
-  vendedores.forEach(function(v) {
-    sel.innerHTML += "<option value='"+v.alias+"'>"+v.alias+(v.nombre?" — "+v.nombre:"")+"</option>";
-  });
-  // Fecha por defecto: hoy
-  var hoy = new Date().toISOString().slice(0,10);
-  document.getElementById("esp-desde").value = hoy;
-  document.getElementById("esp-hasta").value = hoy;
-  document.getElementById("esp-tipo").value = "FIESTA";
-  document.getElementById("esp-msg").style.display = "none";
-  document.getElementById("esp-msg").textContent = "";
-  document.getElementById("modalEspecial").style.display = "flex";
+function abrirCambioTipo(f) {
+  _fichaCambioTipo = f;
+  document.getElementById("ct-info").textContent = f.alias + " · " + f.fecha + " · Tipo actual: " + f.especial;
+  document.querySelectorAll("input[name='ct-tipo-r']").forEach(function(r){ r.checked = r.value === f.especial; });
+  document.getElementById("modalCambioTipo").style.display = "flex";
 }
 
-function cerrarModalEspecial() {
-  document.getElementById("modalEspecial").style.display = "none";
+function cerrarCambioTipo() {
+  document.getElementById("modalCambioTipo").style.display = "none";
+  _fichaCambioTipo = null;
 }
 
-function guardarEspecial() {
-  var aliasOpc = document.getElementById("esp-tr").value;
-  var desde    = document.getElementById("esp-desde").value;
-  var hasta    = document.getElementById("esp-hasta").value;
-  var tipo     = document.getElementById("esp-tipo-val").value;
-  var msgEl    = document.getElementById("esp-msg");
-  msgEl.style.display = "none";
-
-  if (!desde||!hasta) { msgEl.textContent="Indica las fechas"; msgEl.style.display="block"; return; }
-  if (desde>hasta)    { msgEl.textContent="La fecha Desde debe ser anterior a Hasta"; msgEl.style.display="block"; return; }
-
-  // Generar lista de fechas del rango
-  var fechas = [];
-  var cur = new Date(desde+"T00:00:00");
-  var fin = new Date(hasta+"T00:00:00");
-  while (cur <= fin) { fechas.push(cur.toISOString().slice(0,10)); cur.setDate(cur.getDate()+1); }
-  if (fechas.length > 31) { msgEl.textContent="Máximo 31 días por operación"; msgEl.style.display="block"; return; }
-
-  // Determinar qué trabajadores afectar
-  var trabAfectados = aliasOpc === "TODOS" ? vendedores.map(function(v){return v.alias;}) : [aliasOpc];
-
-  var btnGuardar = document.getElementById("esp-btn-guardar");
-  btnGuardar.disabled = true;
-  btnGuardar.textContent = "Procesando...";
-
-  // Cargar vacaciones del año para respetar prioridad
-  var anio = desde.slice(0,4);
-  db.collection("vacaciones_bajas").where("anio","==",parseInt(anio)).get()
-  .then(function(snVac) {
-    // conVac[alias][fecha] = tipo
-    var conVac = {};
-    snVac.forEach(function(d) {
-      var v = d.data();
-      if (!v.alias || !v.fechaIni || !v.fechaFin) return;
-      fechas.forEach(function(f) {
-        if (f >= v.fechaIni && f <= v.fechaFin) {
-          if (!conVac[v.alias]) conVac[v.alias] = {};
-          conVac[v.alias][f] = v.tipo;
-        }
-      });
-    });
-
-    // Para cada trabajador y cada fecha
-    var promesas = [];
-    trabAfectados.forEach(function(alias) {
-      fechas.forEach(function(fecha) {
-        var docId = "fichaje_" + alias.replace(/ /g,"_") + "_" + fecha;
-        var tipoFinal = tipo;
-        if (conVac[alias] && conVac[alias][fecha]) {
-          tipoFinal = conVac[alias][fecha]==="vacacion" ? "VAC" : "BAJA";
-        }
-        var p = db.collection("fichajes").doc(docId).get().then(function(doc) {
-          if (doc.exists) return {alias:alias, fecha:fecha, resultado:"omitido"};
-          var datos = {
-            alias: alias, fecha: fecha, especial: tipoFinal,
-            ini_m:"", fin_m:"", ini_t:"", fin_t:"",
-            firma_ini_m: tipoFinal, firma_fin_m: tipoFinal,
-            firma_ini_t: tipoFinal, firma_fin_t: tipoFinal,
-            manual: true, manual_por: "Sistema",
-            manual_ts: new Date().toISOString()
-          };
-          return db.collection("fichajes").doc(docId).set(datos).then(function() {
-            return {alias:alias, fecha:fecha, resultado:tipoFinal};
-          });
-        });
-        promesas.push(p);
-      });
-    });
-
-    return Promise.all(promesas);
-  })
-  .then(function(resultados) {
-    var guardados = resultados.filter(function(r){ return r.resultado !== "omitido"; });
-    var omitidos  = resultados.filter(function(r){ return r.resultado === "omitido"; });
-    var msg = "✅ "+guardados.length+" fichaje(s) guardados";
-    if (omitidos.length) msg += " · "+omitidos.length+" omitidos (ya tenían fichaje)";
-    toast(msg, "ok");
-    cerrarModalEspecial();
+function guardarCambioTipo() {
+  var nuevoTipo = "";
+  document.querySelectorAll("input[name='ct-tipo-r']").forEach(function(r){ if(r.checked) nuevoTipo=r.value; });
+  if (!nuevoTipo) { toast("Selecciona un tipo","err"); return; }
+  if (!_fichaCambioTipo) return;
+  var f = _fichaCambioTipo;
+  var docId = f._id;
+  db.collection("fichajes").doc(docId).update({
+    especial: nuevoTipo,
+    firma_ini_m: nuevoTipo,
+    firma_fin_m: nuevoTipo,
+    firma_ini_t: nuevoTipo,
+    firma_fin_t: nuevoTipo
+  }).then(function() {
+    toast("✅ Tipo cambiado a "+nuevoTipo+" para "+f.alias+" el "+f.fecha, "ok");
+    cerrarCambioTipo();
     cargarTabla();
-  })
-  .catch(function(e) {
-    msgEl.textContent = "Error: " + e.message;
-    msgEl.style.display = "block";
-  })
-  .finally(function() {
-    btnGuardar.disabled = false;
-    btnGuardar.textContent = "✅ Guardar";
+  }).catch(function(e) {
+    toast("Error: "+e.message, "err");
   });
 }
 </script>
 
-<!-- MODAL FIESTA/BAJA/VAC -->
-<div id="modalEspecial" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;align-items:center;justify-content:center">
-  <div style="background:white;border-radius:14px;max-width:460px;width:94%;box-shadow:0 8px 40px rgba(0,0,0,.25);overflow:hidden">
-    <div style="background:#c4571a;color:white;padding:16px 22px;display:flex;justify-content:space-between;align-items:center">
-      <div style="font-weight:800;font-size:15px">📅 Añadir Fiesta / Baja / Vacación</div>
-      <button onclick="cerrarModalEspecial()" style="background:rgba(255,255,255,.2);border:none;color:white;border-radius:8px;padding:5px 10px;cursor:pointer;font-size:13px">✕</button>
+<!-- MODAL CAMBIAR TIPO -->
+<div id="modalCambioTipo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;align-items:center;justify-content:center">
+  <div style="background:white;border-radius:14px;max-width:400px;width:94%;box-shadow:0 8px 40px rgba(0,0,0,.25);overflow:hidden">
+    <div style="background:#2856c8;color:white;padding:16px 22px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-weight:800;font-size:15px">✏️ Cambiar tipo de registro</div>
+      <button onclick="cerrarCambioTipo()" style="background:rgba(255,255,255,.2);border:none;color:white;border-radius:8px;padding:5px 10px;cursor:pointer;font-size:13px">✕</button>
     </div>
     <div style="padding:22px">
-      <div style="display:flex;flex-direction:column;gap:14px">
-        <div>
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:5px">Trabajador</label>
-          <select id="esp-tr" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-family:inherit;font-size:14px"></select>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div>
-            <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:5px">Desde</label>
-            <input type="date" id="esp-desde" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-family:inherit;font-size:14px">
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:5px">Hasta</label>
-            <input type="date" id="esp-hasta" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-family:inherit;font-size:14px">
-          </div>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:5px">Tipo</label>
-          <div style="display:flex;gap:10px">
-            <label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #ddd;border-radius:8px;cursor:pointer">
-              <input type="radio" name="esp-tipo-r" value="FIESTA" id="esp-tipo" style="width:auto" onchange="document.getElementById('esp-tipo-val').value=this.value" checked>
-              <div><div style="font-weight:700;font-size:13px">🎉 Fiesta</div><div style="font-size:11px;color:#888">Día festivo</div></div>
-            </label>
-            <label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #ddd;border-radius:8px;cursor:pointer">
-              <input type="radio" name="esp-tipo-r" value="BAJA" style="width:auto" onchange="document.getElementById('esp-tipo-val').value=this.value">
-              <div><div style="font-weight:700;font-size:13px">🤒 Baja</div><div style="font-size:11px;color:#888">Baja médica</div></div>
-            </label>
-            <label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #ddd;border-radius:8px;cursor:pointer">
-              <input type="radio" name="esp-tipo-r" value="VAC" style="width:auto" onchange="document.getElementById('esp-tipo-val').value=this.value">
-              <div><div style="font-weight:700;font-size:13px">🏖️ Vac</div><div style="font-size:11px;color:#888">Vacación</div></div>
-            </label>
-          </div>
-          <input type="hidden" id="esp-tipo-val" value="FIESTA">
-        </div>
-        <div id="esp-info" style="background:#fff8e6;border:1px solid #f0c060;border-radius:8px;padding:10px 12px;font-size:12px;color:#8a6000;line-height:1.5">
-          💡 Si un trabajador ya tiene fichaje ese día no se modifica.<br>
-          Si tiene vacaciones anotadas prevalece <strong>VAC</strong> aunque sea Fiesta.
-        </div>
-        <div id="esp-msg" style="display:none;color:#c0392b;font-size:13px;background:#fdecea;padding:10px;border-radius:8px"></div>
+      <div id="ct-info" style="font-size:12px;color:#888;margin-bottom:16px;padding:8px 12px;background:#f8f6f2;border-radius:8px"></div>
+      <div style="display:flex;gap:10px;margin-bottom:20px">
+        <label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #ddd;border-radius:8px;cursor:pointer">
+          <input type="radio" name="ct-tipo-r" value="FIESTA" style="width:auto">
+          <div><div style="font-weight:700;font-size:13px">🎉 Fiesta</div></div>
+        </label>
+        <label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #ddd;border-radius:8px;cursor:pointer">
+          <input type="radio" name="ct-tipo-r" value="BAJA" style="width:auto">
+          <div><div style="font-weight:700;font-size:13px">🤒 Baja</div></div>
+        </label>
+        <label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #ddd;border-radius:8px;cursor:pointer">
+          <input type="radio" name="ct-tipo-r" value="VAC" style="width:auto">
+          <div><div style="font-weight:700;font-size:13px">🏖️ Vac</div></div>
+        </label>
       </div>
-      <div style="display:flex;gap:10px;margin-top:18px">
-        <button id="esp-btn-guardar" onclick="guardarEspecial()" style="flex:1;padding:12px;background:#c4571a;color:white;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">✅ Guardar</button>
-        <button onclick="cerrarModalEspecial()" style="padding:12px 18px;background:#f0ece6;border:none;border-radius:8px;font-family:inherit;font-size:14px;cursor:pointer;color:#555">Cancelar</button>
+      <div style="display:flex;gap:10px">
+        <button onclick="guardarCambioTipo()" style="flex:1;padding:12px;background:#2856c8;color:white;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">✅ Guardar cambio</button>
+        <button onclick="cerrarCambioTipo()" style="padding:12px 18px;background:#f0ece6;border:none;border-radius:8px;font-family:inherit;font-size:14px;cursor:pointer;color:#555">Cancelar</button>
       </div>
     </div>
   </div>
