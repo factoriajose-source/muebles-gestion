@@ -216,6 +216,9 @@ canvas { border: 1.5px solid #ddd; border-radius: 8px; touch-action: none; curso
 </div>
 
 <script>
+// Esperar a que los CDN de Firebase estén listos
+document.addEventListener("DOMContentLoaded", function() {
+
 // Firebase SDK compat
 firebase.initializeApp({
   apiKey: "AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
@@ -737,6 +740,8 @@ function guardarCambioTipo() {
     toast("Error: "+e.message, "err");
   });
 }
+
+}); // fin DOMContentLoaded
 </script>
 
 <!-- MODAL CAMBIAR TIPO -->
