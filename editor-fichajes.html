@@ -858,9 +858,15 @@ function guardarEspecial() {
   if (!tipo)          { msgEl.textContent="⚠️ Debes seleccionar el tipo: Fiesta, Baja o Vac"; msgEl.style.color="#c0392b"; msgEl.style.display="block"; return; }
 
   var fechas = [];
-  var cur = new Date(desde+"T00:00:00");
-  var fin = new Date(hasta+"T00:00:00");
-  while (cur <= fin) { fechas.push(cur.toISOString().slice(0,10)); cur.setDate(cur.getDate()+1); }
+  var cur = new Date(desde+"T12:00:00"); // mediodía para evitar problemas de zona horaria
+  var fin = new Date(hasta+"T12:00:00");
+  while (cur <= fin) {
+    var y = cur.getFullYear();
+    var m = String(cur.getMonth()+1).padStart(2,'0');
+    var d = String(cur.getDate()).padStart(2,'0');
+    fechas.push(y+"-"+m+"-"+d);
+    cur.setDate(cur.getDate()+1);
+  }
   if (fechas.length > 31) { msgEl.textContent="Máximo 31 días por operación"; msgEl.style.color="#c0392b"; msgEl.style.display="block"; return; }
 
   var trabAfectados = aliasOpc === "TODOS" ? vendedores.map(function(v){return v.alias;}) : [aliasOpc];
