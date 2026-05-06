@@ -97,6 +97,28 @@ canvas { border: 1.5px solid #ddd; border-radius: 8px; touch-action: none; curso
 .toast.err { border-left: 4px solid #c0392b; }
 
 .empty { text-align: center; padding: 40px; color: #aaa; font-size: 14px; }
+
+/* ── IMPRESIÓN ─────────────────────────────────────────────────── */
+@media print {
+  @page { size: A4 landscape; margin: 12mm 10mm; }
+  body { background: white !important; font-size: 11px; color: black; }
+  header, .toolbar, .toast, .overlay,
+  #modalEspecial, #modalCambioTipo, #modalImpPreview,
+  .btn, button { display: none !important; }
+  .wrap { padding: 0 !important; }
+  .card { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
+  .card-head { display: none !important; }
+  /* Tabla de impresión */
+  #printArea { display: block !important; }
+  #printArea table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  #printArea thead tr { background: #333 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  #printArea thead th { padding: 5px 6px; font-size: 9px; text-align: left; border: 1px solid #999; }
+  #printArea tbody td { padding: 4px 6px; border: 1px solid #ccc; vertical-align: middle; }
+  #printArea tbody tr:nth-child(even) td { background: #f7f7f7; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* Cajetín firma */
+  #printCajetin { display: block !important; margin-top: 18mm; page-break-inside: avoid; }
+  .tbl-wrap { overflow: visible !important; }
+}
 </style>
 </head>
 <body>
@@ -144,6 +166,7 @@ canvas { border: 1.5px solid #ddd; border-radius: 8px; touch-action: none; curso
     <button class="btn btn-purple" onclick="cargarTabla()">🔄 Cargar</button>
     <button class="btn btn-green" onclick="nuevaFila()" style="margin-left:8px">+ Nuevo fichaje</button>
     <button class="btn" onclick="abrirModalEspecial()" style="margin-left:4px;background:#c4571a;color:white">📅 Añadir Fiesta/Baja/Vac</button>
+    <button class="btn" onclick="imprimirFichajes()" style="margin-left:8px;background:#1a6b2a;color:white">🖨️ Imprimir</button>
   </div>
 
   <div class="wrap">
@@ -1005,5 +1028,162 @@ function guardarCambioTipo() {
   });
 }
 </script>
+<!-- ÁREA DE IMPRESIÓN (oculta en pantalla, visible al imprimir) -->
+<div id="printArea" style="display:none">
+  <div id="printCabecera" style="margin-bottom:8px">
+    <div style="font-size:15px;font-weight:800;letter-spacing:.04em">MERES CENTRAL DE COMPRAS S.L.</div>
+    <div style="font-size:11px;color:#444">CIF: B74102807 · Registro Mercantil de Asturias</div>
+    <div style="font-size:11px;margin-top:3px" id="printSubtitulo"></div>
+    <hr style="margin:6px 0;border:none;border-top:2px solid #333">
+  </div>
+  <table>
+    <thead id="printThead"></thead>
+    <tbody id="printTbody"></tbody>
+  </table>
+</div>
+
+<!-- CAJETÍN DE FIRMA (oculto en pantalla) -->
+<div id="printCajetin" style="display:none">
+  <table style="width:100%;border-collapse:collapse;margin-top:10mm;font-size:10px">
+    <tr>
+      <td style="width:50%;border:1.5px solid #333;padding:6px 10px;vertical-align:top">
+        <div style="font-weight:700;font-size:11px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">La Empresa</div>
+        <div style="font-size:10px;color:#444;margin-bottom:2px">MERES CENTRAL DE COMPRAS S.L. — CIF: B74102807</div>
+        <div style="font-size:10px;color:#444;margin-bottom:20px">En representación de la empresa</div>
+        <div style="border-top:1px solid #333;padding-top:4px;font-size:9px;color:#777">Firma y sello</div>
+      </td>
+      <td style="width:50%;border:1.5px solid #333;border-left:none;padding:6px 10px;vertical-align:top">
+        <div style="font-weight:700;font-size:11px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">El/La Trabajador/a</div>
+        <div id="cajetinTrabajador" style="font-size:10px;color:#444;margin-bottom:2px"></div>
+        <div id="cajetinDNI" style="font-size:10px;color:#444;margin-bottom:20px"></div>
+        <div style="border-top:1px solid #333;padding-top:4px;font-size:9px;color:#777">Firma y fecha</div>
+      </td>
+    </tr>
+  </table>
+  <div style="font-size:8px;color:#aaa;margin-top:4px;text-align:right">
+    Documento generado el <span id="printFechaGen"></span> · Meres Central de Compras S.L. · CIF B74102807
+  </div>
+</div>
+
+<script>
+function imprimirFichajes() {
+  if (!filas || !filas.length) {
+    toast("No hay fichajes cargados. Carga primero los datos.", "err");
+    return;
+  }
+
+  // Determinar trabajador filtrado
+  var filtroTr = document.getElementById("filtroTr").value;
+  var desde    = document.getElementById("filtroDesde").value;
+  var hasta    = document.getElementById("filtroHasta").value;
+
+  // Buscar datos del trabajador si hay uno seleccionado
+  var trabDatos = null;
+  if (filtroTr !== "todos") {
+    trabDatos = vendedores.find(function(v){ return v.alias === filtroTr; });
+  }
+
+  // Subtítulo del informe
+  var subtitulo = "Registro de Fichajes";
+  if (filtroTr !== "todos") subtitulo += " · " + filtroTr;
+  if (desde) subtitulo += " · Del " + desde.split("-").reverse().join("/");
+  if (hasta) subtitulo += " al " + hasta.split("-").reverse().join("/");
+  document.getElementById("printSubtitulo").textContent = subtitulo;
+
+  // Cajetín trabajador
+  var nomCompleto = "";
+  var dniTrab = "";
+  if (trabDatos) {
+    nomCompleto = (trabDatos.nombre||"") + " " + (trabDatos.apellidos||"");
+    dniTrab     = trabDatos.DNI || "";
+  }
+  document.getElementById("cajetinTrabajador").textContent =
+    nomCompleto.trim() ? "Nombre: " + nomCompleto.trim() : "Nombre: ____________________________";
+  document.getElementById("cajetinDNI").textContent =
+    dniTrab ? "DNI: " + dniTrab : "DNI: ____________________________";
+  document.getElementById("printFechaGen").textContent =
+    new Date().toLocaleDateString("es-ES", {day:"2-digit",month:"2-digit",year:"numeric"});
+
+  // Cabecera tabla
+  var thead = document.getElementById("printThead");
+  thead.innerHTML = "<tr>"
+    + "<th style='width:20px'>#</th>"
+    + "<th>Trabajador</th>"
+    + "<th>Día</th>"
+    + "<th>Fecha</th>"
+    + "<th style='text-align:center'>Ent.Mañana</th>"
+    + "<th style='text-align:center'>Sal.Mañana</th>"
+    + "<th style='text-align:center'>Ent.Tarde</th>"
+    + "<th style='text-align:center'>Sal.Tarde</th>"
+    + "<th style='text-align:center'>Firma Ent.Mañ</th>"
+    + "<th style='text-align:center'>Firma Sal.Mañ</th>"
+    + "<th style='text-align:center'>Firma Ent.Tar</th>"
+    + "<th style='text-align:center'>Firma Sal.Tar</th>"
+    + "</tr>";
+
+  // Cuerpo tabla
+  var INICIALES = ["D","L","M","X","J","V","S"];
+  var ESPECIALES = ["FIESTA","VAC","BAJA"];
+  var tbody = document.getElementById("printTbody");
+  tbody.innerHTML = "";
+
+  filas.filter(function(f){ return !f._borrar; }).forEach(function(f, i) {
+    var tr = document.createElement("tr");
+    var diaSem = f.fecha ? new Date(f.fecha+"T12:00:00").getDay() : -1;
+    var inicialDia = diaSem >= 0 ? INICIALES[diaSem] : "";
+
+    function td(contenido, centro) {
+      var cel = document.createElement("td");
+      if (centro) cel.style.textAlign = "center";
+      cel.innerHTML = contenido;
+      return cel;
+    }
+
+    function tdFirma(valor) {
+      var cel = document.createElement("td");
+      cel.style.textAlign = "center";
+      cel.style.padding = "2px 4px";
+      if (!valor) {
+        cel.textContent = "—";
+      } else if (ESPECIALES.indexOf(valor) >= 0) {
+        cel.textContent = valor;
+        cel.style.fontWeight = "700";
+        cel.style.fontSize = "9px";
+      } else {
+        // Es base64 — mostrar imagen de firma
+        var img = document.createElement("img");
+        img.src = valor;
+        img.style.cssText = "height:22px;max-width:60px;object-fit:contain";
+        cel.appendChild(img);
+      }
+      return cel;
+    }
+
+    tr.appendChild(td(i+1, true));
+    tr.appendChild(td(f.alias||""));
+    tr.appendChild(td(inicialDia, true));
+    tr.appendChild(td(f.fecha ? f.fecha.split("-").reverse().join("/") : ""));
+    tr.appendChild(td(f.ini_m||"—", true));
+    tr.appendChild(td(f.fin_m||"—", true));
+    tr.appendChild(td(f.ini_t||"—", true));
+    tr.appendChild(td(f.fin_t||"—", true));
+    tr.appendChild(tdFirma(f.firma_ini_m));
+    tr.appendChild(tdFirma(f.firma_fin_m));
+    tr.appendChild(tdFirma(f.firma_ini_t));
+    tr.appendChild(tdFirma(f.firma_fin_t));
+    tbody.appendChild(tr);
+  });
+
+  // Mostrar áreas ocultas y lanzar impresión
+  document.getElementById("printArea").style.display = "block";
+  document.getElementById("printCajetin").style.display = "block";
+  window.print();
+  // Ocultar de nuevo tras imprimir
+  setTimeout(function(){
+    document.getElementById("printArea").style.display = "none";
+    document.getElementById("printCajetin").style.display = "none";
+  }, 1000);
+}
+</script>
+
 </body>
-</html>
