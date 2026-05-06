@@ -100,24 +100,19 @@ canvas { border: 1.5px solid #ddd; border-radius: 8px; touch-action: none; curso
 
 /* ── IMPRESIÓN ─────────────────────────────────────────────────── */
 @media print {
-  @page { size: A4 landscape; margin: 12mm 10mm; }
-  body { background: white !important; font-size: 11px; color: black; }
-  header, .toolbar, .toast, .overlay,
-  #modalEspecial, #modalCambioTipo, #modalImpPreview,
-  .btn, button { display: none !important; }
-  .wrap { padding: 0 !important; }
-  .card { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
-  .card-head { display: none !important; }
+  @page { size: A4 landscape; margin: 12mm 10mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* Ocultar TODO excepto las áreas de impresión */
+  body > * { display: none !important; }
+  #printArea, #printCajetin { display: block !important; }
+  body { background: white !important; font-size: 11px; color: black; margin: 0; padding: 0; }
   /* Tabla de impresión */
-  #printArea { display: block !important; }
   #printArea table { width: 100%; border-collapse: collapse; font-size: 10px; }
   #printArea thead tr { background: #333 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   #printArea thead th { padding: 5px 6px; font-size: 9px; text-align: left; border: 1px solid #999; }
   #printArea tbody td { padding: 4px 6px; border: 1px solid #ccc; vertical-align: middle; }
   #printArea tbody tr:nth-child(even) td { background: #f7f7f7; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   /* Cajetín firma */
-  #printCajetin { display: block !important; margin-top: 18mm; page-break-inside: avoid; }
-  .tbl-wrap { overflow: visible !important; }
+  #printCajetin { margin-top: 14mm; page-break-inside: avoid; }
 }
 </style>
 </head>
@@ -1033,7 +1028,7 @@ function guardarCambioTipo() {
   <div id="printCabecera" style="margin-bottom:8px">
     <div style="font-size:15px;font-weight:800;letter-spacing:.04em">MERES CENTRAL DE COMPRAS S.L.</div>
     <div style="font-size:11px;color:#444">CIF: B74102807 · Registro Mercantil de Asturias</div>
-    <div style="font-size:11px;margin-top:3px" id="printSubtitulo"></div>
+    <div style="font-size:13px;font-weight:700;margin-top:4px" id="printSubtitulo"></div>
     <hr style="margin:6px 0;border:none;border-top:2px solid #333">
   </div>
   <table>
@@ -1044,7 +1039,7 @@ function guardarCambioTipo() {
 
 <!-- CAJETÍN DE FIRMA (oculto en pantalla) -->
 <div id="printCajetin" style="display:none">
-  <table style="width:100%;border-collapse:collapse;margin-top:10mm;font-size:10px">
+  <table style="width:100%;border-collapse:collapse;font-size:10px">
     <tr>
       <td style="width:50%;border:1.5px solid #333;padding:6px 10px;vertical-align:top">
         <div style="font-weight:700;font-size:11px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">La Empresa</div>
@@ -1072,41 +1067,40 @@ function imprimirFichajes() {
     return;
   }
 
-  // Determinar trabajador filtrado
   var filtroTr = document.getElementById("filtroTr").value;
   var desde    = document.getElementById("filtroDesde").value;
   var hasta    = document.getElementById("filtroHasta").value;
 
-  // Buscar datos del trabajador si hay uno seleccionado
+  // Datos del trabajador desde la ficha de vendedores
   var trabDatos = null;
   if (filtroTr !== "todos") {
     trabDatos = vendedores.find(function(v){ return v.alias === filtroTr; });
   }
 
-  // Subtítulo del informe
-  var subtitulo = "Registro de Fichajes";
+  // Título: REGISTRO HORARIO + trabajador + fechas
+  var subtitulo = "REGISTRO HORARIO";
   if (filtroTr !== "todos") subtitulo += " · " + filtroTr;
   if (desde) subtitulo += " · Del " + desde.split("-").reverse().join("/");
-  if (hasta) subtitulo += " al " + hasta.split("-").reverse().join("/");
+  if (hasta) subtitulo += " al "    + hasta.split("-").reverse().join("/");
   document.getElementById("printSubtitulo").textContent = subtitulo;
 
-  // Cajetín trabajador
-  var nomCompleto = "";
-  var dniTrab = "";
+  // Cajetín: nombre completo y DNI de la ficha del trabajador
   if (trabDatos) {
-    nomCompleto = (trabDatos.nombre||"") + " " + (trabDatos.apellidos||"");
-    dniTrab     = trabDatos.DNI || "";
+    var nomCompleto = ((trabDatos.nombre||"") + " " + (trabDatos.apellidos||"")).trim();
+    document.getElementById("cajetinTrabajador").textContent =
+      "Nombre: " + (nomCompleto || "____________________________");
+    document.getElementById("cajetinDNI").textContent =
+      "DNI: " + (trabDatos.DNI || "____________________________");
+  } else {
+    document.getElementById("cajetinTrabajador").textContent = "Nombre: ____________________________";
+    document.getElementById("cajetinDNI").textContent        = "DNI: ____________________________";
   }
-  document.getElementById("cajetinTrabajador").textContent =
-    nomCompleto.trim() ? "Nombre: " + nomCompleto.trim() : "Nombre: ____________________________";
-  document.getElementById("cajetinDNI").textContent =
-    dniTrab ? "DNI: " + dniTrab : "DNI: ____________________________";
+
   document.getElementById("printFechaGen").textContent =
-    new Date().toLocaleDateString("es-ES", {day:"2-digit",month:"2-digit",year:"numeric"});
+    new Date().toLocaleDateString("es-ES", {day:"2-digit", month:"2-digit", year:"numeric"});
 
   // Cabecera tabla
-  var thead = document.getElementById("printThead");
-  thead.innerHTML = "<tr>"
+  document.getElementById("printThead").innerHTML = "<tr>"
     + "<th style='width:20px'>#</th>"
     + "<th>Trabajador</th>"
     + "<th>Día</th>"
@@ -1138,11 +1132,9 @@ function imprimirFichajes() {
       cel.innerHTML = contenido;
       return cel;
     }
-
     function tdFirma(valor) {
       var cel = document.createElement("td");
-      cel.style.textAlign = "center";
-      cel.style.padding = "2px 4px";
+      cel.style.cssText = "text-align:center;padding:2px 4px";
       if (!valor) {
         cel.textContent = "—";
       } else if (ESPECIALES.indexOf(valor) >= 0) {
@@ -1150,7 +1142,6 @@ function imprimirFichajes() {
         cel.style.fontWeight = "700";
         cel.style.fontSize = "9px";
       } else {
-        // Es base64 — mostrar imagen de firma
         var img = document.createElement("img");
         img.src = valor;
         img.style.cssText = "height:22px;max-width:60px;object-fit:contain";
@@ -1174,15 +1165,14 @@ function imprimirFichajes() {
     tbody.appendChild(tr);
   });
 
-  // Mostrar áreas ocultas y lanzar impresión
-  document.getElementById("printArea").style.display = "block";
+  // Mostrar áreas y lanzar impresión
+  document.getElementById("printArea").style.display   = "block";
   document.getElementById("printCajetin").style.display = "block";
   window.print();
-  // Ocultar de nuevo tras imprimir
   setTimeout(function(){
-    document.getElementById("printArea").style.display = "none";
+    document.getElementById("printArea").style.display   = "none";
     document.getElementById("printCajetin").style.display = "none";
-  }, 1000);
+  }, 1500);
 }
 </script>
 
