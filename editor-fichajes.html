@@ -100,7 +100,18 @@ canvas { border: 1.5px solid #ddd; border-radius: 8px; touch-action: none; curso
 
 /* ── IMPRESIÓN ─────────────────────────────────────────────────── */
 @media print {
-  @page { size: A4 landscape; margin: 12mm 10mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @page {
+    size: A4 landscape;
+    margin: 12mm 10mm;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    /* Elimina cabecera y pie que pone el navegador (título, URL, fecha) */
+    margin-top: 8mm;
+    margin-bottom: 8mm;
+  }
+  /* Truco para quitar título y URL del navegador en Chrome/Edge */
+  @page { margin-header: 0; margin-footer: 0; }
+  html { -webkit-print-color-adjust: exact; }
   /* Ocultar TODO excepto las áreas de impresión */
   body > * { display: none !important; }
   #printArea, #printCajetin { display: block !important; }
@@ -1077,9 +1088,15 @@ function imprimirFichajes() {
     trabDatos = vendedores.find(function(v){ return v.alias === filtroTr; });
   }
 
-  // Título: REGISTRO HORARIO + trabajador + fechas
+  // Título: REGISTRO HORARIO + nombre completo + DNI + fechas
+  var nombreParaTitulo = "";
+  if (filtroTr !== "todos" && trabDatos) {
+    var nomCompleto = ((trabDatos.nombre||"") + " " + (trabDatos.apellidos||"")).trim();
+    nombreParaTitulo = nomCompleto || filtroTr;
+    if (trabDatos.DNI) nombreParaTitulo += " · DNI: " + trabDatos.DNI;
+  }
   var subtitulo = "REGISTRO HORARIO";
-  if (filtroTr !== "todos") subtitulo += " · " + filtroTr;
+  if (nombreParaTitulo) subtitulo += " · " + nombreParaTitulo;
   if (desde) subtitulo += " · Del " + desde.split("-").reverse().join("/");
   if (hasta) subtitulo += " al "    + hasta.split("-").reverse().join("/");
   document.getElementById("printSubtitulo").textContent = subtitulo;
@@ -1168,8 +1185,12 @@ function imprimirFichajes() {
   // Mostrar áreas y lanzar impresión
   document.getElementById("printArea").style.display   = "block";
   document.getElementById("printCajetin").style.display = "block";
+  // Quitar título de pestaña para que el navegador no lo imprima en cabecera
+  var tituloOriginal = document.title;
+  document.title = " ";
   window.print();
   setTimeout(function(){
+    document.title = tituloOriginal;
     document.getElementById("printArea").style.display   = "none";
     document.getElementById("printCajetin").style.display = "none";
   }, 1500);
