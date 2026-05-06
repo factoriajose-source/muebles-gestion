@@ -241,7 +241,7 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
           <div id="mimp-modelos-info" style="padding:8px 10px;border:1.5px solid #ddd;border-radius:7px;background:#f8f6f2;font-size:13px;min-height:38px;color:#2d7a4f">Cargando...</div></div>
         <div class="fg"><label>Columna PROVEEDOR</label><select id="mimp-col-prv" onchange="actualizarPreviewMulti()"></select></div>
         <div class="fg"><label>Columna MODELO</label><select id="mimp-col-mod" onchange="actualizarPreviewMulti()"></select></div>
-        <div class="fg"><label>Columna nombre articulo</label><select id="mimp-col-nom"></select></div>
+        <div class="fg"><label>Columna nombre articulo</label><select id="mimp-col-nom" onchange="actualizarPreviewMulti()"></select></div>
         <div class="fg"><label>Columna referencia (opcional)</label><select id="mimp-col-ref"><option value="">-- Sin referencia --</option></select></div>
         <div class="fg"><label>Columna medidas (opcional)</label><select id="mimp-col-med"><option value="">-- Sin medidas --</option></select></div>
         <div class="fg"><label>Columna categoria articulo (opcional)</label><select id="mimp-col-cat"><option value="">-- Sin categoria --</option></select></div>
@@ -1620,7 +1620,7 @@ function actualizarPreviewMulti(){
   }
   pw.innerHTML=h+"</tbody></table>";
 
-  // Rellenar selects
+  // Rellenar selects conservando valor anterior
   var opts="<option value=''>---</option>"+XL_MULTI_COLS.map(function(c){
     return "<option value='"+c.idx+"'>"+c.name+"</option>";
   }).join("");
@@ -1629,39 +1629,37 @@ function actualizarPreviewMulti(){
     var v=el.value;
     var firstOpt=(id==="mimp-col-nom")?"":el.options[0].outerHTML;
     el.innerHTML=firstOpt+opts;
-    if(v) el.value=v;
+    if(v!=="") el.value=v;
   });
 
-  // Auto-detectar columnas por nombre
+  // Auto-detectar columnas por nombre (flexible: acepta PROVEDOR, PROVEEDOR, PRV...)
+  var elPrv=document.getElementById("mimp-col-prv");
+  var elMod=document.getElementById("mimp-col-mod");
+  var elNom=document.getElementById("mimp-col-nom");
   XL_MULTI_COLS.forEach(function(c){
-    var n=c.name.toLowerCase();
-    if(/proveedor|prv|supplier/i.test(n)){
-      var el=document.getElementById("mimp-col-prv"); if(!el.value) el.value=c.idx;
-    }
-    if(/^modelo$|^model$/i.test(n)){
-      var el=document.getElementById("mimp-col-mod"); if(!el.value) el.value=c.idx;
-    }
-    if(/articu|nombre|descrip/i.test(n)){
-      var el=document.getElementById("mimp-col-nom"); if(!el.value) el.value=c.idx;
-    }
+    var n=c.name.toLowerCase().replace(/[áéíóúàèìòù]/g,"a");
+    if(!elPrv.value && /prove?d|prv|supplier/i.test(n)) elPrv.value=String(c.idx);
+    if(!elMod.value && /^mod/i.test(n)) elMod.value=String(c.idx);
+    if(!elNom.value && /articu|artic|nombre|descrip/i.test(n)) elNom.value=String(c.idx);
   });
 
-  // Detectar proveedor y modelos de los datos
-  var colPrvIdx=parseInt(document.getElementById("mimp-col-prv").value);
-  var colModIdx=parseInt(document.getElementById("mimp-col-mod").value);
+  // Detectar proveedor y modelos usando los índices ya asignados
+  var colPrvIdx= elPrv.value!==""? parseInt(elPrv.value) : -1;
+  var colModIdx= elMod.value!==""? parseInt(elMod.value) : -1;
   var prvDetectado="", modelos={};
+
   for(var r=rowHead;r<XL_MULTI_DATA.length;r++){
     var row=XL_MULTI_DATA[r];
-    var prv=String(row[colPrvIdx]||"").trim();
-    var mod=String(row[colModIdx]||"").trim();
-    // Ignorar filas de sub-cabecera (donde modelo=nombre de columna o prv no es número)
-    if(prv && /^\d+$/.test(prv) && mod && mod.toUpperCase()!=="MODELO"){
+    var prv= colPrvIdx>=0 ? String(row[colPrvIdx]||"").trim() : "";
+    var mod= colModIdx>=0 ? String(row[colModIdx]||"").trim() : "";
+    // Ignorar filas donde el "proveedor" no es un número (son sub-cabeceras)
+    if(prv && /^\d+$/.test(prv) && mod && mod.toUpperCase()!=="MODELO" && mod.toUpperCase()!=="SERIE TEJIDO"){
       if(!prvDetectado) prvDetectado=prv;
       modelos[mod]=1;
     }
   }
 
-  // Poner proveedor detectado en el campo
+  // Poner proveedor detectado en el campo código (solo si está vacío)
   var prvEl=document.getElementById("mimp-prv-cod");
   if(prvDetectado && !prvEl.value){ prvEl.value=prvDetectado; buscarProveedorMulti(); }
 
@@ -1669,32 +1667,26 @@ function actualizarPreviewMulti(){
   var mods=Object.keys(modelos);
   var modInfo=document.getElementById("mimp-modelos-info");
   if(mods.length){
-    modInfo.innerHTML="<strong>"+mods.length+" modelo(s):</strong> "+mods.join(", ");
+    modInfo.innerHTML="<strong>"+mods.length+" modelo(s) detectado(s):</strong> "+mods.join(", ");
     modInfo.style.color="#2d7a4f";
+  } else if(colPrvIdx<0||colModIdx<0){
+    modInfo.textContent="Selecciona las columnas PROVEEDOR y MODELO para detectar modelos";
+    modInfo.style.color="#c4571a";
   } else {
-    modInfo.textContent="No se detectan modelos — revisa las columnas";
+    modInfo.textContent="No se detectan modelos — revisa la fila de cabeceras";
     modInfo.style.color="#c4571a";
   }
 
-  // Columnas de puntos
+  // Columnas de puntos — mostrar todas para que el usuario marque las que son puntos
   var cpDiv=document.getElementById("mimp-cols-puntos");
   cpDiv.innerHTML="";
-  // Excluir las columnas de control (prv, mod, nom, ref, med, cat)
-  var usadas=[
-    document.getElementById("mimp-col-prv").value,
-    document.getElementById("mimp-col-mod").value,
-    document.getElementById("mimp-col-nom").value,
-    document.getElementById("mimp-col-ref").value,
-    document.getElementById("mimp-col-med").value,
-    document.getElementById("mimp-col-cat").value
-  ].filter(function(v){ return v!==""; });
-
   XL_MULTI_COLS.forEach(function(c){
     var div=document.createElement("div");
     div.className="col-check"; div.id="mcpcol-"+c.idx;
     div.innerHTML="<input type='checkbox' id='mchk-"+c.idx+"' style='width:auto'>"
       +"<span style='font-size:12px;font-weight:600'>"+c.name+"</span>"
-      +"<input type='text' placeholder='Nombre categoria' id='mtlabel-"+c.idx+"' style='width:100px;font-size:11px;padding:3px 6px;display:none' onclick='event.stopPropagation()'>";
+      +"<input type='text' placeholder='Nombre categoria' id='mtlabel-"+c.idx
+      +"' style='width:100px;font-size:11px;padding:3px 6px;display:none' onclick='event.stopPropagation()'>";
     div.onclick=function(e){
       if(e.target.tagName==="INPUT"&&e.target.type==="text") return;
       var chk=document.getElementById("mchk-"+c.idx);
