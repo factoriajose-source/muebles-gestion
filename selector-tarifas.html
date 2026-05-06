@@ -1627,7 +1627,7 @@ function actualizarPreviewMulti(){
   ["mimp-col-prv","mimp-col-mod","mimp-col-nom","mimp-col-ref","mimp-col-med","mimp-col-cat"].forEach(function(id){
     var el=document.getElementById(id);
     var v=el.value;
-    var firstOpt=(id==="mimp-col-nom")?"":el.options[0].outerHTML;
+    var firstOpt=(id==="mimp-col-nom")||!el.options[0]?"":el.options[0].outerHTML;
     el.innerHTML=firstOpt+opts;
     if(v!=="") el.value=v;
   });
