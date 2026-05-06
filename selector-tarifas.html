@@ -99,6 +99,7 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
 <div class="tabs no-print">
   <button class="tab-btn act" id="tb-selector" onclick="showTab('selector')">Catalogo + Presupuesto</button>
   <button class="tab-btn" id="tb-importar" onclick="showTab('importar')">Importar tarifa Excel</button>
+  <button class="tab-btn" id="tb-importar-multi" onclick="showTab('importar-multi')">📦 Importar varios modelos</button>
   <button class="tab-btn" id="tb-tarifas" onclick="showTab('tarifas')">Tarifas guardadas</button>
   <button class="tab-btn" id="tb-imagenes" onclick="showTab('imagenes')" style="background:#2856c8;color:white;border-color:#2856c8">🖼️ Cargar Imagenes</button>
 </div>
@@ -205,6 +206,61 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
       <div style="display:flex;gap:10px">
         <button class="btn btn-green" onclick="importarTarifa()">Importar y guardar tarifa</button>
         <button class="btn btn-gray" onclick="cancelarImport()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB IMPORTAR MULTI -->
+<div id="sec-importar-multi" class="app" style="display:none">
+  <div class="card">
+    <div class="card-title">📦 Importar varios modelos desde Excel</div>
+    <p style="font-size:13px;color:#666;margin-bottom:16px;line-height:1.6">
+      Sube el Excel del proveedor con varios modelos. El archivo debe tener columnas <strong>PROVEEDOR</strong> y <strong>MODELO</strong>.
+      El programa detecta los modelos automáticamente y guarda cada uno por separado en Firebase.
+    </p>
+    <div class="drop-zone" id="drop-zone-multi" onclick="document.getElementById('file-input-multi').click()"
+         ondragover="event.preventDefault();this.classList.add('over')"
+         ondragleave="this.classList.remove('over')"
+         ondrop="onDropMulti(event)">
+      <div style="font-size:42px;margin-bottom:8px">📦</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px">Arrastra el Excel aqui o haz clic</div>
+      <div style="font-size:12px;color:#aaa">.xlsx / .xls — con columnas PROVEEDOR y MODELO</div>
+      <input type="file" id="file-input-multi" accept=".xlsx,.xls" onchange="onFileSelectMulti(event)">
+    </div>
+    <div id="import-form-multi" style="display:none;margin-top:16px">
+      <div class="card-title">Configurar importacion</div>
+      <div class="map-grid">
+        <div class="fg"><label>Codigo proveedor detectado</label>
+          <input type="text" id="mimp-prv-cod" placeholder="Ej: 3090" oninput="buscarProveedorMulti()"></div>
+        <div class="fg"><label>Proveedor encontrado</label>
+          <div id="mimp-prv-info" style="padding:8px 10px;border:1.5px solid #ddd;border-radius:7px;background:#f8f6f2;font-size:13px;min-height:38px">Introduce el codigo</div></div>
+        <div class="fg"><label>Fila de cabeceras (numero)</label>
+          <input type="number" id="mimp-row-head" value="1" min="1" max="10" oninput="actualizarPreviewMulti()"></div>
+        <div class="fg"><label>Modelos detectados</label>
+          <div id="mimp-modelos-info" style="padding:8px 10px;border:1.5px solid #ddd;border-radius:7px;background:#f8f6f2;font-size:13px;min-height:38px;color:#2d7a4f">Cargando...</div></div>
+        <div class="fg"><label>Columna PROVEEDOR</label><select id="mimp-col-prv" onchange="actualizarPreviewMulti()"></select></div>
+        <div class="fg"><label>Columna MODELO</label><select id="mimp-col-mod" onchange="actualizarPreviewMulti()"></select></div>
+        <div class="fg"><label>Columna nombre articulo</label><select id="mimp-col-nom"></select></div>
+        <div class="fg"><label>Columna referencia (opcional)</label><select id="mimp-col-ref"><option value="">-- Sin referencia --</option></select></div>
+        <div class="fg"><label>Columna medidas (opcional)</label><select id="mimp-col-med"><option value="">-- Sin medidas --</option></select></div>
+        <div class="fg"><label>Columna categoria articulo (opcional)</label><select id="mimp-col-cat"><option value="">-- Sin categoria --</option></select></div>
+      </div>
+      <div style="margin-top:14px">
+        <div class="card-title">Vista previa del Excel</div>
+        <div class="preview-wrap" id="mimp-preview-wrap"></div>
+        <div class="card-title">Columnas de PUNTOS por categoria de tela</div>
+        <p style="font-size:12px;color:#888;margin-bottom:10px">
+          Marca las columnas que contienen puntos. Ponle un nombre a cada categoria (OFERTA, A, B, C...).
+          Para articulos sin categorias de tela, marca una sola columna y llamala UNICO.
+        </p>
+        <div id="mimp-cols-puntos" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+      </div>
+      <div id="mimp-resumen" style="display:none;background:#e8f5ee;color:#2d7a4f;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;line-height:1.6"></div>
+      <div id="mimp-error" style="display:none;background:#fdecea;color:#c0392b;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px"></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-green" onclick="importarTarifaMulti()">📦 Importar todos los modelos</button>
+        <button class="btn btn-gray" onclick="cancelarImportMulti()">Cancelar</button>
       </div>
     </div>
   </div>
@@ -461,7 +517,7 @@ function fmtEur(v){
 }
 
 function showTab(t){
-  ["selector","importar","tarifas","imagenes"].forEach(function(x){
+  ["selector","importar","importar-multi","tarifas","imagenes"].forEach(function(x){
     var el=document.getElementById("sec-"+x);
     var tb=document.getElementById("tb-"+x);
     if(el)el.style.display=x===t?"block":"none";
@@ -1521,12 +1577,263 @@ document.addEventListener("keydown",function(e){
   if(e.key==="Escape")cerrarVisor();
 });
 
-// Iniciar Firebase cuando el DOM esté listo
-if(document.readyState==="loading"){
-  document.addEventListener("DOMContentLoaded", initFirebase);
-} else {
-  initFirebase();
+// ─── IMPORTADOR MULTI-MODELO ──────────────────────────────────────────────────
+var XL_MULTI_DATA=null, XL_MULTI_COLS=[];
+
+function onDropMulti(e){
+  e.preventDefault();
+  document.getElementById("drop-zone-multi").classList.remove("over");
+  var f=e.dataTransfer.files[0];
+  if(f) procesarExcelMulti(f);
 }
+function onFileSelectMulti(e){ if(e.target.files[0]) procesarExcelMulti(e.target.files[0]); }
+
+function procesarExcelMulti(file){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var wb=XLSX.read(e.target.result,{type:"array"});
+    var ws=wb.Sheets[wb.SheetNames[0]];
+    XL_MULTI_DATA=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+    XL_MULTI_COLS=[];
+    document.getElementById("import-form-multi").style.display="block";
+    actualizarPreviewMulti();
+    toast("Excel cargado: "+XL_MULTI_DATA.length+" filas","info");
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function actualizarPreviewMulti(){
+  if(!XL_MULTI_DATA) return;
+  var rowHead=parseInt(document.getElementById("mimp-row-head").value)||1;
+  var cabRow=XL_MULTI_DATA[rowHead-1]||[];
+  XL_MULTI_COLS=cabRow.map(function(c,i){ return{idx:i,name:String(c||"Col "+(i+1)).trim()}; });
+
+  // Vista previa
+  var pw=document.getElementById("mimp-preview-wrap");
+  var h="<table class='preview-tbl'><thead><tr>";
+  XL_MULTI_COLS.forEach(function(c){ h+="<th>"+c.name+"</th>"; });
+  h+="</tr></thead><tbody>";
+  for(var r=rowHead;r<Math.min(rowHead+6,XL_MULTI_DATA.length);r++){
+    h+="<tr>";
+    XL_MULTI_DATA[r].forEach(function(c){ h+="<td>"+c+"</td>"; });
+    h+="</tr>";
+  }
+  pw.innerHTML=h+"</tbody></table>";
+
+  // Rellenar selects
+  var opts="<option value=''>---</option>"+XL_MULTI_COLS.map(function(c){
+    return "<option value='"+c.idx+"'>"+c.name+"</option>";
+  }).join("");
+  ["mimp-col-prv","mimp-col-mod","mimp-col-nom","mimp-col-ref","mimp-col-med","mimp-col-cat"].forEach(function(id){
+    var el=document.getElementById(id);
+    var v=el.value;
+    var firstOpt=(id==="mimp-col-nom")?"":el.options[0].outerHTML;
+    el.innerHTML=firstOpt+opts;
+    if(v) el.value=v;
+  });
+
+  // Auto-detectar columnas por nombre
+  XL_MULTI_COLS.forEach(function(c){
+    var n=c.name.toLowerCase();
+    if(/proveedor|prv|supplier/i.test(n)){
+      var el=document.getElementById("mimp-col-prv"); if(!el.value) el.value=c.idx;
+    }
+    if(/^modelo$|^model$/i.test(n)){
+      var el=document.getElementById("mimp-col-mod"); if(!el.value) el.value=c.idx;
+    }
+    if(/articu|nombre|descrip/i.test(n)){
+      var el=document.getElementById("mimp-col-nom"); if(!el.value) el.value=c.idx;
+    }
+  });
+
+  // Detectar proveedor y modelos de los datos
+  var colPrvIdx=parseInt(document.getElementById("mimp-col-prv").value);
+  var colModIdx=parseInt(document.getElementById("mimp-col-mod").value);
+  var prvDetectado="", modelos={};
+  for(var r=rowHead;r<XL_MULTI_DATA.length;r++){
+    var row=XL_MULTI_DATA[r];
+    var prv=String(row[colPrvIdx]||"").trim();
+    var mod=String(row[colModIdx]||"").trim();
+    // Ignorar filas de sub-cabecera (donde modelo=nombre de columna o prv no es número)
+    if(prv && /^\d+$/.test(prv) && mod && mod.toUpperCase()!=="MODELO"){
+      if(!prvDetectado) prvDetectado=prv;
+      modelos[mod]=1;
+    }
+  }
+
+  // Poner proveedor detectado en el campo
+  var prvEl=document.getElementById("mimp-prv-cod");
+  if(prvDetectado && !prvEl.value){ prvEl.value=prvDetectado; buscarProveedorMulti(); }
+
+  // Mostrar modelos detectados
+  var mods=Object.keys(modelos);
+  var modInfo=document.getElementById("mimp-modelos-info");
+  if(mods.length){
+    modInfo.innerHTML="<strong>"+mods.length+" modelo(s):</strong> "+mods.join(", ");
+    modInfo.style.color="#2d7a4f";
+  } else {
+    modInfo.textContent="No se detectan modelos — revisa las columnas";
+    modInfo.style.color="#c4571a";
+  }
+
+  // Columnas de puntos
+  var cpDiv=document.getElementById("mimp-cols-puntos");
+  cpDiv.innerHTML="";
+  // Excluir las columnas de control (prv, mod, nom, ref, med, cat)
+  var usadas=[
+    document.getElementById("mimp-col-prv").value,
+    document.getElementById("mimp-col-mod").value,
+    document.getElementById("mimp-col-nom").value,
+    document.getElementById("mimp-col-ref").value,
+    document.getElementById("mimp-col-med").value,
+    document.getElementById("mimp-col-cat").value
+  ].filter(function(v){ return v!==""; });
+
+  XL_MULTI_COLS.forEach(function(c){
+    var div=document.createElement("div");
+    div.className="col-check"; div.id="mcpcol-"+c.idx;
+    div.innerHTML="<input type='checkbox' id='mchk-"+c.idx+"' style='width:auto'>"
+      +"<span style='font-size:12px;font-weight:600'>"+c.name+"</span>"
+      +"<input type='text' placeholder='Nombre categoria' id='mtlabel-"+c.idx+"' style='width:100px;font-size:11px;padding:3px 6px;display:none' onclick='event.stopPropagation()'>";
+    div.onclick=function(e){
+      if(e.target.tagName==="INPUT"&&e.target.type==="text") return;
+      var chk=document.getElementById("mchk-"+c.idx);
+      chk.checked=!chk.checked;
+      var lbl=document.getElementById("mtlabel-"+c.idx);
+      lbl.style.display=chk.checked?"inline-block":"none";
+      if(chk.checked&&!lbl.value) lbl.value=c.name;
+      div.classList.toggle("sel",chk.checked);
+    };
+    cpDiv.appendChild(div);
+  });
+}
+
+function buscarProveedorMulti(){
+  var cod=document.getElementById("mimp-prv-cod").value.trim();
+  var info=document.getElementById("mimp-prv-info");
+  if(!cod){ info.textContent="Introduce el codigo"; info.style.color="#888"; return; }
+  var p=PROVEEDORES_MAP[cod]||PROVEEDORES_MAP[parseInt(cod)]||PROVEEDORES_MAP[String(parseInt(cod))];
+  if(p){
+    info.innerHTML="✅ "+p.nombre+" | P.Punto: "+p.precioPunto+" EUR/pt | Dto: "+p.dtoMax+"%";
+    info.style.color="#2d7a4f";
+  } else {
+    info.innerHTML="Codigo "+cod+" no encontrado en tabla Proveedores";
+    info.style.color="#c4571a";
+  }
+}
+
+function importarTarifaMulti(){
+  var cod=document.getElementById("mimp-prv-cod").value.trim();
+  var rowHead=parseInt(document.getElementById("mimp-row-head").value)||1;
+  var colPrvIdx=document.getElementById("mimp-col-prv").value;
+  var colModIdx=document.getElementById("mimp-col-mod").value;
+  var colNomIdx=document.getElementById("mimp-col-nom").value;
+  var colRefIdx=document.getElementById("mimp-col-ref").value;
+  var colMedIdx=document.getElementById("mimp-col-med").value;
+  var colCatIdx=document.getElementById("mimp-col-cat").value;
+  var errEl=document.getElementById("mimp-error");
+  var resEl=document.getElementById("mimp-resumen");
+  errEl.style.display="none"; resEl.style.display="none";
+
+  if(!cod){ errEl.textContent="Introduce el codigo de proveedor"; errEl.style.display="block"; return; }
+  if(!colNomIdx){ errEl.textContent="Selecciona la columna de nombre de articulo"; errEl.style.display="block"; return; }
+
+  // Columnas de puntos marcadas
+  var colsPts={};
+  XL_MULTI_COLS.forEach(function(c){
+    var chk=document.getElementById("mchk-"+c.idx);
+    if(chk&&chk.checked){
+      var lbl=document.getElementById("mtlabel-"+c.idx).value.trim()||c.name;
+      colsPts[c.idx]=lbl;
+    }
+  });
+  if(!Object.keys(colsPts).length){ errEl.textContent="Marca al menos una columna de puntos"; errEl.style.display="block"; return; }
+
+  var pd=PROVEEDORES_MAP[cod]||PROVEEDORES_MAP[parseInt(cod)]||{};
+
+  // Agrupar filas por modelo
+  var grupos={};
+  for(var r=rowHead;r<XL_MULTI_DATA.length;r++){
+    var row=XL_MULTI_DATA[r];
+    var nom=String(row[parseInt(colNomIdx)]||"").trim();
+    if(!nom) continue;
+    // Ignorar sub-cabeceras (filas donde nom coincide con el nombre de una columna de puntos)
+    var esCabecera=Object.values(colsPts).some(function(v){ return v.toLowerCase()===nom.toLowerCase(); });
+    if(esCabecera) continue;
+
+    var modFila=colModIdx!==undefined&&colModIdx!==""?String(row[parseInt(colModIdx)]||"").trim().toUpperCase():"";
+    if(!modFila||modFila==="MODELO") continue;
+
+    var categorias={};
+    var valid=false;
+    Object.keys(colsPts).forEach(function(ci){
+      var v=parseFloat(String(row[parseInt(ci)]||"").replace(",","."));
+      if(!isNaN(v)&&v>0){ categorias[colsPts[ci]]=v; valid=true; }
+    });
+    if(!valid) continue;
+
+    if(!grupos[modFila]) grupos[modFila]=[];
+    grupos[modFila].push({
+      prv: cod,
+      prvNom: pd.nombre||cod,
+      mod: modFila,
+      ref: colRefIdx?String(row[parseInt(colRefIdx)]||"").trim():String(grupos[modFila]?grupos[modFila].length+1:1),
+      nom: nom,
+      med: colMedIdx?String(row[parseInt(colMedIdx)]||"").trim():"",
+      cat: colCatIdx?String(row[parseInt(colCatIdx)]||"").trim():"",
+      categorias: categorias
+    });
+  }
+
+  var modelos=Object.keys(grupos);
+  if(!modelos.length){ errEl.textContent="No se encontraron articulos validos. Revisa la fila de cabeceras y las columnas."; errEl.style.display="block"; return; }
+
+  var totalArts=modelos.reduce(function(s,m){ return s+grupos[m].length; },0);
+  resEl.style.cssText="display:block;background:#e8f0ff;color:#2856c8;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px";
+  resEl.innerHTML="⏳ Guardando "+modelos.length+" modelos ("+totalArts+" artículos) en Firebase...";
+
+  // Guardar uno por uno en Firebase
+  var guardados=[];
+  var errores=[];
+  function guardarSiguiente(i){
+    if(i>=modelos.length){
+      // Fin
+      var arts=modelos.reduce(function(a,m){ return a.concat(grupos[m]); },[]);
+      // Quitar de ARTICULOS los modelos que acabamos de importar y añadir los nuevos
+      ARTICULOS=ARTICULOS.filter(function(a){
+        return !(a.prv===cod && modelos.indexOf(a.mod)>=0);
+      });
+      ARTICULOS=ARTICULOS.concat(arts);
+      renderArt();
+      resEl.style.cssText="display:block;background:#e8f5ee;color:#2d7a4f;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;line-height:1.8";
+      var lineas=guardados.map(function(m){ return "✅ "+m+" — "+grupos[m].length+" artículos"; }).join("<br>");
+      if(errores.length) lineas+="<br><span style='color:#c0392b'>❌ Errores en: "+errores.join(", ")+"</span>";
+      resEl.innerHTML="<strong>Importación completada</strong><br>"+lineas
+        +"<br><strong style='font-size:14px;margin-top:6px;display:block'>Total: "+guardados.length+" modelos · "+totalArts+" artículos</strong>"
+        +(pd.precioPunto?" | "+pd.precioPunto+" €/pt · Dto: "+pd.dtoMax+"%":" | ⚠️ Proveedor sin precio/punto todavía");
+      toast("✅ "+guardados.length+" modelos importados en Firebase","ok");
+      setTimeout(function(){ showTab("selector"); },2000);
+      return;
+    }
+    var mod=modelos[i];
+    guardarTarifaFirestore(cod, mod, grupos[mod], function(err){
+      if(err){ errores.push(mod); }
+      else { guardados.push(mod); }
+      guardarSiguiente(i+1);
+    });
+  }
+  guardarSiguiente(0);
+}
+
+function cancelarImportMulti(){
+  document.getElementById("import-form-multi").style.display="none";
+  document.getElementById("file-input-multi").value="";
+  XL_MULTI_DATA=null;
+}
+// ─── FIN IMPORTADOR MULTI-MODELO ─────────────────────────────────────────────
+
+// Iniciar Firebase — esperar a que los scripts externos estén cargados
+window.addEventListener("load", initFirebase);
 </script>
 </body>
 </html>
