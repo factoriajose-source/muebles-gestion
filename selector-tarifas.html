@@ -493,7 +493,9 @@ function cargarProveedoresFirebase(){
       var dto=parseFloat(String(p.MAX_DTO||"0").replace(",",".").replace("%",""))||0;
       var nom=p.Nombre||p.nombre||cod;
       PROVEEDORES_MAP[cod]={nombre:nom,precioPunto:pp,dtoMax:dto};
-      PROVEEDORES_MAP[parseInt(cod)]={nombre:nom,precioPunto:pp,dtoMax:dto};
+      // Solo duplicar con clave numérica si el código ES puramente numérico
+      // (evita que "7022_CAMAS" machaque la entrada de "7022")
+      if(/^\d+$/.test(cod)) PROVEEDORES_MAP[parseInt(cod)]={nombre:nom,precioPunto:pp,dtoMax:dto};
     });
     console.log("Proveedores cargados:",Object.keys(PROVEEDORES_MAP).length/2);
     renderArt();
@@ -1977,12 +1979,13 @@ function buscarProveedorFilas(){
   var cod=document.getElementById("fimp-prv-cod").value.trim();
   var info=document.getElementById("fimp-prv-info");
   if(!cod){ info.textContent="Introduce el codigo"; info.style.color="#888"; return; }
+  // Buscar primero por clave exacta (soporta "7022_CAMAS"), luego por número
   var p=PROVEEDORES_MAP[cod]||PROVEEDORES_MAP[parseInt(cod)]||{};
   if(p.nombre){
     info.innerHTML="✅ "+p.nombre+" | P.Punto: "+p.precioPunto+" EUR/pt | Dto: "+p.dtoMax+"%";
     info.style.color="#2d7a4f";
   } else {
-    info.innerHTML="Codigo "+cod+" no encontrado en tabla Proveedores";
+    info.innerHTML="Codigo '"+cod+"' no encontrado. Prueba exactamente como está en Firebase (ej: 7022_CAMAS)";
     info.style.color="#c4571a";
   }
 }
