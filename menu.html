@@ -802,34 +802,57 @@ function cerrarSidebar(){
 function navegar(tab, titulo){
   showTab(tab);
   document.getElementById("main-title").textContent = titulo;
-  // Marcar activo en sidebar
   document.querySelectorAll(".sb-item").forEach(function(el){ el.classList.remove("active"); });
   var mn = document.getElementById("mn-"+tab);
   if(mn) mn.classList.add("active");
   cerrarSidebar();
 }
+window.navegar = navegar;
+
 function abrirSelector(){
   if(!currentUser){ showToast("Identifícate primero"); return; }
   window.open("selector-tarifas.html","_blank");
   cerrarSidebar();
 }
+window.abrirSelector = abrirSelector;
+
 function abrirProveedoresMenu(){
   if(!currentUser){ showToast("Identifícate primero"); return; }
   window.open("proveedores.html?usuario="+encodeURIComponent(currentUser),"_blank");
   cerrarSidebar();
 }
+window.abrirProveedoresMenu = abrirProveedoresMenu;
+
 function abrirVacaciones(){
   window.open("vacaciones.html","_blank");
   cerrarSidebar();
 }
+window.abrirVacaciones = abrirVacaciones;
+
 function abrirEditor(){
   window.open("editor-fichajes.html","_blank");
   cerrarSidebar();
 }
+window.abrirEditor = abrirEditor;
+
 function abrirAuditoria(){
   window.open("auditoria-fichajes.html","_blank");
   cerrarSidebar();
 }
+window.abrirAuditoria = abrirAuditoria;
+
+function toggleSidebar(){
+  document.getElementById("sidebar").classList.toggle("open");
+  document.getElementById("sidebar-overlay").classList.toggle("open");
+}
+window.toggleSidebar = toggleSidebar;
+
+function cerrarSidebar(){
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("sidebar-overlay").classList.remove("open");
+}
+window.cerrarSidebar = cerrarSidebar;
+
 function actualizarSidebar(name){
   var ini = name ? name.substring(0,2).toUpperCase() : "?";
   document.getElementById("sb-avatar").textContent = ini;
