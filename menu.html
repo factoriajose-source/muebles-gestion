@@ -872,6 +872,7 @@ function logout() {
   document.getElementById("login-screen").style.display = "flex";
   lines = []; presupuestos = []; editingId = null; lineCounter = 0;
 }
+window.logout = logout;
 
 const _btnLogout = document.getElementById("btn-logout");
 if(_btnLogout) _btnLogout.addEventListener("click", logout);
