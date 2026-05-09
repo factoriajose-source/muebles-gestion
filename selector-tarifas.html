@@ -100,6 +100,7 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
   <button class="tab-btn act" id="tb-selector" onclick="showTab('selector')">Catalogo + Presupuesto</button>
   <button class="tab-btn" id="tb-importar" onclick="showTab('importar')">Importar tarifa Excel</button>
   <button class="tab-btn" id="tb-importar-multi" onclick="showTab('importar-multi')">📦 Importar varios modelos</button>
+  <button class="tab-btn" id="tb-importar-filas" onclick="showTab('importar-filas')">📋 Importar formato filas</button>
   <button class="tab-btn" id="tb-tarifas" onclick="showTab('tarifas')">Tarifas guardadas</button>
   <button class="tab-btn" id="tb-imagenes" onclick="showTab('imagenes')" style="background:#2856c8;color:white;border-color:#2856c8">🖼️ Cargar Imagenes</button>
 </div>
@@ -261,6 +262,62 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
       <div style="display:flex;gap:10px">
         <button class="btn btn-green" onclick="importarTarifaMulti()">📦 Importar todos los modelos</button>
         <button class="btn btn-gray" onclick="cancelarImportMulti()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB IMPORTAR FILAS -->
+<div id="sec-importar-filas" class="app" style="display:none">
+  <div class="card">
+    <div class="card-title">📋 Importar tarifa en formato filas</div>
+    <p style="font-size:13px;color:#666;margin-bottom:16px;line-height:1.6">
+      Para proveedores que ponen <strong>una fila por cada serie de tela</strong> en vez de columnas.<br>
+      El programa agrupa automáticamente y guarda un solo artículo con todas sus categorías.
+    </p>
+    <div class="drop-zone" id="drop-zone-filas" onclick="document.getElementById('file-input-filas').click()"
+         ondragover="event.preventDefault();this.classList.add('over')"
+         ondragleave="this.classList.remove('over')"
+         ondrop="onDropFilas(event)">
+      <div style="font-size:42px;margin-bottom:8px">📋</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px">Arrastra el Excel aqui o haz clic</div>
+      <div style="font-size:12px;color:#aaa">.xlsx / .xls — con columnas MODELO, ARTICULO, SERIE, PUNTOS</div>
+      <input type="file" id="file-input-filas" accept=".xlsx,.xls" onchange="onFileSelectFilas(event)">
+    </div>
+
+    <div id="import-form-filas" style="display:none;margin-top:16px">
+      <div class="card-title">Configurar importacion</div>
+      <div class="map-grid">
+        <div class="fg"><label>Codigo proveedor</label>
+          <input type="text" id="fimp-prv-cod" placeholder="Ej: 7022" oninput="buscarProveedorFilas()"></div>
+        <div class="fg"><label>Proveedor encontrado</label>
+          <div id="fimp-prv-info" style="padding:8px 10px;border:1.5px solid #ddd;border-radius:7px;background:#f8f6f2;font-size:13px;min-height:38px">Introduce el codigo</div></div>
+        <div class="fg"><label>Fila de cabeceras</label>
+          <input type="number" id="fimp-row-head" value="1" min="1" max="10" oninput="actualizarPreviewFilas()"></div>
+        <div class="fg"><label>Articulos detectados</label>
+          <div id="fimp-arts-info" style="padding:8px 10px;border:1.5px solid #ddd;border-radius:7px;background:#f8f6f2;font-size:13px;min-height:38px;color:#2d7a4f">Cargando...</div></div>
+        <div class="fg"><label>Columna MODELO</label><select id="fimp-col-mod" onchange="actualizarPreviewFilas()"></select></div>
+        <div class="fg"><label>Columna ARTICULO (nombre)</label><select id="fimp-col-nom" onchange="actualizarPreviewFilas()"></select></div>
+        <div class="fg"><label>Columna SERIE (categoria tela)</label><select id="fimp-col-serie" onchange="actualizarPreviewFilas()"></select></div>
+        <div class="fg"><label>Columna PUNTOS</label><select id="fimp-col-pts" onchange="actualizarPreviewFilas()"></select></div>
+        <div class="fg"><label>Columna REF (opcional)</label><select id="fimp-col-ref"><option value="">-- Sin referencia --</option></select></div>
+        <div class="fg"><label>Quitar " - Tela" del nombre</label>
+          <select id="fimp-quitar-tela">
+            <option value="1">Sí, quitar " - Tela" del final</option>
+            <option value="0">No, dejar el nombre tal cual</option>
+          </select></div>
+      </div>
+
+      <div style="margin-top:14px">
+        <div class="card-title">Vista previa del Excel</div>
+        <div class="preview-wrap" id="fimp-preview-wrap"></div>
+      </div>
+
+      <div id="fimp-resumen" style="display:none"></div>
+      <div id="fimp-error" style="display:none;background:#fdecea;color:#c0392b;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px"></div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn btn-green" onclick="importarTarifaFilas()">📋 Importar agrupando por articulo</button>
+        <button class="btn btn-gray" onclick="cancelarImportFilas()">Cancelar</button>
       </div>
     </div>
   </div>
@@ -517,7 +574,7 @@ function fmtEur(v){
 }
 
 function showTab(t){
-  ["selector","importar","importar-multi","tarifas","imagenes"].forEach(function(x){
+  ["selector","importar","importar-multi","importar-filas","tarifas","imagenes"].forEach(function(x){
     var el=document.getElementById("sec-"+x);
     var tb=document.getElementById("tb-"+x);
     if(el)el.style.display=x===t?"block":"none";
@@ -578,7 +635,7 @@ function renderArt(){
   var prvs={};
   ARTICULOS.forEach(function(a){prvs[a.prv]=a.prvNom;});
   prvSel.innerHTML="<option value=''>Todos los proveedores</option>";
-  Object.keys(prvs).sort().forEach(function(p){
+  Object.keys(prvs).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(p){
     var pd=PROVEEDORES_MAP[p];
     var nom=pd?pd.nombre:prvs[p];
     prvSel.innerHTML+="<option value='"+p+"'"+(p===pv?" selected":"")+">"+p+" - "+nom+"</option>";
@@ -1824,6 +1881,213 @@ function cancelarImportMulti(){
   document.getElementById("file-input-multi").value="";
   XL_MULTI_DATA=null;
 }
+// ─── IMPORTADOR FORMATO FILAS ────────────────────────────────────────────────
+var XL_FILAS_DATA=null, XL_FILAS_COLS=[];
+
+function onDropFilas(e){
+  e.preventDefault();
+  document.getElementById("drop-zone-filas").classList.remove("over");
+  var f=e.dataTransfer.files[0];
+  if(f) procesarExcelFilas(f);
+}
+function onFileSelectFilas(e){ if(e.target.files[0]) procesarExcelFilas(e.target.files[0]); }
+
+function procesarExcelFilas(file){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var wb=XLSX.read(e.target.result,{type:"array"});
+    var ws=wb.Sheets[wb.SheetNames[0]];
+    XL_FILAS_DATA=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+    document.getElementById("import-form-filas").style.display="block";
+    actualizarPreviewFilas();
+    toast("Excel cargado: "+XL_FILAS_DATA.length+" filas","info");
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function actualizarPreviewFilas(){
+  if(!XL_FILAS_DATA) return;
+  var rowHead=parseInt(document.getElementById("fimp-row-head").value)||1;
+  var cabRow=XL_FILAS_DATA[rowHead-1]||[];
+  XL_FILAS_COLS=cabRow.map(function(c,i){ return{idx:i,name:String(c||"Col "+(i+1)).trim()}; });
+
+  // Vista previa
+  var pw=document.getElementById("fimp-preview-wrap");
+  var h="<table class='preview-tbl'><thead><tr>";
+  XL_FILAS_COLS.forEach(function(c){ h+="<th>"+c.name+"</th>"; });
+  h+="</tr></thead><tbody>";
+  for(var r=rowHead;r<Math.min(rowHead+8,XL_FILAS_DATA.length);r++){
+    h+="<tr>";
+    XL_FILAS_DATA[r].forEach(function(c){ h+="<td>"+c+"</td>"; });
+    h+="</tr>";
+  }
+  pw.innerHTML=h+"</tbody></table>";
+
+  // Rellenar selects
+  var opts="<option value=''>---</option>"+XL_FILAS_COLS.map(function(c){
+    return "<option value='"+c.idx+"'>"+c.name+"</option>";
+  }).join("");
+  ["fimp-col-mod","fimp-col-nom","fimp-col-serie","fimp-col-pts","fimp-col-ref"].forEach(function(id){
+    var el=document.getElementById(id);
+    var v=el.value;
+    var firstOpt=id==="fimp-col-ref"?el.options[0].outerHTML||"":"";
+    el.innerHTML=firstOpt+opts;
+    if(v!=="") el.value=v;
+  });
+
+  // Auto-detectar columnas por nombre
+  var elMod=document.getElementById("fimp-col-mod");
+  var elNom=document.getElementById("fimp-col-nom");
+  var elSerie=document.getElementById("fimp-col-serie");
+  var elPts=document.getElementById("fimp-col-pts");
+  XL_FILAS_COLS.forEach(function(c){
+    var n=c.name.toLowerCase();
+    if(!elMod.value   && /^mod/i.test(n))                    elMod.value=String(c.idx);
+    if(!elNom.value   && /articu|artic|nombre|descrip/i.test(n)) elNom.value=String(c.idx);
+    if(!elSerie.value && /serie|tela|cat|acabado/i.test(n))  elSerie.value=String(c.idx);
+    if(!elPts.value   && /punto|pts|price|precio/i.test(n))  elPts.value=String(c.idx);
+  });
+
+  // Contar artículos únicos detectados
+  var colNomIdx=elNom.value!==""?parseInt(elNom.value):-1;
+  var colModIdx=elMod.value!==""?parseInt(elMod.value):-1;
+  var artsUnicos={}, modelos={};
+  for(var r=rowHead;r<XL_FILAS_DATA.length;r++){
+    var row=XL_FILAS_DATA[r];
+    var nom=colNomIdx>=0?String(row[colNomIdx]||"").trim():"";
+    var mod=colModIdx>=0?String(row[colModIdx]||"").trim():"";
+    if(nom && mod && mod.toUpperCase()!=="MODELO"){
+      artsUnicos[mod+"||"+nom]=1;
+      modelos[mod]=1;
+    }
+  }
+  var nArts=Object.keys(artsUnicos).length;
+  var nMods=Object.keys(modelos).length;
+  var infoEl=document.getElementById("fimp-arts-info");
+  if(nArts){
+    infoEl.innerHTML="<strong>"+nArts+" artículos únicos</strong> en "+nMods+" modelo(s): "+Object.keys(modelos).join(", ");
+    infoEl.style.color="#2d7a4f";
+  } else {
+    infoEl.textContent="Selecciona las columnas MODELO y ARTICULO para detectar";
+    infoEl.style.color="#c4571a";
+  }
+}
+
+function buscarProveedorFilas(){
+  var cod=document.getElementById("fimp-prv-cod").value.trim();
+  var info=document.getElementById("fimp-prv-info");
+  if(!cod){ info.textContent="Introduce el codigo"; info.style.color="#888"; return; }
+  var p=PROVEEDORES_MAP[cod]||PROVEEDORES_MAP[parseInt(cod)]||{};
+  if(p.nombre){
+    info.innerHTML="✅ "+p.nombre+" | P.Punto: "+p.precioPunto+" EUR/pt | Dto: "+p.dtoMax+"%";
+    info.style.color="#2d7a4f";
+  } else {
+    info.innerHTML="Codigo "+cod+" no encontrado en tabla Proveedores";
+    info.style.color="#c4571a";
+  }
+}
+
+function importarTarifaFilas(){
+  var cod=document.getElementById("fimp-prv-cod").value.trim();
+  var rowHead=parseInt(document.getElementById("fimp-row-head").value)||1;
+  var colModIdx=parseInt(document.getElementById("fimp-col-mod").value);
+  var colNomIdx=parseInt(document.getElementById("fimp-col-nom").value);
+  var colSerieIdx=parseInt(document.getElementById("fimp-col-serie").value);
+  var colPtsIdx=parseInt(document.getElementById("fimp-col-pts").value);
+  var colRefIdx=document.getElementById("fimp-col-ref").value;
+  var quitarTela=document.getElementById("fimp-quitar-tela").value==="1";
+  var errEl=document.getElementById("fimp-error");
+  var resEl=document.getElementById("fimp-resumen");
+  errEl.style.display="none"; resEl.style.display="none";
+
+  if(!cod){ errEl.textContent="Introduce el codigo de proveedor"; errEl.style.display="block"; return; }
+  if(isNaN(colModIdx)||isNaN(colNomIdx)||isNaN(colSerieIdx)||isNaN(colPtsIdx)){
+    errEl.textContent="Selecciona las columnas MODELO, ARTICULO, SERIE y PUNTOS"; errEl.style.display="block"; return;
+  }
+
+  var pd=PROVEEDORES_MAP[cod]||PROVEEDORES_MAP[parseInt(cod)]||{};
+
+  // Agrupar filas: clave = mod+"||"+nom, acumular categorias
+  var grupos={};   // {mod: {nom: {ref, categorias:{serie:pts}}}}
+  var modelosOrden=[];
+
+  for(var r=rowHead;r<XL_FILAS_DATA.length;r++){
+    var row=XL_FILAS_DATA[r];
+    var mod=String(row[colModIdx]||"").trim().toUpperCase();
+    var nom=String(row[colNomIdx]||"").trim();
+    var serie=String(row[colSerieIdx]||"").trim().toUpperCase();
+    var pts=parseFloat(String(row[colPtsIdx]||"").replace(/\./g,"").replace(",","."));
+
+    if(!mod||!nom||!serie||isNaN(pts)||pts<=0) continue;
+    if(mod==="MODELO"||nom==="ARTICULO") continue; // cabeceras repetidas
+
+    // Quitar " - Tela" o " - tela" del final del nombre
+    if(quitarTela) nom=nom.replace(/\s*-\s*tela\s*$/i,"").trim();
+
+    if(!grupos[mod]){ grupos[mod]={}; modelosOrden.push(mod); }
+    if(!grupos[mod][nom]){
+      var ref=colRefIdx?String(row[parseInt(colRefIdx)]||"").trim():"";
+      grupos[mod][nom]={ref:ref, categorias:{}};
+    }
+    grupos[mod][nom].categorias[serie]=pts;
+  }
+
+  if(!modelosOrden.length){
+    errEl.textContent="No se encontraron artículos válidos. Revisa la fila de cabeceras y las columnas.";
+    errEl.style.display="block"; return;
+  }
+
+  var totalArts=0;
+  modelosOrden.forEach(function(m){ totalArts+=Object.keys(grupos[m]).length; });
+
+  resEl.style.cssText="display:block;background:#e8f0ff;color:#2856c8;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px";
+  resEl.innerHTML="⏳ Guardando "+modelosOrden.length+" modelos ("+totalArts+" artículos) en Firebase...";
+
+  // Convertir a array de artículos por modelo y guardar
+  var guardados=[], errores=[];
+  function guardarSiguiente(i){
+    if(i>=modelosOrden.length){
+      // Actualizar ARTICULOS en memoria
+      ARTICULOS=ARTICULOS.filter(function(a){
+        return !(a.prv===cod && modelosOrden.indexOf(a.mod)>=0);
+      });
+      modelosOrden.forEach(function(mod){
+        Object.keys(grupos[mod]).forEach(function(nom){
+          var g=grupos[mod][nom];
+          ARTICULOS.push({prv:cod,prvNom:pd.nombre||cod,mod:mod,ref:g.ref||nom,nom:nom,med:"",cat:"",categorias:g.categorias});
+        });
+      });
+      renderArt();
+      resEl.style.cssText="display:block;background:#e8f5ee;color:#2d7a4f;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;line-height:1.8";
+      var lineas=guardados.map(function(m){ return "✅ "+m+" — "+Object.keys(grupos[m]).length+" artículos"; }).join("<br>");
+      if(errores.length) lineas+="<br><span style='color:#c0392b'>❌ Errores en: "+errores.join(", ")+"</span>";
+      resEl.innerHTML="<strong>Importación completada</strong><br>"+lineas
+        +"<br><strong style='font-size:14px;margin-top:6px;display:block'>Total: "+guardados.length+" modelos · "+totalArts+" artículos</strong>"
+        +(pd.precioPunto?" | "+pd.precioPunto+" €/pt · Dto: "+pd.dtoMax+"%":" | ⚠️ Proveedor sin precio/punto todavía");
+      toast("✅ "+guardados.length+" modelos importados en Firebase","ok");
+      setTimeout(function(){ showTab("selector"); },2000);
+      return;
+    }
+    var mod=modelosOrden[i];
+    var artsArr=Object.keys(grupos[mod]).map(function(nom){
+      var g=grupos[mod][nom];
+      return {prv:cod,prvNom:pd.nombre||cod,mod:mod,ref:g.ref||nom,nom:nom,med:"",cat:"",categorias:g.categorias};
+    });
+    guardarTarifaFirestore(cod, mod, artsArr, function(err){
+      if(err) errores.push(mod); else guardados.push(mod);
+      guardarSiguiente(i+1);
+    });
+  }
+  guardarSiguiente(0);
+}
+
+function cancelarImportFilas(){
+  document.getElementById("import-form-filas").style.display="none";
+  document.getElementById("file-input-filas").value="";
+  XL_FILAS_DATA=null;
+}
+// ─── FIN IMPORTADOR FORMATO FILAS ────────────────────────────────────────────
+
 // ─── FIN IMPORTADOR MULTI-MODELO ─────────────────────────────────────────────
 
 // Iniciar Firebase — esperar a que los scripts externos estén cargados
