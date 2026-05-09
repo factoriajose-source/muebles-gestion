@@ -736,6 +736,7 @@ function renderPres(){
     html+="<tr>"
       +"<td style='font-size:12px'><strong>"+l.art.nom+"</strong>"
         +(l.tela!=="UNICO"?"<br><span style='font-size:10px;color:#c4571a'>"+l.tela+"</span>":"")
+        +(l.art.med?"<br><span style='font-size:10px;color:#666'>📐 "+l.art.med+"</span>":"")
         +"<br><span style='font-size:10px;color:#aaa'>"+l.art.prv+" · "+l.art.mod.replace(/_/g," ")+" ref."+l.art.ref+"</span>"
       +"</td>"
       +"<td style='text-align:center'><div class='qty-ctrl'>"
@@ -1159,6 +1160,7 @@ function ejecutarImpresion(){
       return "<tr>"
         +"<td style=\'padding:7px 8px;border-bottom:1px solid #f0ece6;font-size:12px\'><strong>"+l.art.nom+"</strong>"
         +(l.tela!=="UNICO"?"<br><span style=\'color:"+st.color+";font-size:11px\'>"+l.tela+"</span>":"")
+        +(l.art.med?"<br><span style=\'font-size:10px;color:#666\'>📐 "+l.art.med+"</span>":"")
         +"<br><span style=\'font-size:10px;color:#aaa\'>Ref. "+l.art.prv+"-"+modCodigo+"-"+l.art.ref+"</span></td>"
         +"<td style=\'padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center\'>"+l.qty+"</td>"
         +"<td style=\'padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right\'>"+filaPrecio+"</td>"
