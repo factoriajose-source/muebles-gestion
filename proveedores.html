@@ -989,6 +989,7 @@ function showViewPanel(p) {
           <div class="info-item">
             <label>Año tarifa</label>
             <div class="val">${escHtml(p.Año||'—')}</div>
+            ${p.PCoste_ts ? `<div style="font-size:10px;color:var(--text2);margin-top:3px">📅 P.Coste actualizado: ${p.PCoste_ts}</div>` : ''}
           </div>
         </div>
       </div>
@@ -1145,7 +1146,12 @@ window.showEditPanel = (p, isNuevo) => {
           <label>Año tarifa</label>
           <input type="text" id="fAño" value="${escHtml(t.Año||'')}">
         </div>
-      </div>
+        <div class="form-group">
+          <label>Últ. actualiz. P.Coste</label>
+          <div id="fPCosteTs" style="font-size:11px;color:var(--text2);padding:6px 0">
+            ${t.PCoste_ts ? '📅 ' + t.PCoste_ts : '— sin registrar —'}
+          </div>
+        </div>
 
       <hr style="border:none;border-top:1px solid var(--border);margin:8px 0 16px">
       <p style="font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:.08em;color:var(--text2);margin-bottom:12px">Condiciones comerciales</p>
@@ -1224,6 +1230,13 @@ function openPanel() {
 }
 
 function getFormData() {
+  const pcosteNuevo = document.getElementById('fPCoste').value.trim();
+  const pcosteAnterior = String(currentDoc?.P_COSTE || '').trim();
+  // Si cambió P.Coste, guardar la fecha de hoy
+  const hoy = new Date().toLocaleDateString('es-ES', {day:'2-digit', month:'2-digit', year:'numeric'});
+  const pcosteTs = (pcosteNuevo !== pcosteAnterior && pcosteNuevo !== '')
+    ? hoy
+    : (currentDoc?.PCoste_ts || '');
   return {
     Codigo:       document.getElementById('fCodigo').value.trim(),
     Nombre:       document.getElementById('fNombre').value.trim(),
@@ -1231,7 +1244,8 @@ function getFormData() {
     Familia:      document.getElementById('fFamilia').value,
     Año:          document.getElementById('fAño').value.trim(),
     PUNTOS:       document.getElementById('fPuntos').value.trim(),
-    P_COSTE:      document.getElementById('fPCoste').value.trim(),
+    P_COSTE:      pcosteNuevo,
+    PCoste_ts:    pcosteTs,
     MAX_DTO:      document.getElementById('fMaxDto').value.trim(),
     DC_PCT:       document.getElementById('fDcPct').value.trim(),
     PORTES:       document.getElementById('fPortes').value.trim(),
