@@ -611,10 +611,7 @@ tr:last-child td{border-bottom:none}
   </div><!-- /main-area -->
 </div><!-- /app-shell -->
 
-<!-- BOTON FLOTANTE REPARTOS -->
-<button id="btn-flotante-repartos" onclick="window._abrirRepartos&&window._abrirRepartos()"if(window._abrirRepartos){window._abrirRepartos();}else{alert('Cargando...');}" style="position:fixed;bottom:24px;right:24px;width:60px;height:60px;border-radius:50%;background:#e65100;color:#fff;border:none;font-size:26px;cursor:pointer;box-shadow:0 4px 16px rgba(230,81,0,.4);z-index:500;display:flex;align-items:center;justify-content:center;touch-action:manipulation">🚚</button>
-
-<button id="btn-flotante-fichaje" onclick="window._abrirFichajeRapido&&window._abrirFichajeRapido()"if(window._abrirFichajeRapido){window._abrirFichajeRapido();}else{alert('Cargando...');}" style="position:fixed;bottom:24px;left:24px;width:60px;height:60px;border-radius:50%;background:#1a6b2a;color:#fff;border:none;font-size:26px;cursor:pointer;box-shadow:0 4px 16px rgba(26,107,42,.4);z-index:500;display:flex;align-items:center;justify-content:center;touch-action:manipulation" title="Fichar">⏱️</button>
+<!-- botones flotantes eliminados en menu.html -->
 
 <div class="toast" id="toast"></div>
 
@@ -946,8 +943,10 @@ onAuthStateChanged(auth, (user) => {
 // ===== TABS =====
 function showTab(name) {
   ["presupuesto","lista","visitas","fichajes","repartos","incidencias","stats"].forEach(n => {
-    document.getElementById("tab-" + n).classList.toggle("active", n === name);
-    document.getElementById("tab-btn-" + n).classList.toggle("active", n === name);
+    const sec = document.getElementById("tab-" + n);
+    const btn = document.getElementById("tab-btn-" + n);
+    if(sec) sec.classList.toggle("active", n === name);
+    if(btn) btn.classList.toggle("active", n === name);
   });
   if (name === "lista") {
     cargarYMostrarLista();
@@ -5386,8 +5385,6 @@ async function imprimirFichasMultiples(aliasSelect, anio, mes, tipo, fechaRef) {
   setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); },1000);
 }
 </script>
-<button id="btn-flotante-incidencias" onclick="window._abrirIncidencias&&window._abrirIncidencias()" style="position:fixed;top:80px;right:24px;width:60px;height:60px;border-radius:50%;background:#c0392b;color:#fff;border:none;font-size:26px;cursor:pointer;box-shadow:0 4px 16px rgba(192,57,43,.4);z-index:500;display:flex;align-items:center;justify-content:center;touch-action:manipulation" title="Incidencias">⚠️</button>
-<!-- Elemento header-user oculto para compatibilidad con JS existente -->
 <span id="header-user" style="display:none"></span>
 </body>
 </html>
