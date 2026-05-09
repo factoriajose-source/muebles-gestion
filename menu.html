@@ -850,18 +850,6 @@ function abrirAuditoria(){
 }
 window.abrirAuditoria = abrirAuditoria;
 
-function toggleSidebar(){
-  document.getElementById("sidebar").classList.toggle("open");
-  document.getElementById("sidebar-overlay").classList.toggle("open");
-}
-window.toggleSidebar = toggleSidebar;
-
-function cerrarSidebar(){
-  document.getElementById("sidebar").classList.remove("open");
-  document.getElementById("sidebar-overlay").classList.remove("open");
-}
-window.cerrarSidebar = cerrarSidebar;
-
 function actualizarSidebar(name){
   var ini = name ? name.substring(0,2).toUpperCase() : "?";
   document.getElementById("sb-avatar").textContent = ini;
