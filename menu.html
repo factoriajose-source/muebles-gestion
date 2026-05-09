@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>🪑 Meres · Gestión</title>
+<script>
+window.onerror = function(msg, src, line, col, err) {
+  var d = document.getElementById('_debug_err');
+  if(!d){ d = document.createElement('div'); d.id='_debug_err';
+    d.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#c0392b;color:#fff;font-size:12px;padding:8px 12px;z-index:99999;font-family:monospace';
+    document.body.appendChild(d); }
+  d.textContent = 'ERROR línea '+line+': '+msg;
+};
+</script>
 <!-- Icono en pestaña del navegador (favicon emoji) -->
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪑</text></svg>">
 <!-- Icono al guardar en iPhone/iPad -->
