@@ -155,6 +155,18 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
             <span class="total-pres" id="pres-total">0 €</span>
           </div>
           <div style="font-size:11px;color:#bbb;margin-top:3px;text-align:right">Precios orientativos</div>
+          <div style="margin-top:8px;text-align:right">
+            <button id="btn-add-nota" onclick="toggleNotaPres()" title="Añadir nota para el cliente"
+              style="background:none;border:1.5px dashed #bbb;border-radius:6px;color:#aaa;font-size:12px;padding:3px 8px;cursor:pointer;width:100%">
+              + Añadir nota para el cliente
+            </button>
+          </div>
+          <div id="nota-pres-wrap" style="display:none;margin-top:6px">
+            <textarea id="nota-pres" rows="3" placeholder="Escribe aquí una nota o aclaración para el cliente..."
+              style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border:1.5px solid #ddd;border-radius:6px;font-family:inherit;resize:vertical;color:#333;background:#fafaf8"
+              oninput="this.style.borderColor='#7A9A01'"></textarea>
+            <button onclick="quitarNotaPres()" style="background:none;border:none;color:#bbb;font-size:11px;cursor:pointer;padding:0;margin-top:2px">✕ Quitar nota</button>
+          </div>
         </div>
       </div>
     </div>
@@ -573,6 +585,24 @@ function calcPrecio(art,cat){
 function fmtEur(v){
   if(v===null||v===undefined||isNaN(v))return"---";
   return Math.round(v).toLocaleString("es-ES")+" €";
+}
+
+function toggleNotaPres(){
+  var wrap=document.getElementById("nota-pres-wrap");
+  var btn=document.getElementById("btn-add-nota");
+  wrap.style.display="block";
+  btn.style.display="none";
+  document.getElementById("nota-pres").focus();
+}
+function quitarNotaPres(){
+  document.getElementById("nota-pres").value="";
+  document.getElementById("nota-pres-wrap").style.display="none";
+  document.getElementById("btn-add-nota").style.display="block";
+}
+function getNotaPres(){
+  var wrap=document.getElementById("nota-pres-wrap");
+  if(!wrap||wrap.style.display==="none") return "";
+  return (document.getElementById("nota-pres").value||"").trim();
 }
 
 function showTab(t){
@@ -1243,7 +1273,10 @@ function ejecutarImpresion(){
       +"</tr></thead><tbody>"+filas+"</tbody>"
       +"<tfoot><tr><td colspan=\'3\' style=\'padding:10px 8px;text-align:right;font-weight:700;font-size:14px;border-top:2px solid #1a1714\'>TOTAL</td>"
       +"<td style=\'padding:10px 8px;text-align:right;font-weight:800;font-size:18px;color:"+st.color+";border-top:2px solid #1a1714\'>"+Math.round(total)+" €</td></tr></tfoot></table>"
-      +(pi===presConContenido.length-1?"<div style=\'margin-top:12px;font-size:11px;color:#aaa;text-align:center\'>Precios orientativos · Válido 14 días</div></div>":"</div>");
+      +(pi===presConContenido.length-1
+        ? (getNotaPres()?"<div style=\'margin-top:12px;padding:10px 12px;background:#f8f6f2;border-left:3px solid #7A9A01;border-radius:4px;font-size:12px;color:#444;white-space:pre-wrap\'>"+getNotaPres()+"</div>":"")
+          +"<div style=\'margin-top:10px;font-size:11px;color:#aaa;text-align:center\'>Precios orientativos · Válido 14 días</div></div>"
+        : "</div>");
   });
 
   // Recoger todos los modelos únicos de TODAS las opciones
