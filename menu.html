@@ -855,7 +855,8 @@ function logout() {
   lines = []; presupuestos = []; editingId = null; lineCounter = 0;
 }
 
-document.getElementById("btn-logout").addEventListener("click", logout);
+const _btnLogout = document.getElementById("btn-logout");
+if(_btnLogout) _btnLogout.addEventListener("click", logout);
 
 // Load vendedores first, then check session
 // ===== FIREBASE AUTH FLOW =====
@@ -5035,7 +5036,7 @@ function initApp() {
   // Only run once
   if (window._appInitialized) {
     // Just update user display
-    document.getElementById("header-user").textContent = currentUser;
+    const _hu = document.getElementById("header-user"); if(_hu) _hu.textContent = currentUser;
     const sel = document.getElementById("c-vendedor");
     if (sel) { sel.value = currentUser; sel.disabled = false; }
     return;
