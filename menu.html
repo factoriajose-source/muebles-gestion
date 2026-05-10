@@ -822,18 +822,9 @@ function navegar(tab, titulo){
   document.querySelectorAll(".sb-item").forEach(function(el){ el.classList.remove("active"); });
   var mn = document.getElementById("mn-"+tab);
   if(mn) mn.classList.add("active");
-  // Forzar scroll al top por todos los medios posibles
-  var mc = document.getElementById("main-content");
-  if(mc){ mc.scrollTop = 0; mc.scrollTo(0,0); }
-  document.documentElement.scrollTop = 0;
-  document.body.scrollTop = 0;
-  window.scrollTo({top:0, behavior:'instant'});
-  setTimeout(function(){
-    if(mc) mc.scrollTop = 0;
-  }, 50);
-  setTimeout(function(){
-    if(mc) mc.scrollTop = 0;
-  }, 300);
+  // Scroll a la sección activa
+  var sec = document.getElementById("tab-"+tab);
+  if(sec) sec.scrollIntoView({behavior:'instant', block:'start'});
   cerrarSidebar();
 }
 window.navegar = navegar;
