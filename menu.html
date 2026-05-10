@@ -1371,11 +1371,7 @@ function renderLines() {
         const lbl = document.createElement("span"); lbl.className = "cheslon-lbl"; lbl.style.pointerEvents = "none";
         lbl.textContent = "Chaise a la " + (val === "izq" ? "IZQUIERDA" : "DERECHA");
         opt.appendChild(optImg); opt.appendChild(lbl);
-        opt.addEventListener("click", () => {
-          console.log("Click cheslon lid="+l.id+" val="+val+" tipo="+(typeof l.id));
-          console.log("Todos los data-lid:", Array.from(document.querySelectorAll(".cheslon-opt")).map(e=>e.getAttribute("data-lid")));
-          setCheslon(l.id, val);
-        }); opts.appendChild(opt);
+        opt.addEventListener("click", () => setCheslon(l.id, val)); opts.appendChild(opt);
       });
       const msgDiv = document.createElement("div"); msgDiv.id = "cmsg-" + l.id; msgDiv.style.cssText = "margin-top:8px;font-size:13px";
       msgDiv.innerHTML = l.cheslon ? "<span style='color:#3b6d11;font-weight:600'>Chaise a la " + (l.cheslon==="izq"?"IZQUIERDA":"DERECHA") + " (visto de frente)</span>" : "<span style='color:#a32d2d'>Selecciona la posicion de la chaise</span>";
@@ -1454,7 +1450,16 @@ function loadToForm(pid) {
   clearForm(); editingId = p.id;
   const btnClear = document.getElementById("btn-clear");
   if(btnClear) { btnClear.textContent = "✕ Abandonar edición"; btnClear.className = "btn btn-danger"; }
-  lines = JSON.parse(JSON.stringify(p.lines)); lineCounter = lines.reduce((m,l) => Math.max(m,l.id), 0);
+  lines = JSON.parse(JSON.stringify(p.lines));
+  // Garantizar que cada línea tiene un id numérico único
+  let maxId = 0;
+  lines.forEach((l, i) => {
+    if (l.id === undefined || l.id === null || isNaN(Number(l.id))) {
+      l.id = i + 1;
+    }
+    if (Number(l.id) > maxId) maxId = Number(l.id);
+  });
+  lineCounter = maxId;
   document.getElementById("c-nombre").value = p.cliente.nombre||"";
   document.getElementById("c-tel").value = p.cliente.tel||"";
   document.getElementById("c-email").value = p.cliente.email||"";
