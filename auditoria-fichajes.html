@@ -659,21 +659,13 @@ async function ejecutarRevisionIncompletos(){
       if(!r) return; // sin fichaje ese día — no es "incompleto", es ausente
       if(r.especial) return; // día especial OK
 
-      var dd = new Date(fecha+"T12:00:00");
-      var esSab = dd.getDay()===6;
-      var tieneMañana = esSab ? !!(horario.ini_m_sab&&horario.fin_m_sab) : !!(horario.ini_m&&horario.fin_m);
-      var tieneTarde  = esSab ? !!(horario.ini_t_sab&&horario.fin_t_sab) : !!(horario.ini_t&&horario.fin_t);
-
       var ps = [];
-      if(tieneMañana){
-        if(r.ini_m && !r.fin_m) ps.push("falta salida mañana");
-        if(!r.ini_m && r.fin_m) ps.push("falta entrada mañana");
-      }
-      if(tieneTarde){
-        if(r.ini_t && !r.fin_t) ps.push("falta salida tarde");
-        if(!r.ini_t && r.fin_t) ps.push("falta entrada tarde");
-      }
-      if(ps.length) problemas.push({alias:v.alias, fecha:fecha, problemas:ps});
+      // Si tiene entrada pero no salida — incompleto, independientemente del horario contractual
+      if(r.ini_m && !r.fin_m) ps.push("falta salida mañana");
+      if(!r.ini_m && r.fin_m) ps.push("falta entrada mañana");
+      if(r.ini_t && !r.fin_t) ps.push("falta salida tarde");
+      if(!r.ini_t && r.fin_t) ps.push("falta entrada tarde");
+      if(ps.length) problemas.push({alias:v.alias, fecha:fecha, problemas:ps, vendedor:v});
     });
   });
 
@@ -740,6 +732,8 @@ async function corregirSalidas(){
       if(prob.indexOf("falta salida")<0) return; // solo salidas
       var turno = prob.indexOf("mañana")>=0 ? "fin_m" : "fin_t";
       var turnoFirmaOrigen = prob.indexOf("mañana")>=0 ? "firma_ini_m" : "firma_ini_t"; // firma del mismo turno misma entrada
+      var dd = new Date(p.fecha+"T12:00:00");
+      var esSab = dd.getDay()===6;
       var horaContrato = "";
       if(turno==="fin_m") horaContrato = esSab ? (horario.fin_m_sab||horario.fin_m||"") : (horario.fin_m||"");
       if(turno==="fin_t") horaContrato = esSab ? (horario.fin_t_sab||horario.fin_t||"") : (horario.fin_t||"");
