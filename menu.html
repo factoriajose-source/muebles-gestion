@@ -5478,7 +5478,9 @@ async function imprimirFichasMultiples(aliasSelect, anio, mes, tipo, fechaRef) {
     const nombreCompleto = ((vData.nombre||"") + " " + (vData.apellidos||"")).trim() || alias;
 
     let totalMins = 0;
-    let filas = registros.map(r => {
+
+    // Función para generar una fila
+    function generarFila(r) {
       const d2 = new Date(r.fecha + "T12:00:00");
       let mins = 0;
       if (r.ini_m && r.fin_m) { const [hI,mI]=r.ini_m.split(":").map(Number); const [hF,mF]=r.fin_m.split(":").map(Number); mins += (hF*60+mF)-(hI*60+mI); }
@@ -5492,38 +5494,98 @@ async function imprimirFichasMultiples(aliasSelect, anio, mes, tipo, fechaRef) {
         if (tipo_vb === "baja")     return "<div style='background:#fdecea;border:1px solid #c0392b;border-radius:3px;padding:2px 4px;font-size:8px;font-weight:700;color:#c0392b;text-align:center;line-height:1.3'>🤒<br>BAJA</div>";
         return "<span style='color:#ccc'>—</span>";
       };
-      return "<tr>"
+      const esSab = d2.getDay()===6;
+      const horIni_m = esSab?(horario.ini_m_sab||horario.ini_m||"—"):(horario.ini_m||"—");
+      const horFin_m = esSab?(horario.fin_m_sab||horario.fin_m||"—"):(horario.fin_m||"—");
+      const horIni_t = esSab?(horario.ini_t_sab||horario.ini_t||"—"):(horario.ini_t||"—");
+      const horFin_t = esSab?(horario.fin_t_sab||horario.fin_t||"—"):(horario.fin_t||"—");
+      return { html: "<tr>"
         + "<td style='font-weight:500;white-space:nowrap'>" + DIAS_MAP[d2.getDay()] + " " + fmtDate(r.fecha) + "</td>"
-        + "<td style='text-align:center'>" + (r.ini_m||"—") + "<br><small style='color:#888'>prev: " + (horario.ini_m||"—") + "</small></td>"
-        + "<td style='text-align:center'>" + (r.fin_m||"—") + "<br><small style='color:#888'>prev: " + (horario.fin_m||"—") + "</small></td>"
-        + "<td style='text-align:center'>" + (r.ini_t||"—") + "<br><small style='color:#888'>prev: " + (horario.ini_t||"—") + "</small></td>"
-        + "<td style='text-align:center'>" + (r.fin_t||"—") + "<br><small style='color:#888'>prev: " + (horario.fin_t||"—") + "</small></td>"
+        + "<td style='text-align:center'>" + (r.ini_m||"—") + "<br><small style='color:#888'>prev: " + horIni_m + "</small></td>"
+        + "<td style='text-align:center'>" + (r.fin_m||"—") + "<br><small style='color:#888'>prev: " + horFin_m + "</small></td>"
+        + "<td style='text-align:center'>" + (r.ini_t||"—") + "<br><small style='color:#888'>prev: " + horIni_t + "</small></td>"
+        + "<td style='text-align:center'>" + (r.fin_t||"—") + "<br><small style='color:#888'>prev: " + horFin_t + "</small></td>"
         + "<td style='text-align:center;font-weight:500'>" + horasTrab + "</td>"
         + "<td style='text-align:center'>" + celdaF("ini_m") + "</td>"
         + "<td style='text-align:center'>" + celdaF("fin_m") + "</td>"
         + "<td style='text-align:center'>" + celdaF("ini_t") + "</td>"
         + "<td style='text-align:center'>" + celdaF("fin_t") + "</td>"
-        + "</tr>";
-    }).join("");
+        + "</tr>", mins };
+    }
 
-    const totalHoras = Math.floor(totalMins/60) + "h " + (totalMins%60) + "m";
-
-    allPages += (allPages ? "<div style='page-break-before:always'></div>" : "")
-      + "<div style='border-bottom:2px solid #1a6b2a;margin-bottom:.75rem;padding-bottom:.5rem;display:flex;justify-content:space-between;align-items:flex-start'>"
+    const cabecera = "<div style='border-bottom:2px solid #1a6b2a;margin-bottom:.75rem;padding-bottom:.5rem;display:flex;justify-content:space-between;align-items:flex-start'>"
       + "<div><h1 style='font-size:16px;margin-bottom:4px'>" + titulo + "</h1><div style='font-size:11px;color:#666'>Meres Central de Compras S.L. | CIF: B74102807</div></div>"
-      + "<div style='text-align:right'><div style='font-size:13px;font-weight:700'>" + nombreCompleto + "</div><div style='font-size:11px;color:#666'>DNI: " + (vData.dni||"—") + " | Contrato: " + (vData.horas||"—") + "h/semana</div></div></div>"
-      + "<table style='width:100%;border-collapse:collapse;font-size:10px'>"
-      + "<thead><tr style='background:#1a6b2a;color:#fff'>"
+      + "<div style='text-align:right'><div style='font-size:13px;font-weight:700'>" + nombreCompleto + "</div><div style='font-size:11px;color:#666'>DNI: " + (vData.dni||"—") + " | Contrato: " + (vData.horas||"—") + "h/semana</div></div></div>";
+
+    const theadHtml = "<thead><tr style='background:#1a6b2a;color:#fff'>"
       + "<th style='padding:6px 4px'>Dia</th><th>Entrada Man</th><th>Salida Man</th><th>Entrada Tar</th><th>Salida Tar</th><th>Total</th>"
       + "<th style='width:80px'>Firma EM</th><th style='width:80px'>Firma SM</th><th style='width:80px'>Firma ET</th><th style='width:80px'>Firma ST</th>"
-      + "</tr></thead><tbody>" + filas + "</tbody></table>"
-      + "<div style='margin-top:.75rem;padding:8px 12px;background:#f0f7f0;border:1px solid #1a6b2a;border-radius:6px;display:inline-block;font-size:11px'>"
-      + (currentUser === "Jose Angel" ? "<strong>Total horas: " + totalHoras + "</strong>" : "") + "</div>"
-      + "<div style='display:flex;justify-content:space-between;margin-top:1rem'>"
+      + "</tr></thead>";
+
+    const cajetin = "<div style='display:flex;justify-content:space-between;margin-top:1rem'>"
       + "<div style='text-align:center'><div style='border:1px solid #333;height:45px;width:180px;margin-bottom:3px'></div><div style='font-size:9px;color:#666'>Firma y sello empresa</div></div>"
       + "<div style='text-align:center'><div style='border:1px solid #333;height:45px;width:150px;margin-bottom:3px'></div><div style='font-size:9px;color:#666'>Firma trabajador/a</div></div>"
       + "</div>"
       + "<p style='margin-top:.5rem;font-size:8px;color:#aaa'>Registro horario conforme al Real Decreto-ley 8/2019. Generado el " + fmtDate(nowMadridFull().fecha) + ".</p>";
+
+    let fichaHtml = "";
+
+    if (tipo === "semanas-mes") {
+      // Agrupar días por semana ISO (lunes a domingo)
+      function getISOWeekStart(fecha) {
+        const d = new Date(fecha + "T12:00:00");
+        const dow = d.getDay();
+        const diff = (dow === 0 ? -6 : 1 - dow);
+        const lunes = new Date(d);
+        lunes.setDate(d.getDate() + diff);
+        return lunes.toISOString().split("T")[0];
+      }
+      const semanas = {};
+      const semanasOrden = [];
+      registros.forEach(r => {
+        const ws = getISOWeekStart(r.fecha);
+        if (!semanas[ws]) { semanas[ws] = []; semanasOrden.push(ws); }
+        semanas[ws].push(r);
+      });
+      semanasOrden.sort();
+      let totalMesMins = 0;
+      fichaHtml = cabecera;
+      semanasOrden.forEach((ws, idx) => {
+        const dias = semanas[ws].sort((a,b) => a.fecha.localeCompare(b.fecha));
+        let semMins = 0;
+        const filasHtml = dias.map(r => {
+          const f = generarFila(r);
+          semMins += f.mins;
+          return f.html;
+        }).join("");
+        totalMesMins += semMins;
+        const semTotalStr = Math.floor(semMins/60) + "h " + (semMins%60) + "m";
+        const we = new Date(ws + "T12:00:00"); we.setDate(we.getDate()+6);
+        const weStr = we.toISOString().split("T")[0];
+        fichaHtml += "<div style='font-size:10px;font-weight:700;color:#1a6b2a;margin:"+(idx>0?"12px":"0")+"px 0 4px'>Semana del " + fmtDate(ws) + " al " + fmtDate(weStr) + "</div>"
+          + "<table style='width:100%;border-collapse:collapse;font-size:10px'>" + theadHtml
+          + "<tbody>" + filasHtml + "</tbody>"
+          + "<tfoot><tr><td colspan='5' style='padding:5px 4px;font-size:10px;color:#666;font-style:italic'>Total semana</td>"
+          + "<td style='padding:5px 4px;font-weight:700;color:#1a6b2a'>" + semTotalStr + "</td><td colspan='4'></td></tr></tfoot>"
+          + "</table>";
+      });
+      const totalMesStr = Math.floor(totalMesMins/60) + "h " + (totalMesMins%60) + "m";
+      fichaHtml += "<div style='margin-top:.75rem;padding:8px 12px;background:#f0f7f0;border:1px solid #1a6b2a;border-radius:6px;display:inline-block;font-size:11px'>"
+        + (currentUser === "Jose Angel" ? "<strong>Total mes: " + totalMesStr + "</strong>" : "") + "</div>"
+        + cajetin;
+    } else {
+      // Layout mensual — una sola tabla
+      const filas = registros.map(r => { const f = generarFila(r); return f.html; }).join("");
+      const totalHoras = Math.floor(totalMins/60) + "h " + (totalMins%60) + "m";
+      fichaHtml = cabecera
+        + "<table style='width:100%;border-collapse:collapse;font-size:10px'>" + theadHtml
+        + "<tbody>" + filas + "</tbody></table>"
+        + "<div style='margin-top:.75rem;padding:8px 12px;background:#f0f7f0;border:1px solid #1a6b2a;border-radius:6px;display:inline-block;font-size:11px'>"
+        + (currentUser === "Jose Angel" ? "<strong>Total horas: " + totalHoras + "</strong>" : "") + "</div>"
+        + cajetin;
+    }
+
+    allPages += (allPages ? "<div style='page-break-before:always'></div>" : "") + fichaHtml;
   }
 
   if (!allPages) { showToast("Sin fichajes para el periodo seleccionado"); return; }
