@@ -882,6 +882,10 @@ function actualizarSidebar(name){
   document.getElementById("sb-name").textContent = name || "—";
   var esAdmin = ["Jose Angel","Marisa","Javi","Kike"].includes(name);
   document.getElementById("sb-role").textContent = esAdmin ? "Administrador" : "Vendedor";
+  // Vacaciones solo para Jose Angel, Marisa y Javi
+  var puedeVacaciones = ["Jose Angel","Marisa","Javi"].includes(name);
+  var mnVac = document.getElementById("mn-vacaciones");
+  if(mnVac) mnVac.style.display = puedeVacaciones ? "" : "none";
   // Mostrar sección admin
   ["mn-sec-admin","mn-stats","mn-editor","mn-auditoria"].forEach(function(id){
     var el=document.getElementById(id);
@@ -3430,7 +3434,50 @@ function updateLoginGrid() {
     const btn = document.createElement("button");
     btn.className = "vendor-btn";
     btn.textContent = v;
-    btn.addEventListener("click", () => login(v));
+    btn.addEventListener("click", () => {
+      if(v === "Jose Angel"){
+        // Pregunta de seguridad — respuesta = día del mes actual
+        const old = document.getElementById("security-overlay");
+        if(old) old.remove();
+        const overlay = document.createElement("div");
+        overlay.id = "security-overlay";
+        overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:1rem";
+        const box = document.createElement("div");
+        box.style.cssText = "background:#fff;border-radius:14px;padding:1.5rem;width:100%;max-width:300px;text-align:center";
+        box.innerHTML = "<div style='font-size:32px;margin-bottom:8px'>🔐</div>"
+          +"<div style='font-size:15px;font-weight:700;margin-bottom:16px'>??</div>";
+        const inp = document.createElement("input");
+        inp.type = "password";
+        inp.inputMode = "numeric";
+        inp.maxLength = 2;
+        inp.placeholder = "••";
+        inp.style.cssText = "width:100%;padding:14px;border:1.5px solid #ccc;border-radius:8px;font-size:24px;text-align:center;letter-spacing:.3em;margin-bottom:12px;-webkit-appearance:none;font-family:inherit";
+        const errDiv = document.createElement("div");
+        errDiv.style.cssText = "color:#a32d2d;font-size:12px;margin-bottom:10px;display:none";
+        errDiv.textContent = "Respuesta incorrecta";
+        const btnOk = document.createElement("button");
+        btnOk.style.cssText = "width:100%;padding:12px;background:#1a6b2a;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px";
+        btnOk.textContent = "Entrar";
+        const btnCancel = document.createElement("button");
+        btnCancel.style.cssText = "width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;background:#fff;font-size:13px;cursor:pointer";
+        btnCancel.textContent = "Cancelar";
+        btnCancel.addEventListener("click", ()=>overlay.remove());
+        function verificar(){
+          const respuesta = inp.value.trim();
+          const diaHoy = String(new Date().getDate());
+          if(respuesta === diaHoy){ overlay.remove(); login("Jose Angel"); }
+          else { errDiv.style.display="block"; inp.value=""; inp.focus(); }
+        }
+        btnOk.addEventListener("click", verificar);
+        inp.addEventListener("keydown", e=>{ if(e.key==="Enter") verificar(); });
+        box.appendChild(inp); box.appendChild(errDiv); box.appendChild(btnOk); box.appendChild(btnCancel);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        setTimeout(()=>inp.focus(), 100);
+      } else {
+        login(v);
+      }
+    });
     grid.appendChild(btn);
   });
 }
@@ -5467,5 +5514,73 @@ async function imprimirFichasMultiples(aliasSelect, anio, mes, tipo, fechaRef) {
 }
 </script>
 <span id="header-user" style="display:none"></span>
+
+<!-- BOTÓN FLOTANTE FICHAJE -->
+<button id="btn-flotante-fichaje" onclick="window._abrirFichajeRapido&&window._abrirFichajeRapido()" style="position:fixed;bottom:24px;left:24px;width:60px;height:60px;border-radius:50%;background:#1a6b2a;color:#fff;border:none;font-size:26px;cursor:pointer;box-shadow:0 4px 16px rgba(26,107,42,.4);z-index:500;display:flex;align-items:center;justify-content:center;touch-action:manipulation" title="Fichar">⏱️</button>
+
+<script>
+window._abrirFichajeRapido = function() {
+  const old = document.getElementById("fichaje-rapido-overlay");
+  if (old) old.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "fichaje-rapido-overlay";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem";
+  const box = document.createElement("div");
+  box.style.cssText = "background:#fff;border-radius:16px;padding:2rem;width:100%;max-width:380px;text-align:center";
+  const icon = document.createElement("div");
+  icon.style.cssText = "font-size:44px;margin-bottom:.5rem";
+  icon.textContent = "⏱️";
+  const title = document.createElement("div");
+  title.style.cssText = "font-size:20px;font-weight:700;margin-bottom:6px";
+  title.textContent = "Fichaje";
+  const sub = document.createElement("div");
+  sub.style.cssText = "font-size:13px;color:#888;margin-bottom:1.5rem";
+  sub.textContent = "Introduce tu DNI para fichar";
+  const dniLabel = document.createElement("label");
+  dniLabel.style.cssText = "font-size:12px;color:#666;display:block;margin-bottom:4px;text-align:left";
+  dniLabel.textContent = "DNI / NIE";
+  const dniInput = document.createElement("input");
+  dniInput.type = "text";
+  dniInput.placeholder = "Ej: 12345678A";
+  dniInput.maxLength = 10;
+  dniInput.style.cssText = "width:100%;padding:14px;border:1px solid #ccc;border-radius:8px;font-size:18px;text-align:center;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;-webkit-appearance:none;font-family:inherit";
+  dniInput.addEventListener("input", function() { this.value = this.value.toUpperCase(); });
+  const errDiv = document.createElement("div");
+  errDiv.style.cssText = "color:#a32d2d;font-size:13px;margin-bottom:10px;display:none";
+  const btnOk = document.createElement("button");
+  btnOk.style.cssText = "width:100%;padding:14px;background:#1a6b2a;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;touch-action:manipulation;margin-bottom:8px";
+  btnOk.textContent = "Continuar";
+  const btnCancel = document.createElement("button");
+  btnCancel.style.cssText = "width:100%;padding:11px;border:1px solid #ccc;border-radius:8px;background:#fff;font-size:14px;cursor:pointer;touch-action:manipulation";
+  btnCancel.textContent = "Cancelar";
+  btnCancel.addEventListener("click", () => overlay.remove());
+  async function verificarDNI() {
+    const dni = dniInput.value.trim().toUpperCase();
+    if (!dni || dni.length < 8) { errDiv.textContent = "Introduce un DNI valido"; errDiv.style.display = "block"; return; }
+    const vendedor = vendedoresData.find(v => v.dni && v.dni.toUpperCase().replace(/[-\s]/g,"") === dni.replace(/[-\s]/g,"") && v.activo !== false);
+    if (!vendedor) { errDiv.textContent = "DNI no encontrado. Contacta con el responsable."; errDiv.style.display = "block"; dniInput.value = ""; dniInput.focus(); return; }
+    errDiv.style.display = "none";
+    btnOk.textContent = "Verificando..."; btnOk.disabled = true;
+    const geo = await getGeolocalizacion().catch(()=>null);
+    const { fecha } = nowMadridFull();
+    let fichajeVendedor = { alias: vendedor.alias, fecha, ini_m:null, fin_m:null, ini_t:null, fin_t:null, firma_ini_m:null, firma_fin_m:null, firma_ini_t:null, firma_fin_t:null };
+    try {
+      const sn = await getDoc(doc(db, "fichajes", fichajeKey(vendedor.alias, fecha)));
+      if (sn.exists()) fichajeVendedor = sn.data();
+    } catch(e) {}
+    overlay.remove();
+    mostrarFichajeRapidoModal(vendedor, fichajeVendedor, geo);
+  }
+  btnOk.addEventListener("click", verificarDNI);
+  dniInput.addEventListener("keydown", function(e) { if (e.key === "Enter") verificarDNI(); });
+  box.appendChild(icon); box.appendChild(title); box.appendChild(sub);
+  box.appendChild(dniLabel); box.appendChild(dniInput); box.appendChild(errDiv);
+  box.appendChild(btnOk); box.appendChild(btnCancel);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", e => { if (e.target === overlay) overlay.remove(); });
+  setTimeout(() => dniInput.focus(), 100);
+};
+</script>
 </body>
 </html>
