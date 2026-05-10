@@ -817,21 +817,14 @@ function navegarNuevoPresupuesto(){
 window.navegarNuevoPresupuesto = navegarNuevoPresupuesto;
 
 function navegar(tab, titulo){
-  var dbg=document.getElementById('_nav_dbg');
-  if(!dbg){dbg=document.createElement('div');dbg.id='_nav_dbg';
-    dbg.style.cssText='position:fixed;top:0;left:0;right:0;background:#c4571a;color:#fff;font-size:12px;padding:6px;z-index:99999;font-family:monospace';
-    document.body.appendChild(dbg);}
-  dbg.textContent='navegar('+tab+') showTab existe:'+(typeof showTab)+' window.showTab:'+(typeof window.showTab);
-  setTimeout(function(){
-    var sec=document.getElementById('tab-'+tab);
-    dbg.textContent='tab-'+tab+' existe:'+(!!sec)+' clases:'+(sec?sec.className:'?')+' display:'+(sec?getComputedStyle(sec).display:'?');
-    setTimeout(function(){dbg.style.display='none';},5000);
-  },200);
   showTab(tab);
   document.getElementById("main-title").textContent = titulo;
   document.querySelectorAll(".sb-item").forEach(function(el){ el.classList.remove("active"); });
   var mn = document.getElementById("mn-"+tab);
   if(mn) mn.classList.add("active");
+  // Scroll al top del contenido
+  var mc = document.getElementById("main-content");
+  if(mc) mc.scrollTop = 0;
   cerrarSidebar();
 }
 window.navegar = navegar;
@@ -4188,9 +4181,8 @@ let REPARTIDORES_FIJOS = ["ALEX","ANTONIO_CONFO","CLEO","DARWIN","EDISON","JAVIE
 
 async function initRepartos() {
   const cont = document.getElementById("repartos-content");
-  console.log("initRepartos llamado, cont=", cont, "display=", cont ? getComputedStyle(cont.parentElement).display : "?");
   if(!cont) return;
-  cont.innerHTML = "<div class='card'><p style='padding:1rem;color:#185fa5;font-weight:600'>⏳ Cargando repartos...</p></div>";
+  cont.innerHTML = "<div class='spinner'>Cargando repartos...</div>";
   try {
     const sn = await getDocs(collection(db, "repartos"));
     const repartos = [];
