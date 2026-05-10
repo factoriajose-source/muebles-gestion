@@ -1058,7 +1058,7 @@ function showTab(name) {
       const printAlias = document.getElementById("print-alias");
       if (printAlias) {
         printAlias.innerHTML = "<option value='all'>Todos los vendedores</option>";
-        VENDORS.forEach(v => {
+        VENDORS.filter(v => v !== "Jose Angel").forEach(v => {
           const o = document.createElement("option");
           o.value = v; o.textContent = v;
           printAlias.appendChild(o);
@@ -1659,7 +1659,7 @@ function initVisitas() {
     const printAlias = document.getElementById("print-alias");
     if (printAlias) {
       printAlias.innerHTML = "<option value='all'>Todos los vendedores</option>";
-      VENDORS.forEach(v => {
+      VENDORS.filter(v => v !== "Jose Angel").forEach(v => {
         const o = document.createElement("option"); o.value=v; o.textContent=v;
         printAlias.appendChild(o);
       });
@@ -5363,9 +5363,10 @@ window._btnPrintMes = async function() {
 };
 window._btnPrintSemana = async function() {
   const aliasSelect = document.getElementById("print-alias") ? document.getElementById("print-alias").value : "all";
-  const fechaRef = nowMadridFull().fecha;
-  const anio = fechaRef.slice(0,4);
-  const mes = fechaRef.slice(5,7);
+  const mes  = document.getElementById("print-mes-sel")  ? document.getElementById("print-mes-sel").value  : nowMadridFull().fecha.slice(5,7);
+  const anio = document.getElementById("print-anio-sel") ? document.getElementById("print-anio-sel").value : nowMadridFull().fecha.slice(0,4);
+  // Usar el primer día del mes seleccionado como referencia de semana
+  const fechaRef = anio + "-" + mes + "-01";
   showToast("Generando ficha semanal...");
   await imprimirFichasMultiples(aliasSelect, anio, mes, "semana", fechaRef);
 };
@@ -5393,6 +5394,9 @@ async function imprimirFichasMultiples(aliasSelect, anio, mes, tipo, fechaRef) {
       .filter(v => v.activo !== false && v.alias !== "Jose Angel")
       .map(v => v.alias)
       .sort();
+  } else if (aliasSelect === "Jose Angel") {
+    showToast("Jose Angel no tiene ficha de fichajes");
+    return;
   } else {
     vendorsToPrint = [aliasSelect];
   }
