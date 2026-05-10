@@ -817,6 +817,12 @@ function navegarNuevoPresupuesto(){
 window.navegarNuevoPresupuesto = navegarNuevoPresupuesto;
 
 function navegar(tab, titulo){
+  var dbg=document.getElementById('_nav_dbg');
+  if(!dbg){dbg=document.createElement('div');dbg.id='_nav_dbg';
+    dbg.style.cssText='position:fixed;top:0;left:0;right:0;background:#c4571a;color:#fff;font-size:12px;padding:6px;z-index:99999;font-family:monospace';
+    document.body.appendChild(dbg);}
+  dbg.textContent='navegar('+tab+') showTab existe:'+(typeof showTab)+' window.showTab:'+(typeof window.showTab);
+  setTimeout(function(){dbg.style.display='none';},4000);
   showTab(tab);
   document.getElementById("main-title").textContent = titulo;
   document.querySelectorAll(".sb-item").forEach(function(el){ el.classList.remove("active"); });
