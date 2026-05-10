@@ -829,32 +829,44 @@ window.navegar = navegar;
 
 function abrirSelector(){
   if(!currentUser){ showToast("Identifícate primero"); return; }
-  window.open("selector-tarifas.html?usuario="+encodeURIComponent(currentUser),"_blank");
+  var url="selector-tarifas.html?usuario="+encodeURIComponent(currentUser);
+  var a=document.createElement("a");
+  a.href=url; a.target="_blank"; a.rel="noopener";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
   cerrarSidebar();
 }
 window.abrirSelector = abrirSelector;
 
 function abrirProveedoresMenu(){
   if(!currentUser){ showToast("Identifícate primero"); return; }
-  window.open("proveedores.html?usuario="+encodeURIComponent(currentUser),"_blank");
+  var url="proveedores.html?usuario="+encodeURIComponent(currentUser);
+  var a=document.createElement("a");
+  a.href=url; a.target="_blank"; a.rel="noopener";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
   cerrarSidebar();
 }
 window.abrirProveedoresMenu = abrirProveedoresMenu;
 
 function abrirVacaciones(){
-  window.open("vacaciones.html","_blank");
+  var a=document.createElement("a");
+  a.href="vacaciones.html"; a.target="_blank"; a.rel="noopener";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
   cerrarSidebar();
 }
 window.abrirVacaciones = abrirVacaciones;
 
 function abrirEditor(){
-  window.open("editor-fichajes.html","_blank");
+  var a=document.createElement("a");
+  a.href="editor-fichajes.html"; a.target="_blank"; a.rel="noopener";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
   cerrarSidebar();
 }
 window.abrirEditor = abrirEditor;
 
 function abrirAuditoria(){
-  window.open("auditoria-fichajes.html","_blank");
+  var a=document.createElement("a");
+  a.href="auditoria-fichajes.html"; a.target="_blank"; a.rel="noopener";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
   cerrarSidebar();
 }
 window.abrirAuditoria = abrirAuditoria;
