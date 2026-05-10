@@ -5517,7 +5517,7 @@ async function imprimirFichasMultiples(aliasSelect, anio, mes, tipo, fechaRef) {
       totalMins += mins;
       const horasTrab = mins > 0 ? Math.floor(mins/60) + "h " + (mins%60) + "m" : "—";
       const tipo_vb = diasVacBaja[r.fecha] || (r.especial === "VAC" ? "vacacion" : r.especial === "BAJA" ? "baja" : null);
-      if(alias==="Elisa") console.log("generarFila",r.fecha,"diasVacBaja[fecha]=",diasVacBaja[r.fecha],"tipo_vb=",tipo_vb);
+      if(alias==="Elisa" && tipo_vb) console.log("celdaF ini_m:", r.firma_ini_m?"tiene firma":"sin firma", "tipo_vb=",tipo_vb);
       const celdaF = (campo) => {
         if (r["firma_"+campo]) return "<img src='" + r["firma_"+campo] + "' style='height:32px;max-width:80px;object-fit:contain'>";
         if (tipo_vb === "vacacion") return "<div style='background:#e8f5ee;border:1px solid #2d7a4f;border-radius:3px;padding:2px 4px;font-size:8px;font-weight:700;color:#2d7a4f;text-align:center;line-height:1.3'>🏖️<br>VAC.</div>";
