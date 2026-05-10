@@ -5463,8 +5463,7 @@ async function imprimirFichasMultiples(aliasSelect, anio, mes, tipo, fechaRef) {
       });
     }
 
-    console.log("VAC para "+alias+": total vacDocs="+vacDocs.length, "match="+vacDocs.filter(r=>norm2(r.alias)===norm2(alias)).length, "ejemplo="+(vacDocs[0]?JSON.stringify(vacDocs[0]):"-"));
-    const diasVacBaja = {};
+    let diasVacBaja = {};
     vacDocs.filter(r => norm2(r.alias) === norm2(alias) || norm2(r.alias) === norm2(vData.nombre||"") ).forEach(r => {
       let cur = new Date(r.fechaIni + "T12:00:00");
       const fin = new Date(r.fechaFin + "T12:00:00");
@@ -5476,7 +5475,6 @@ async function imprimirFichasMultiples(aliasSelect, anio, mes, tipo, fechaRef) {
         cur.setDate(cur.getDate()+1);
       }
     });
-    console.log("diasVacBaja para "+alias+":", JSON.stringify(diasVacBaja));
 
     // Añadir días de vac/baja sin fichaje en el rango
     Object.keys(diasVacBaja).forEach(fs => {
