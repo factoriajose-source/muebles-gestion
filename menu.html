@@ -5365,10 +5365,9 @@ window._btnPrintSemana = async function() {
   const aliasSelect = document.getElementById("print-alias") ? document.getElementById("print-alias").value : "all";
   const mes  = document.getElementById("print-mes-sel")  ? document.getElementById("print-mes-sel").value  : nowMadridFull().fecha.slice(5,7);
   const anio = document.getElementById("print-anio-sel") ? document.getElementById("print-anio-sel").value : nowMadridFull().fecha.slice(0,4);
-  // Usar el primer día del mes seleccionado como referencia de semana
-  const fechaRef = anio + "-" + mes + "-01";
   showToast("Generando ficha semanal...");
-  await imprimirFichasMultiples(aliasSelect, anio, mes, "semana", fechaRef);
+  // Pasar el mes completo — la función generará una página por semana
+  await imprimirFichasMultiples(aliasSelect, anio, mes, "semanas-mes", null);
 };
 window._btnPrintDia = function() {
   const fecha = document.getElementById("panel-fecha") && document.getElementById("panel-fecha").value
@@ -5418,6 +5417,9 @@ async function imprimirFichasMultiples(aliasSelect, anio, mes, tipo, fechaRef) {
 
     if (tipo === "mes") {
       registros = registros.filter(r => r.fecha && r.fecha.startsWith(anio + "-" + mes));
+    } else if (tipo === "semanas-mes") {
+      // Mostrar todos los registros del mes completo — igual que mes pero con layout semanal
+      registros = registros.filter(r => r.fecha && r.fecha.startsWith(anio + "-" + mes));
     } else if (tipo === "semana" && fechaRef) {
       const d0 = new Date(fechaRef + "T12:00:00");
       const start = new Date(d0);
@@ -5450,6 +5452,7 @@ async function imprimirFichasMultiples(aliasSelect, anio, mes, tipo, fechaRef) {
       if (registros.find(r => r.fecha === fs)) return;
       let enRango = false;
       if (tipo === "mes" && fs.startsWith(anio + "-" + mes)) enRango = true;
+      else if (tipo === "semanas-mes" && fs.startsWith(anio + "-" + mes)) enRango = true;
       else if (tipo === "semana" && fechaRef) {
         const d0 = new Date(fechaRef + "T12:00:00");
         const start = new Date(d0);
@@ -5469,7 +5472,7 @@ async function imprimirFichasMultiples(aliasSelect, anio, mes, tipo, fechaRef) {
 
     registros.sort((a,b) => a.fecha.localeCompare(b.fecha));
 
-    const titulo = tipo === "mes"
+    const titulo = (tipo === "mes" || tipo === "semanas-mes")
       ? "REGISTRO HORARIO — " + MESES_MAP[parseInt(mes)] + " " + anio
       : "REGISTRO HORARIO — SEMANA";
     const nombreCompleto = ((vData.nombre||"") + " " + (vData.apellidos||"")).trim() || alias;
