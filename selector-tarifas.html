@@ -511,7 +511,15 @@ function initFirebase(){
 
   // Si viene ?usuario=Alias en la URL (desde menu.html), saltar el login directamente
   // Igual que proveedores.html — sin comprobar Firebase Auth
-  var urlAlias=(new URLSearchParams(window.location.search)).get("usuario")||"";
+  var urlAlias=(new URLSearchParams(window.location.search)).get("usuario")
+              || localStorage.getItem("meres_usuario_actual")
+              || "";
+  // DEBUG visible en móvil — borrar después
+  var dbg=document.createElement("div");
+  dbg.style.cssText="position:fixed;bottom:0;left:0;right:0;background:#185fa5;color:#fff;font-size:11px;padding:6px;z-index:99999;font-family:monospace";
+  dbg.textContent="urlAlias=["+urlAlias+"] url="+window.location.href.substring(0,80);
+  document.body.appendChild(dbg);
+
   if(urlAlias){
     VENDEDOR_ACTUAL={alias:urlAlias, nombre:urlAlias};
     document.getElementById("loginBox").style.display="none";
