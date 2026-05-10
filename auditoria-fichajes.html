@@ -96,9 +96,40 @@
           </div>
           <button class="btn btn-primary" id="btnAnalizar" onclick="analizar()">🔍 Analizar</button>
           <button class="btn btn-green no-print" id="btnPrint" onclick="window.print()" disabled>🖨️ Imprimir PDF</button>
-          
+          <button class="btn no-print" id="btnRevisarIncompletos" onclick="abrirRevisarIncompletos()" style="background:#8e44ad;color:#fff;border-color:#8e44ad">⚠️ Revisar fichajes incompletos</button>
         </div>
         <div id="status"></div>
+      </div>
+
+      <!-- PANEL REVISAR INCOMPLETOS -->
+      <div class="card" id="panelIncompletos" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <h2 style="margin-bottom:0">⚠️ Fichajes incompletos</h2>
+          <button class="btn btn-gray no-print" onclick="document.getElementById('panelIncompletos').style.display='none'">✕ Cerrar</button>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">
+          <div>
+            <label style="font-size:12px;color:#666;display:block;margin-bottom:3px">Mes</label>
+            <select id="incMes" style="padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px">
+              <option value="01">Enero</option><option value="02">Febrero</option>
+              <option value="03">Marzo</option><option value="04">Abril</option>
+              <option value="05">Mayo</option><option value="06">Junio</option>
+              <option value="07">Julio</option><option value="08">Agosto</option>
+              <option value="09">Septiembre</option><option value="10">Octubre</option>
+              <option value="11">Noviembre</option><option value="12">Diciembre</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:#666;display:block;margin-bottom:3px">Año</label>
+            <select id="incAnio" style="padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px">
+              <option value="2025">2025</option>
+              <option value="2026" selected>2026</option>
+              <option value="2027">2027</option>
+            </select>
+          </div>
+          <button class="btn" onclick="ejecutarRevisionIncompletos()" style="background:#8e44ad;color:#fff;border-color:#8e44ad">🔍 Revisar</button>
+        </div>
+        <div id="incResult"><p style="color:#888;font-size:13px">Selecciona mes y año y pulsa Revisar.</p></div>
       </div>
 
       <!-- MENSAJES — visible nada más entrar -->
@@ -591,6 +622,101 @@ function borrarTodosMensajes() {
     });
     Promise.all(proms).then(function() { cargarMensajes(); });
   });
+function abrirRevisarIncompletos(){
+  var panel = document.getElementById("panelIncompletos");
+  panel.style.display = "block";
+  // Poner mes actual por defecto
+  var hoy = new Date();
+  document.getElementById("incMes").value = String(hoy.getMonth()+1).padStart(2,"0");
+  document.getElementById("incAnio").value = String(hoy.getFullYear());
+  panel.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+async function ejecutarRevisionIncompletos(){
+  var mes  = document.getElementById("incMes").value;
+  var anio = document.getElementById("incAnio").value;
+  var res  = document.getElementById("incResult");
+  res.innerHTML = "<p style='color:#888;font-size:13px'>⏳ Revisando "+mes+"/"+anio+"... puede tardar unos segundos.</p>";
+
+  // Días del mes
+  var diasEnMes = new Date(parseInt(anio), parseInt(mes), 0).getDate();
+  var fechas = [];
+  for(var d=1; d<=diasEnMes; d++){
+    var f = anio+"-"+mes+"-"+String(d).padStart(2,"0");
+    if(f >= new Date().toISOString().split("T")[0]) break; // no chequear días futuros ni hoy
+    fechas.push(f);
+  }
+
+  // Cargar trabajadores
+  var trabSnapshot = await db.collection("vendedores").get();
+  var trabajadores = [];
+  trabSnapshot.forEach(function(d){ var v=d.data(); if(v.activo!==false) trabajadores.push(v); });
+
+  // Cargar todos los fichajes del mes de una vez
+  var prefijo = anio+"-"+mes;
+  var fichSnapshot = await db.collection("fichajes")
+    .where("fecha",">=",prefijo+"-01")
+    .where("fecha","<=",prefijo+"-31")
+    .get();
+  var fichajesMap = {};
+  fichSnapshot.forEach(function(d){
+    var r=d.data();
+    fichajesMap[(r.alias||"")+"_"+(r.fecha||"")] = r;
+  });
+
+  // Revisar
+  var problemas = [];
+  trabajadores.forEach(function(v){
+    var horario = v.horario || {};
+    fechas.forEach(function(fecha){
+      var r = fichajesMap[v.alias+"_"+fecha];
+      if(!r) return; // sin fichaje ese día — no es "incompleto", es ausente
+      if(r.especial) return; // día especial OK
+
+      var dd = new Date(fecha+"T12:00:00");
+      var esSab = dd.getDay()===6;
+      var tieneMañana = esSab ? !!(horario.ini_m_sab&&horario.fin_m_sab) : !!(horario.ini_m&&horario.fin_m);
+      var tieneTarde  = esSab ? !!(horario.ini_t_sab&&horario.fin_t_sab) : !!(horario.ini_t&&horario.fin_t);
+
+      var ps = [];
+      if(tieneMañana){
+        if(r.ini_m && !r.fin_m) ps.push("falta salida mañana");
+        if(!r.ini_m && r.fin_m) ps.push("falta entrada mañana");
+      }
+      if(tieneTarde){
+        if(r.ini_t && !r.fin_t) ps.push("falta salida tarde");
+        if(!r.ini_t && r.fin_t) ps.push("falta entrada tarde");
+      }
+      if(ps.length) problemas.push({alias:v.alias, fecha:fecha, problemas:ps});
+    });
+  });
+
+  // Mostrar resultado
+  if(!problemas.length){
+    res.innerHTML = "<div style='background:#eaf3de;color:#3b6d11;border-radius:8px;padding:14px;font-size:13px'>✅ Sin fichajes incompletos en "+mes+"/"+anio+"</div>";
+    return;
+  }
+
+  var h = "<div style='font-size:13px;color:#666;margin-bottom:10px'><strong>"+problemas.length+" fichaje(s) incompleto(s)</strong> encontrados en "+mes+"/"+anio+":</div>";
+  // Agrupar por trabajador
+  var porTrabajador = {};
+  problemas.forEach(function(p){
+    if(!porTrabajador[p.alias]) porTrabajador[p.alias]=[];
+    porTrabajador[p.alias].push(p);
+  });
+  Object.keys(porTrabajador).sort().forEach(function(alias){
+    h += "<div style='border:1px solid #f0c0c0;border-radius:8px;padding:10px 14px;margin-bottom:8px;border-left:4px solid #c0392b'>";
+    h += "<div style='font-weight:700;font-size:14px;margin-bottom:6px;color:#c0392b'>👤 "+alias+"</div>";
+    porTrabajador[alias].forEach(function(p){
+      var dd = new Date(p.fecha+"T12:00:00");
+      var dias=["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+      h += "<div style='font-size:12px;padding:4px 0;border-bottom:1px solid #f5e0e0'>"
+        +"<span style='color:#888;min-width:100px;display:inline-block'>"+dias[dd.getDay()]+" "+p.fecha.split("-").reverse().join("/")+"</span> "
+        +"<span style='color:#c0392b'>"+p.problemas.join(", ")+"</span></div>";
+    });
+    h += "</div>";
+  });
+  res.innerHTML = h;
 }
 </script>
 </body>
