@@ -804,10 +804,12 @@ function toggleSidebar(){
   document.getElementById("sidebar").classList.toggle("open");
   document.getElementById("sidebar-overlay").classList.toggle("open");
 }
+window.toggleSidebar = toggleSidebar;
 function cerrarSidebar(){
   document.getElementById("sidebar").classList.remove("open");
   document.getElementById("sidebar-overlay").classList.remove("open");
 }
+window.cerrarSidebar = cerrarSidebar;
 function navegarNuevoPresupuesto(){
   if(editingId && !confirm("¿Abandonar la edición del presupuesto actual?")) return;
   clearForm();
