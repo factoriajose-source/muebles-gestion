@@ -1251,8 +1251,11 @@ function removeLine(id) {
 }
 
 function setCheslon(id, val) {
-  lines.forEach(l => { if (l.id === id) l.cheslon = val; });
-  document.querySelectorAll(".copt-id" + id).forEach(el => el.classList.toggle("sel", el.getAttribute("data-val") === val));
+  lines.forEach(l => { if (String(l.id) === String(id)) l.cheslon = val; });
+  // Usar data-lid para seleccionar SOLO las opciones de esta línea exacta
+  document.querySelectorAll(".cheslon-opt[data-lid='" + id + "']").forEach(el => {
+    el.classList.toggle("sel", el.getAttribute("data-val") === val);
+  });
   const msg = document.getElementById("cmsg-" + id);
   if (msg) msg.innerHTML = "<span style='color:#3b6d11;font-weight:600'>Chaise a la " + (val === "izq" ? "IZQUIERDA" : "DERECHA") + " (visto de frente)</span>";
 }
@@ -1360,7 +1363,8 @@ function renderLines() {
       const opts = document.createElement("div"); opts.className = "cheslon-opts";
       ["izq","der"].forEach(val => {
         const opt = document.createElement("div");
-        opt.className = "cheslon-opt copt-id" + l.id + (l.cheslon === val ? " sel" : "");
+        opt.className = "cheslon-opt" + (l.cheslon === val ? " sel" : "");
+        opt.setAttribute("data-lid", String(l.id));
         opt.setAttribute("data-val", val);
         const optImg = document.createElement("img"); optImg.src = val === "izq" ? IMG_IZQ : IMG_DER;
         optImg.style.cssText = "width:110px;height:85px;object-fit:contain;pointer-events:none";
