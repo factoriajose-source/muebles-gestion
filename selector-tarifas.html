@@ -103,6 +103,7 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
   <button class="tab-btn" id="tb-importar-filas" onclick="showTab('importar-filas')">📋 Importar formato filas</button>
   <button class="tab-btn" id="tb-tarifas" onclick="showTab('tarifas')">Tarifas guardadas</button>
   <button class="tab-btn" id="tb-imagenes" onclick="showTab('imagenes')" style="background:#2856c8;color:white;border-color:#2856c8">🖼️ Cargar Imagenes</button>
+  <button class="tab-btn" id="tb-editar" onclick="showTab('editar')" style="background:#8B0000;color:white;border-color:#8B0000">✏️ Editar Tarifas</button>
 </div>
 
 <!-- TAB SELECTOR -->
@@ -449,6 +450,49 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
   </div>
 </div>
 
+<!-- TAB EDITAR TARIFAS -->
+<div id="sec-editar" class="app" style="display:none">
+  <div class="card">
+    <div class="card-title">✏️ Editar Tarifas de Proveedor</div>
+    <p style="color:#aaa;font-size:13px;margin:0 0 14px">Selecciona un proveedor y un modelo para ver todos sus artículos en tabla. Puedes editar el nombre, los puntos o borrar artículos. Al terminar pulsa <strong>💾 Guardar cambios</strong>.</p>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
+      <div style="flex:1;min-width:180px">
+        <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px">Proveedor</label>
+        <select id="edit-prv" onchange="editarCargarModelos()" style="width:100%;padding:8px;border-radius:6px;border:1px solid #444;background:#2a2a2a;color:white;font-size:14px">
+          <option value="">-- Selecciona proveedor --</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:180px">
+        <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px">Modelo</label>
+        <select id="edit-mod" onchange="editarCargarTabla()" style="width:100%;padding:8px;border-radius:6px;border:1px solid #444;background:#2a2a2a;color:white;font-size:14px">
+          <option value="">-- Primero elige proveedor --</option>
+        </select>
+      </div>
+      <button id="edit-guardar-btn" onclick="editarGuardarCambios()" style="display:none;background:#2d7a4f;color:white;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer">💾 Guardar cambios</button>
+      <button id="edit-borrar-modelo-btn" onclick="editarBorrarModeloCompleto()" style="display:none;background:#8B0000;color:white;border:none;border-radius:8px;padding:10px 16px;font-size:14px;cursor:pointer">🗑️ Borrar modelo entero</button>
+    </div>
+
+    <div id="edit-info" style="color:#aaa;font-size:13px;margin-bottom:10px"></div>
+
+    <div id="edit-tabla-wrap" style="display:none;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:#333;color:#ccc;text-align:left">
+            <th style="padding:8px 10px;border:1px solid #444;min-width:50px">Ref.</th>
+            <th style="padding:8px 10px;border:1px solid #444;min-width:260px">Nombre artículo</th>
+            <th style="padding:8px 10px;border:1px solid #444;min-width:80px">Medida</th>
+            <th style="padding:8px 10px;border:1px solid #444;min-width:90px">Categorías / Puntos</th>
+            <th style="padding:8px 10px;border:1px solid #444;min-width:60px;text-align:center">Borrar</th>
+          </tr>
+        </thead>
+        <tbody id="edit-tbody"></tbody>
+      </table>
+    </div>
+    <div id="edit-vacio" style="display:none;text-align:center;padding:30px;color:#666">Elige proveedor y modelo para ver los artículos.</div>
+  </div>
+</div>
+
 <script>
 var db, auth;
 var ARTICULOS=[],PROVEEDORES_MAP={},XL_DATA=null,XL_COLS=[];
@@ -465,10 +509,9 @@ function initFirebase(){
   auth=firebase.auth();
   document.getElementById("lPass").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
 
-  // Si viene ?usuario=Alias en la URL, saltar el login directamente
+  // Si viene ?usuario=Alias en la URL (desde menu.html), saltar el login directamente
   var urlAlias=(new URLSearchParams(window.location.search)).get("usuario")||"";
   if(urlAlias){
-    // Buscar el vendedor por alias en Firebase para obtener nombre completo
     db.collection("vendedores").get().then(function(sn){
       sn.forEach(function(d){
         var v=d.data();
@@ -481,9 +524,7 @@ function initFirebase(){
       document.getElementById("appBox").style.display="block";
       cargarProveedoresFirebase();
       cargarTarifasFirestore();
-    }).catch(function(){
-      // Si falla, mostrar login normal
-    });
+    }).catch(function(e){ console.warn("Auto-login fallido:",e); });
   }
 }
 function doLogin(){
@@ -626,7 +667,7 @@ function getNotaPres(){
 }
 
 function showTab(t){
-  ["selector","importar","importar-multi","importar-filas","tarifas","imagenes"].forEach(function(x){
+  ["selector","importar","importar-multi","importar-filas","tarifas","imagenes","editar"].forEach(function(x){
     var el=document.getElementById("sec-"+x);
     var tb=document.getElementById("tb-"+x);
     if(el)el.style.display=x===t?"block":"none";
@@ -634,6 +675,7 @@ function showTab(t){
   });
   if(t==="tarifas")renderTarifas();
   if(t==="imagenes"){poblarSelectoresImg();mostrarEspacio();}
+  if(t==="editar")editarCargarProveedores();
 }
 
 function toast(msg,tipo){
@@ -2148,6 +2190,209 @@ function cancelarImportFilas(){
 
 // Iniciar Firebase — esperar a que los scripts externos estén cargados
 window.addEventListener("load", initFirebase);
+
+// ─── EDITOR DE TARIFAS ────────────────────────────────────────────────────────
+
+var EDITAR_DOC_ID = "";      // ID del documento en Firestore
+var EDITAR_ARTICULOS = [];   // copia de los artículos en edición
+var EDITAR_BORRADOS = [];    // índices marcados para borrar
+
+function editarCargarProveedores(){
+  var sel = document.getElementById("edit-prv");
+  sel.innerHTML = "<option value=''>-- Selecciona proveedor --</option>";
+  // Construir lista de proveedores que tienen tarifas en Firebase
+  db.collection("tarifas_modelos").get().then(function(sn){
+    var prvSet = {};
+    sn.forEach(function(d){
+      var data = d.data();
+      if(data.prv) prvSet[data.prv] = data.prvNom || data.prv;
+    });
+    Object.keys(prvSet).sort(function(a,b){return parseInt(a)-parseInt(b)||a.localeCompare(b);}).forEach(function(p){
+      var opt = document.createElement("option");
+      opt.value = p;
+      opt.textContent = p + " - " + prvSet[p];
+      sel.appendChild(opt);
+    });
+    document.getElementById("edit-mod").innerHTML = "<option value=''>-- Primero elige proveedor --</option>";
+    document.getElementById("edit-tabla-wrap").style.display = "none";
+    document.getElementById("edit-vacio").style.display = "block";
+    document.getElementById("edit-info").textContent = "";
+    document.getElementById("edit-guardar-btn").style.display = "none";
+    document.getElementById("edit-borrar-modelo-btn").style.display = "none";
+  });
+}
+
+function editarCargarModelos(){
+  var prv = document.getElementById("edit-prv").value;
+  var sel = document.getElementById("edit-mod");
+  sel.innerHTML = "<option value=''>-- Cargando... --</option>";
+  document.getElementById("edit-tabla-wrap").style.display = "none";
+  document.getElementById("edit-vacio").style.display = "block";
+  document.getElementById("edit-info").textContent = "";
+  document.getElementById("edit-guardar-btn").style.display = "none";
+  document.getElementById("edit-borrar-modelo-btn").style.display = "none";
+  if(!prv){ sel.innerHTML = "<option value=''>-- Primero elige proveedor --</option>"; return; }
+  db.collection("tarifas_modelos").where("prv","==",prv).get().then(function(sn){
+    sel.innerHTML = "<option value=''>-- Selecciona modelo --</option>";
+    sn.forEach(function(d){
+      var data = d.data();
+      var opt = document.createElement("option");
+      opt.value = d.id;
+      opt.textContent = data.mod + " (" + (data.total||0) + " artículos)";
+      sel.appendChild(opt);
+    });
+    if(sel.options.length === 1) sel.innerHTML = "<option value=''>Sin modelos guardados</option>";
+  });
+}
+
+function editarCargarTabla(){
+  var docId = document.getElementById("edit-mod").value;
+  var tbody = document.getElementById("edit-tbody");
+  var wrap = document.getElementById("edit-tabla-wrap");
+  var vacio = document.getElementById("edit-vacio");
+  var info = document.getElementById("edit-info");
+  document.getElementById("edit-guardar-btn").style.display = "none";
+  document.getElementById("edit-borrar-modelo-btn").style.display = "none";
+  if(!docId){ wrap.style.display="none"; vacio.style.display="block"; return; }
+
+  EDITAR_DOC_ID = docId;
+  EDITAR_BORRADOS = [];
+  info.textContent = "Cargando...";
+  wrap.style.display = "none";
+  vacio.style.display = "block";
+
+  db.collection("tarifas_modelos").doc(docId).get().then(function(doc){
+    if(!doc.exists){ info.textContent = "No encontrado."; return; }
+    var data = doc.data();
+    EDITAR_ARTICULOS = JSON.parse(JSON.stringify(data.articulos||[])); // copia profunda
+    info.textContent = "Modelo: " + data.mod + " · " + EDITAR_ARTICULOS.length + " artículos · Proveedor: " + (data.prvNom||data.prv);
+    editarRenderTabla();
+    wrap.style.display = "block";
+    vacio.style.display = "none";
+    document.getElementById("edit-guardar-btn").style.display = "inline-block";
+    document.getElementById("edit-borrar-modelo-btn").style.display = "inline-block";
+  }).catch(function(e){ info.textContent = "Error: " + e.message; });
+}
+
+function editarRenderTabla(){
+  var tbody = document.getElementById("edit-tbody");
+  var html = "";
+  EDITAR_ARTICULOS.forEach(function(a, i){
+    if(EDITAR_BORRADOS.indexOf(i) !== -1){
+      // Fila marcada para borrar — aparece tachada en rojo
+      html += "<tr style='background:#3a0000;opacity:.5' id='edit-row-"+i+"'>"
+        + "<td style='padding:6px 8px;border:1px solid #555;color:#f66;text-decoration:line-through' colspan='5'>🗑️ BORRADO: " + (a.ref||"") + " — " + a.nom + " <button onclick='editarDeshacer("+i+")' style='background:#555;color:white;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px'>↩ Deshacer</button></td>"
+        + "</tr>";
+      return;
+    }
+    // Construir celda de categorías/puntos — puede ser un objeto {TELA: pts, ...}
+    var cats = a.categorias || {};
+    var catKeys = Object.keys(cats);
+    var catHtml = "";
+    if(catKeys.length === 0){
+      // Sin categorías — usar campo PUNTOS directo
+      catHtml = "<input type='number' step='0.01' value='" + (a.PUNTOS||0) + "' "
+        + "onchange='editarCambiarPuntos("+i+",null,this.value)' "
+        + "style='width:70px;padding:4px;border:1px solid #555;border-radius:4px;background:#1e1e1e;color:white;font-size:12px'> pts";
+    } else {
+      catKeys.forEach(function(k){
+        catHtml += "<div style='display:flex;align-items:center;gap:4px;margin-bottom:3px'>"
+          + "<span style='color:#aaa;font-size:11px;min-width:50px'>" + k + ":</span>"
+          + "<input type='number' step='0.01' value='" + (cats[k]||0) + "' "
+          + "onchange='editarCambiarPuntos("+i+",\""+k+"\",this.value)' "
+          + "style='width:65px;padding:3px;border:1px solid #555;border-radius:4px;background:#1e1e1e;color:white;font-size:12px'> pts"
+          + "</div>";
+      });
+    }
+    html += "<tr id='edit-row-"+i+"' style='"+(i%2===0?"background:#1e1e1e":"background:#232323")+"'>"
+      + "<td style='padding:6px 8px;border:1px solid #444;color:#aaa;font-size:12px'>" + (a.ref||"-") + "</td>"
+      + "<td style='padding:6px 8px;border:1px solid #444'>"
+        + "<input type='text' value='" + (a.nom||"").replace(/'/g,"&#39;") + "' "
+        + "onchange='editarCambiarNom("+i+",this.value)' "
+        + "style='width:100%;padding:5px;border:1px solid #555;border-radius:4px;background:#1e1e1e;color:white;font-size:13px'>"
+      + "</td>"
+      + "<td style='padding:6px 8px;border:1px solid #444;color:#aaa;font-size:12px'>" + (a.med||"-") + "</td>"
+      + "<td style='padding:6px 8px;border:1px solid #444'>" + catHtml + "</td>"
+      + "<td style='padding:6px 8px;border:1px solid #444;text-align:center'>"
+        + "<button onclick='editarMarcarBorrar("+i+")' title='Borrar este artículo' "
+        + "style='background:#8B0000;color:white;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:15px'>🗑️</button>"
+      + "</td>"
+      + "</tr>";
+  });
+  tbody.innerHTML = html;
+}
+
+function editarCambiarNom(i, valor){
+  EDITAR_ARTICULOS[i].nom = valor;
+}
+function editarCambiarPuntos(i, cat, valor){
+  var pts = parseFloat(valor) || 0;
+  if(cat === null){
+    EDITAR_ARTICULOS[i].PUNTOS = pts;
+  } else {
+    if(!EDITAR_ARTICULOS[i].categorias) EDITAR_ARTICULOS[i].categorias = {};
+    EDITAR_ARTICULOS[i].categorias[cat] = pts;
+  }
+}
+function editarMarcarBorrar(i){
+  if(EDITAR_BORRADOS.indexOf(i) === -1) EDITAR_BORRADOS.push(i);
+  editarRenderTabla();
+}
+function editarDeshacer(i){
+  EDITAR_BORRADOS = EDITAR_BORRADOS.filter(function(x){ return x !== i; });
+  editarRenderTabla();
+}
+
+function editarGuardarCambios(){
+  if(!EDITAR_DOC_ID){ toast("No hay modelo seleccionado","err"); return; }
+  var btn = document.getElementById("edit-guardar-btn");
+  btn.disabled = true;
+  btn.textContent = "Guardando...";
+  // Filtrar los borrados
+  var artsFinal = EDITAR_ARTICULOS.filter(function(a, i){
+    return EDITAR_BORRADOS.indexOf(i) === -1;
+  });
+  db.collection("tarifas_modelos").doc(EDITAR_DOC_ID).update({
+    articulos: artsFinal,
+    total: artsFinal.length,
+    actualizado: new Date().toISOString()
+  }).then(function(){
+    toast("✅ Guardado correctamente (" + artsFinal.length + " artículos)", "ok");
+    btn.disabled = false;
+    btn.textContent = "💾 Guardar cambios";
+    EDITAR_BORRADOS = [];
+    EDITAR_ARTICULOS = artsFinal;
+    // Recargar ARTICULOS global para que el catálogo se actualice
+    cargarTarifasFirestore();
+    // Actualizar info
+    document.getElementById("edit-info").textContent = "Guardado · " + artsFinal.length + " artículos";
+    editarRenderTabla();
+  }).catch(function(e){
+    toast("Error al guardar: " + e.message, "err");
+    btn.disabled = false;
+    btn.textContent = "💾 Guardar cambios";
+  });
+}
+
+function editarBorrarModeloCompleto(){
+  var sel = document.getElementById("edit-mod");
+  var texto = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : EDITAR_DOC_ID;
+  if(!confirm("⚠️ ¿Seguro que quieres BORRAR COMPLETAMENTE el modelo:\n\n" + texto + "\n\nEsta acción no se puede deshacer.")) return;
+  db.collection("tarifas_modelos").doc(EDITAR_DOC_ID).delete().then(function(){
+    toast("Modelo borrado completamente", "ok");
+    EDITAR_DOC_ID = "";
+    EDITAR_ARTICULOS = [];
+    EDITAR_BORRADOS = [];
+    document.getElementById("edit-tabla-wrap").style.display = "none";
+    document.getElementById("edit-vacio").style.display = "block";
+    document.getElementById("edit-guardar-btn").style.display = "none";
+    document.getElementById("edit-borrar-modelo-btn").style.display = "none";
+    document.getElementById("edit-info").textContent = "";
+    cargarTarifasFirestore();
+    editarCargarModelos();
+  }).catch(function(e){ toast("Error: " + e.message, "err"); });
+}
+// ─── FIN EDITOR DE TARIFAS ────────────────────────────────────────────────────
 </script>
 </body>
 </html>
