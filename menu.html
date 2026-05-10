@@ -822,7 +822,11 @@ function navegar(tab, titulo){
     dbg.style.cssText='position:fixed;top:0;left:0;right:0;background:#c4571a;color:#fff;font-size:12px;padding:6px;z-index:99999;font-family:monospace';
     document.body.appendChild(dbg);}
   dbg.textContent='navegar('+tab+') showTab existe:'+(typeof showTab)+' window.showTab:'+(typeof window.showTab);
-  setTimeout(function(){dbg.style.display='none';},4000);
+  setTimeout(function(){
+    var sec=document.getElementById('tab-'+tab);
+    dbg.textContent='tab-'+tab+' existe:'+(!!sec)+' clases:'+(sec?sec.className:'?')+' display:'+(sec?getComputedStyle(sec).display:'?');
+    setTimeout(function(){dbg.style.display='none';},5000);
+  },200);
   showTab(tab);
   document.getElementById("main-title").textContent = titulo;
   document.querySelectorAll(".sb-item").forEach(function(el){ el.classList.remove("active"); });
