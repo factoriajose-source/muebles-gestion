@@ -512,22 +512,27 @@ function initFirebase(){
   // Si viene ?usuario=Alias en la URL (desde menu.html), saltar el login directamente
   var urlAlias=(new URLSearchParams(window.location.search)).get("usuario")||"";
   if(urlAlias){
-    // Pequeño delay para asegurar que Firestore está listo en móvil
-    setTimeout(function(){
-      db.collection("vendedores").get().then(function(sn){
-        sn.forEach(function(d){
-          var v=d.data();
-          if((v.alias||"").toLowerCase()===urlAlias.toLowerCase()){
-            VENDEDOR_ACTUAL={alias:v.alias||urlAlias, nombre:(v.nombre||"")+" "+(v.apellidos||"")};
-          }
-        });
-        if(!VENDEDOR_ACTUAL.alias) VENDEDOR_ACTUAL={alias:urlAlias, nombre:urlAlias};
-        document.getElementById("loginBox").style.display="none";
-        document.getElementById("appBox").style.display="block";
-        cargarProveedoresFirebase();
-        cargarTarifasFirestore();
-      }).catch(function(e){ console.warn("Auto-login fallido:",e); });
-    }, 300);
+    // El menu.html ya está autenticado en Firebase — reutilizar esa sesión
+    // onAuthStateChanged detectará si ya hay sesión activa del mismo navegador
+    auth.onAuthStateChanged(function(user){
+      if(user){
+        // Ya hay sesión Firebase activa — cargar vendedor y entrar directo
+        db.collection("vendedores").get().then(function(sn){
+          sn.forEach(function(d){
+            var v=d.data();
+            if((v.alias||"").toLowerCase()===urlAlias.toLowerCase()){
+              VENDEDOR_ACTUAL={alias:v.alias||urlAlias, nombre:(v.nombre||"")+" "+(v.apellidos||"")};
+            }
+          });
+          if(!VENDEDOR_ACTUAL.alias) VENDEDOR_ACTUAL={alias:urlAlias, nombre:urlAlias};
+          document.getElementById("loginBox").style.display="none";
+          document.getElementById("appBox").style.display="block";
+          cargarProveedoresFirebase();
+          cargarTarifasFirestore();
+        }).catch(function(e){ console.warn("Error cargando vendedor:",e); });
+      }
+      // Si no hay sesión activa, se queda en la pantalla de login normal
+    });
   }
 }
 function doLogin(){
