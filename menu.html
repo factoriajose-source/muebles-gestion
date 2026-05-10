@@ -889,10 +889,13 @@ function actualizarSidebar(name){
   var mnVac = document.getElementById("mn-vacaciones");
   if(mnVac) mnVac.style.display = puedeVacaciones ? "" : "none";
   // Mostrar sección admin
-  ["mn-sec-admin","mn-stats","mn-editor","mn-auditoria"].forEach(function(id){
+  ["mn-sec-admin","mn-stats","mn-auditoria"].forEach(function(id){
     var el=document.getElementById(id);
     if(el) el.style.display = esAdmin ? "" : "none";
   });
+  // Editor Fichajes SOLO Jose Angel
+  var mnEditor=document.getElementById("mn-editor");
+  if(mnEditor) mnEditor.style.display = (name==="Jose Angel") ? "" : "none";
 }
 // ── FIN MENÚ LATERAL ──────────────────────────────────────────────────────────
 
