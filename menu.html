@@ -1019,7 +1019,17 @@ function showTab(name) {
     cargarYMostrarLista();
   }
   if (name === "visitas") initVisitas();
-  if (name === "fichajes") initFichajes();
+  if (name === "fichajes") {
+    initFichajes();
+    // Forzar visibilidad del panel para Jose Angel y Marisa
+    const ADMINS_FICHAS2 = ["Jose Angel","Marisa"];
+    const secF = document.getElementById("vis-fichajes-section");
+    if(secF) secF.style.display = ADMINS_FICHAS2.includes(currentUser) ? "block" : "none";
+    const fichasBtns2 = document.getElementById("fichas-print-btns");
+    if(fichasBtns2 && ADMINS_FICHAS2.includes(currentUser)) fichasBtns2.style.display = "block";
+    const panelF = document.getElementById("panel-fichajes");
+    if(panelF && ADMINS_FICHAS2.includes(currentUser)) panelF.style.display = "block";
+  }
   if (name === "repartos") initRepartos();
   if (name === "incidencias") initIncidencias();
   if (name === "stats") {
@@ -2379,7 +2389,6 @@ function abrirFirmaRapida(vendedor, fichajeHoyV, turno, hor, geo) {
     try {
       await setDoc(doc(db,"fichajes",fichajeKey(vendedor.alias,fecha)),fichajeHoyV);
       showToast("Fichaje registrado: " + horaARegistrar);
-      // Check weekly hours after every fichaje
       verificarHorasSemana(vendedor, fecha);
       overlay.remove();
     } catch(err) { showToast("Error: "+err.message); bOk.disabled=false; bOk.textContent="Confirmar fichaje"; }
