@@ -1371,7 +1371,11 @@ function renderLines() {
         const lbl = document.createElement("span"); lbl.className = "cheslon-lbl"; lbl.style.pointerEvents = "none";
         lbl.textContent = "Chaise a la " + (val === "izq" ? "IZQUIERDA" : "DERECHA");
         opt.appendChild(optImg); opt.appendChild(lbl);
-        opt.addEventListener("click", () => setCheslon(l.id, val)); opts.appendChild(opt);
+        opt.addEventListener("click", () => {
+          console.log("Click cheslon lid="+l.id+" val="+val+" tipo="+(typeof l.id));
+          console.log("Todos los data-lid:", Array.from(document.querySelectorAll(".cheslon-opt")).map(e=>e.getAttribute("data-lid")));
+          setCheslon(l.id, val);
+        }); opts.appendChild(opt);
       });
       const msgDiv = document.createElement("div"); msgDiv.id = "cmsg-" + l.id; msgDiv.style.cssText = "margin-top:8px;font-size:13px";
       msgDiv.innerHTML = l.cheslon ? "<span style='color:#3b6d11;font-weight:600'>Chaise a la " + (l.cheslon==="izq"?"IZQUIERDA":"DERECHA") + " (visto de frente)</span>" : "<span style='color:#a32d2d'>Selecciona la posicion de la chaise</span>";
