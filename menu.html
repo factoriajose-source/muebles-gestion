@@ -1058,7 +1058,8 @@ function showTab(name) {
       const printAlias = document.getElementById("print-alias");
       if (printAlias) {
         printAlias.innerHTML = "<option value='all'>Todos los vendedores</option>";
-        VENDORS.filter(v => v !== "Jose Angel").forEach(v => {
+        const fuente2 = vendedoresData.length ? vendedoresData.map(v=>v.alias) : VENDORS;
+        fuente2.filter(v => v !== "Jose Angel").sort().forEach(v => {
           const o = document.createElement("option");
           o.value = v; o.textContent = v;
           printAlias.appendChild(o);
@@ -1659,7 +1660,8 @@ function initVisitas() {
     const printAlias = document.getElementById("print-alias");
     if (printAlias) {
       printAlias.innerHTML = "<option value='all'>Todos los vendedores</option>";
-      VENDORS.filter(v => v !== "Jose Angel").forEach(v => {
+      const fuente = vendedoresData.length ? vendedoresData.map(v=>v.alias) : VENDORS;
+      fuente.filter(v => v !== "Jose Angel").sort().forEach(v => {
         const o = document.createElement("option"); o.value=v; o.textContent=v;
         printAlias.appendChild(o);
       });
