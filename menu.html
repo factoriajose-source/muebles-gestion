@@ -822,9 +822,12 @@ function navegar(tab, titulo){
   document.querySelectorAll(".sb-item").forEach(function(el){ el.classList.remove("active"); });
   var mn = document.getElementById("mn-"+tab);
   if(mn) mn.classList.add("active");
-  // Scroll al top del contenido
-  var mc = document.getElementById("main-content");
-  if(mc) mc.scrollTop = 0;
+  // Scroll al top del contenido tras renderizar
+  setTimeout(function(){
+    var mc = document.getElementById("main-content");
+    if(mc) mc.scrollTop = 0;
+    window.scrollTo(0,0);
+  }, 100);
   cerrarSidebar();
 }
 window.navegar = navegar;
