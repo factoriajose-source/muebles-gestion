@@ -309,7 +309,7 @@ tr:last-child td{border-bottom:none}
     </div>
 
     <div class="sb-section">Ventas</div>
-    <div class="sb-item active" id="mn-presupuesto" onclick="navegar('presupuesto','Nuevo presupuesto')"><span class="ico">📝</span> Nuevo presupuesto</div>
+    <div class="sb-item active" id="mn-presupuesto" onclick="navegarNuevoPresupuesto()"><span class="ico">📝</span> Nuevo presupuesto</div>
     <div class="sb-item" id="mn-lista" onclick="navegar('lista','Presupuestos')"><span class="ico">📋</span> Presupuestos</div>
     <div class="sb-item" id="mn-visitas" onclick="navegar('visitas','Visitas')"><span class="ico">👥</span> Visitas</div>
     <div class="sb-item" id="mn-selector" onclick="abrirSelector()"><span class="ico">🚀</span> Selector de Tarifas</div>
@@ -808,7 +808,12 @@ function cerrarSidebar(){
   document.getElementById("sidebar").classList.remove("open");
   document.getElementById("sidebar-overlay").classList.remove("open");
 }
-function navegar(tab, titulo){
+function navegarNuevoPresupuesto(){
+  if(editingId && !confirm("¿Abandonar la edición del presupuesto actual?")) return;
+  clearForm();
+  navegar('presupuesto','Nuevo presupuesto');
+}
+window.navegarNuevoPresupuesto = navegarNuevoPresupuesto;
   showTab(tab);
   document.getElementById("main-title").textContent = titulo;
   document.querySelectorAll(".sb-item").forEach(function(el){ el.classList.remove("active"); });
@@ -1245,7 +1250,7 @@ function removeLine(id) {
 
 function setCheslon(id, val) {
   lines.forEach(l => { if (l.id === id) l.cheslon = val; });
-  document.querySelectorAll(".copt-" + id).forEach(el => el.classList.toggle("sel", el.getAttribute("data-val") === val));
+  document.querySelectorAll(".copt-id" + id).forEach(el => el.classList.toggle("sel", el.getAttribute("data-val") === val));
   const msg = document.getElementById("cmsg-" + id);
   if (msg) msg.innerHTML = "<span style='color:#3b6d11;font-weight:600'>Chaise a la " + (val === "izq" ? "IZQUIERDA" : "DERECHA") + " (visto de frente)</span>";
 }
@@ -1353,7 +1358,7 @@ function renderLines() {
       const opts = document.createElement("div"); opts.className = "cheslon-opts";
       ["izq","der"].forEach(val => {
         const opt = document.createElement("div");
-        opt.className = "cheslon-opt copt-" + l.id + (l.cheslon === val ? " sel" : "");
+        opt.className = "cheslon-opt copt-id" + l.id + (l.cheslon === val ? " sel" : "");
         opt.setAttribute("data-val", val);
         const optImg = document.createElement("img"); optImg.src = val === "izq" ? IMG_IZQ : IMG_DER;
         optImg.style.cssText = "width:110px;height:85px;object-fit:contain;pointer-events:none";
@@ -1422,14 +1427,14 @@ async function savePresupuesto() {
 
 function clearForm() {
   editingId = null; lines = []; lineCounter = 0;
+  const btnClear = document.getElementById("btn-clear");
+  if(btnClear) { btnClear.textContent = "Limpiar"; btnClear.className = "btn"; }
   ["c-nombre","c-tel","c-email","c-dni","c-dir","c-notas","mo-desc","mo-precio","desc-pct","fin-entidad","fin-cuota","fin-meses"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
   document.querySelectorAll("#pago-chips .chip").forEach(c => c.classList.remove("active"));
   document.getElementById("fin-block").style.display = "none";
   document.getElementById("validez").value = "14";
-  // Re-enable vendedor for new presupuesto and set to current user
   const vs = document.getElementById("c-vendedor");
-  vs.disabled = false;
-  vs.title = "";
+  vs.disabled = false; vs.title = "";
   if (currentUser) vs.value = currentUser;
   renderLines(); calcTotals();
 }
@@ -1437,6 +1442,8 @@ function clearForm() {
 function loadToForm(pid) {
   const p = presupuestos.find(x => x.id === pid); if (!p) return;
   clearForm(); editingId = p.id;
+  const btnClear = document.getElementById("btn-clear");
+  if(btnClear) { btnClear.textContent = "✕ Abandonar edición"; btnClear.className = "btn btn-danger"; }
   lines = JSON.parse(JSON.stringify(p.lines)); lineCounter = lines.reduce((m,l) => Math.max(m,l.id), 0);
   document.getElementById("c-nombre").value = p.cliente.nombre||"";
   document.getElementById("c-tel").value = p.cliente.tel||"";
