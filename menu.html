@@ -512,7 +512,11 @@ tr:last-child td{border-bottom:none}
       </div>
       <div id="vis-historico"></div>
     </div>
-      <!-- FICHAS HORARIAS - solo para usuarios autorizados -->
+
+    <!-- FICHAJES -->
+    <div id="tab-fichajes" class="section">
+      <div id="fichajes-content"></div>
+      <!-- FICHAS HORARIAS - solo Marisa y Jose Angel -->
       <div id="vis-fichajes-section" style="display:none;margin-top:1rem">
         <div id="fichas-print-btns" style="display:none;margin-top:1rem">
         <div class="card">
@@ -563,13 +567,7 @@ tr:last-child td{border-bottom:none}
           </div>
         </div>
       </div>
-      </div>
-
-
-    <!-- FICHAJES -->
-    <div id="tab-fichajes" class="section">
-      <div id="fichajes-content"></div>
-    </div>
+    </div><!-- /tab-fichajes -->
 
     <!-- REPARTOS -->
     <div id="tab-repartos" class="section">
@@ -795,8 +793,9 @@ function login(name) {
   const fb = document.getElementById("btn-flotante-repartos");
   if (fb) fb.style.display = "flex";
   // Show fichas section only for authorized users
+  const USERS_FICHAS_ADMIN = ["Jose Angel", "Marisa"];
   const secFichajes = document.getElementById("vis-fichajes-section");
-  if (secFichajes) secFichajes.style.display = USERS_FICHAS.includes(name) ? "block" : "none";
+  if (secFichajes) secFichajes.style.display = USERS_FICHAS_ADMIN.includes(name) ? "block" : "none";
 }
 
 // ── MENÚ LATERAL ─────────────────────────────────────────────────────────────
@@ -1599,11 +1598,12 @@ function initVisitas() {
   } else {
     selTienda.disabled = false;
   }
-  // Show fichas section for authorized users
+  // Show fichas section solo para Jose Angel y Marisa
+  const ADMINS_FICHAS = ["Jose Angel", "Marisa"];
   const secFichajes = document.getElementById("vis-fichajes-section");
-  if (secFichajes) secFichajes.style.display = USERS_FICHAS.includes(currentUser) ? "block" : "none";
+  if (secFichajes) secFichajes.style.display = ADMINS_FICHAS.includes(currentUser) ? "block" : "none";
   // Show fichas buttons and panel if authorized
-  if (USERS_FICHAS.includes(currentUser)) {
+  if (ADMINS_FICHAS.includes(currentUser)) {
     const fichasBtns = document.getElementById("fichas-print-btns");
     if (fichasBtns) fichasBtns.style.display = "block";
     const panelFichajes = document.getElementById("panel-fichajes");
