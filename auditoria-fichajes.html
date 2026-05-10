@@ -664,14 +664,14 @@ async function ejecutarRevisionIncompletos(){
       function esFirmaReal(f){ return f && ESPECIALES.indexOf(f)<0; }
 
       // Incompleto = tiene entrada pero no salida (ni hora ni firma)
-      if(r.ini_m && !r.fin_m && !esFirmaReal(r.firma_fin_m)) ps.push("falta salida mañana");
-      if(!r.ini_m && r.fin_m && !esFirmaReal(r.firma_ini_m)) ps.push("falta entrada mañana");
-      if(r.ini_t && !r.fin_t && !esFirmaReal(r.firma_fin_t)) ps.push("falta salida tarde");
-      if(!r.ini_t && r.fin_t && !esFirmaReal(r.firma_ini_t)) ps.push("falta entrada tarde");
+      if(r.ini_m && !r.fin_m && !esFirmaReal(r.firma_fin_m)) ps.push("✍️ Falta firma y hora de salida mañana");
+      if(!r.ini_m && r.fin_m && !esFirmaReal(r.firma_ini_m)) ps.push("✍️ Falta firma y hora de entrada mañana");
+      if(r.ini_t && !r.fin_t && !esFirmaReal(r.firma_fin_t)) ps.push("✍️ Falta firma y hora de salida tarde");
+      if(!r.ini_t && r.fin_t && !esFirmaReal(r.firma_ini_t)) ps.push("✍️ Falta firma y hora de entrada tarde");
 
-      // También detectar: tiene firma de salida pero falta la HORA de salida
-      if(r.ini_m && esFirmaReal(r.firma_fin_m) && !r.fin_m) ps.push("falta hora salida mañana");
-      if(r.ini_t && esFirmaReal(r.firma_fin_t) && !r.fin_t) ps.push("falta hora salida tarde");
+      // Tiene firma de salida pero falta la HORA
+      if(r.ini_m && esFirmaReal(r.firma_fin_m) && !r.fin_m) ps.push("⏰ Falta hora de salida mañana (tiene firma)");
+      if(r.ini_t && esFirmaReal(r.firma_fin_t) && !r.fin_t) ps.push("⏰ Falta hora de salida tarde (tiene firma)");
 
       if(ps.length) problemas.push({alias:v.alias, fecha:fecha, problemas:ps, vendedor:v});
     });
@@ -685,7 +685,7 @@ async function ejecutarRevisionIncompletos(){
 
   // Separar solo salidas (para el botón de corrección)
   var soloSalidas = problemas.filter(function(p){
-    return p.problemas.some(function(x){ return x.indexOf("falta salida")>=0; });
+    return p.problemas.some(function(x){ return x.indexOf("Falta firma y hora de salida")>=0 || x.indexOf("Falta hora de salida")>=0; });
   });
 
   var h = "<div style='font-size:13px;color:#666;margin-bottom:10px'>"
@@ -737,8 +737,8 @@ async function corregirSalidas(){
     var r = fichajesMap[p.alias+"_"+p.fecha] || {};
 
     p.problemas.forEach(function(prob){
-      if(prob.indexOf("falta salida")<0 && prob.indexOf("falta hora salida")<0) return;
-      var esSoloHora = prob.indexOf("falta hora salida")>=0;
+      if(prob.indexOf("Falta firma y hora de salida")<0 && prob.indexOf("Falta hora de salida")<0) return;
+      var esSoloHora = prob.indexOf("Falta hora de salida")>=0;
       var turno = prob.indexOf("mañana")>=0 ? "fin_m" : "fin_t";
       var turnoFirmaOrigen = prob.indexOf("mañana")>=0 ? "firma_ini_m" : "firma_ini_t";
       var dd = new Date(p.fecha+"T12:00:00");
