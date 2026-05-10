@@ -2603,6 +2603,23 @@ async function initFichajes() {
   cont.innerHTML = "<div class='spinner'>Cargando fichaje...</div>";
   const { fecha } = nowMadridFull();
   const v = vendedoresData.find(x => x.alias === currentUser);
+
+  // Rellenar selector de vendedores para fichas horarias
+  const printAlias = document.getElementById("print-alias");
+  if (printAlias && vendedoresData.length) {
+    const valorActual = printAlias.value;
+    printAlias.innerHTML = "<option value='all'>Todos los vendedores</option>";
+    vendedoresData
+      .filter(vd => vd.alias !== "Jose Angel" && vd.activo !== false)
+      .sort((a,b) => (a.alias||"").localeCompare(b.alias||"","es"))
+      .forEach(vd => {
+        const o = document.createElement("option");
+        o.value = vd.alias; o.textContent = vd.alias;
+        printAlias.appendChild(o);
+      });
+    if (valorActual) printAlias.value = valorActual;
+  }
+
   try {
     const sn = await getDoc(doc(db, "fichajes", fichajeKey(currentUser, fecha)));
     fichajeHoy = sn.exists() ? sn.data() : { alias: currentUser, fecha, ini_m: null, fin_m: null, ini_t: null, fin_t: null, firma_ini_m: null, firma_fin_m: null, firma_ini_t: null, firma_fin_t: null };
@@ -5357,7 +5374,18 @@ window._resetAcceso = clearDailyAccess; // for testing: type window._resetAcceso
 // Expose stats/fichajes buttons to window for onclick handlers
 window._btnCargarPanel = cargarPanelFichajes;
 window._btnPrintMes = async function() {
-  const aliasSelect = document.getElementById("print-alias") ? document.getElementById("print-alias").value : "all";
+  // Rellenar vendedores justo antes de imprimir por si no estaban cargados
+  const printAlias = document.getElementById("print-alias");
+  if (printAlias && printAlias.options.length <= 1 && vendedoresData.length) {
+    vendedoresData.filter(v => v.alias !== "Jose Angel" && v.activo !== false)
+      .sort((a,b) => (a.alias||"").localeCompare(b.alias||"","es"))
+      .forEach(v => {
+        if ([...printAlias.options].some(o => o.value === v.alias)) return;
+        const o = document.createElement("option"); o.value=v.alias; o.textContent=v.alias;
+        printAlias.appendChild(o);
+      });
+  }
+  const aliasSelect = printAlias ? printAlias.value : "all";
   const mes  = document.getElementById("print-mes-sel")  ? document.getElementById("print-mes-sel").value  : nowMadridFull().fecha.slice(5,7);
   const anio = document.getElementById("print-anio-sel") ? document.getElementById("print-anio-sel").value : nowMadridFull().fecha.slice(0,4);
   showToast("Generando ficha mensual...");
