@@ -535,6 +535,12 @@ tr:last-child td{border-bottom:none}
               <option value="07">Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option>
               <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
             </select>
+            <select id="print-anio-sel" style="padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:#fff;-webkit-appearance:none">
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026" selected>2026</option>
+              <option value="2027">2027</option>
+            </select>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button id="btn-print-mes" class="btn btn-primary" style="flex:1" onclick="window._btnPrintMes()">Ficha mensual</button>
@@ -5350,8 +5356,8 @@ window._resetAcceso = clearDailyAccess; // for testing: type window._resetAcceso
 window._btnCargarPanel = cargarPanelFichajes;
 window._btnPrintMes = async function() {
   const aliasSelect = document.getElementById("print-alias") ? document.getElementById("print-alias").value : "all";
-  const mes = document.getElementById("print-mes-sel") ? document.getElementById("print-mes-sel").value : nowMadridFull().fecha.slice(5,7);
-  const anio = nowMadridFull().fecha.slice(0,4);
+  const mes  = document.getElementById("print-mes-sel")  ? document.getElementById("print-mes-sel").value  : nowMadridFull().fecha.slice(5,7);
+  const anio = document.getElementById("print-anio-sel") ? document.getElementById("print-anio-sel").value : nowMadridFull().fecha.slice(0,4);
   showToast("Generando ficha mensual...");
   await imprimirFichasMultiples(aliasSelect, anio, mes, "mes", null);
 };
@@ -5382,11 +5388,11 @@ async function imprimirFichasMultiples(aliasSelect, anio, mes, tipo, fechaRef) {
   // Determine which vendors to print
   let vendorsToPrint = [];
   if (aliasSelect === "all") {
-    // Use ALL unique aliases from fichajes + active vendors
-    const allAliases = new Set();
-    allRecs.forEach(r => allAliases.add(r.alias));
-    vendedoresData.filter(v => v.activo !== false).forEach(v => allAliases.add(v.alias));
-    vendorsToPrint = Array.from(allAliases).sort();
+    // Usar solo vendedores activos (excluir Jose Angel que no ficha)
+    vendorsToPrint = vendedoresData
+      .filter(v => v.activo !== false && v.alias !== "Jose Angel")
+      .map(v => v.alias)
+      .sort();
   } else {
     vendorsToPrint = [aliasSelect];
   }
