@@ -829,9 +829,10 @@ window.navegar = navegar;
 
 function abrirSelector(){
   if(!currentUser){ showToast("Identifícate primero"); return; }
-  var url="selector-tarifas.html?usuario="+encodeURIComponent(currentUser);
+  localStorage.setItem("meres_usuario_actual", currentUser);
   var a=document.createElement("a");
-  a.href=url; a.target="_blank"; a.rel="noopener";
+  a.href="selector-tarifas.html?usuario="+encodeURIComponent(currentUser);
+  a.target="_blank"; a.rel="noopener";
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   cerrarSidebar();
 }
