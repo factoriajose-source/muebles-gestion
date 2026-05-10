@@ -47,7 +47,8 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f5f4f0;color:#1a
 #main-header{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#fff;border-bottom:1px solid #e0dfd8;flex-shrink:0}
 #btn-menu-toggle{display:none;background:none;border:none;font-size:22px;cursor:pointer;color:#1a1714;padding:2px 6px}
 #main-title{font-size:15px;font-weight:600;flex:1}
-#main-content{flex:1;overflow-y:auto;padding:1rem}
+#main-content{flex:1;overflow-y:auto;padding:0}
+.section{display:none;padding:1rem}.section.active{display:block}
 /* ── PANTALLA LOGIN ──────────────────────────────────────── */
 #login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem;background:#f5f4f0}
 .login-card{background:#fff;border:1px solid #e0dfd8;border-radius:16px;padding:2rem;width:100%;max-width:380px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.06)}
@@ -822,9 +823,9 @@ function navegar(tab, titulo){
   document.querySelectorAll(".sb-item").forEach(function(el){ el.classList.remove("active"); });
   var mn = document.getElementById("mn-"+tab);
   if(mn) mn.classList.add("active");
-  // Scroll a la sección activa
-  var sec = document.getElementById("tab-"+tab);
-  if(sec) sec.scrollIntoView({behavior:'instant', block:'start'});
+  // Resetear scroll - la sección activa empieza en top
+  var mc = document.getElementById("main-content");
+  if(mc) mc.scrollTop = 0;
   cerrarSidebar();
 }
 window.navegar = navegar;
