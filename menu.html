@@ -987,6 +987,7 @@ onAuthStateChanged(auth, (user) => {
 
 // ===== TABS =====
 function showTab(name) {
+  window._lastTab = name;
   ["presupuesto","lista","visitas","fichajes","repartos","incidencias","stats"].forEach(n => {
     const sec = document.getElementById("tab-" + n);
     const btn = document.getElementById("tab-btn-" + n);
@@ -1002,6 +1003,11 @@ function showTab(name) {
   if (name === "incidencias") initIncidencias();
   if (name === "stats") {
     mostrarModalClave(function() {
+      // Activar la sección visualmente
+      ["presupuesto","lista","visitas","fichajes","repartos","incidencias","stats"].forEach(n => {
+        const sec = document.getElementById("tab-"+n);
+        if(sec) sec.classList.toggle("active", n === "stats");
+      });
       renderStats();
 
       // Fichas and panel are now in Visitas tab
@@ -1024,6 +1030,7 @@ function showTab(name) {
     });
   }
 }
+window.showTab = showTab;
 
 document.getElementById("tab-btn-presupuesto").addEventListener("click", () => {
   clearForm();
