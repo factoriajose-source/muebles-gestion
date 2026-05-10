@@ -915,6 +915,8 @@ async function doFirebaseLogin() {
   fbErrDiv.style.display = "none";
   try {
     await signInWithEmailAndPassword(auth, email, pwd);
+    localStorage.setItem("meres_fb_email", email);
+    localStorage.setItem("meres_fb_pwd", btoa(pwd)); // ofuscación básica
     // onAuthStateChanged will handle the rest
   } catch(err) {
     let msg = "Email o contraseña incorrectos";

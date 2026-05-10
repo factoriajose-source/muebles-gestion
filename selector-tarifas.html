@@ -512,11 +512,10 @@ function initFirebase(){
   // Si viene ?usuario=Alias en la URL (desde menu.html), saltar el login directamente
   var urlAlias=(new URLSearchParams(window.location.search)).get("usuario")||"";
   if(urlAlias){
-    // El menu.html ya está autenticado en Firebase — reutilizar esa sesión
-    // onAuthStateChanged detectará si ya hay sesión activa del mismo navegador
+    // Intentar primero con sesión Firebase activa
     auth.onAuthStateChanged(function(user){
       if(user){
-        // Ya hay sesión Firebase activa — cargar vendedor y entrar directo
+        // Sesión activa — entrar directo
         db.collection("vendedores").get().then(function(sn){
           sn.forEach(function(d){
             var v=d.data();
@@ -530,8 +529,21 @@ function initFirebase(){
           cargarProveedoresFirebase();
           cargarTarifasFirestore();
         }).catch(function(e){ console.warn("Error cargando vendedor:",e); });
+      } else {
+        // No hay sesión activa — intentar con credenciales guardadas en localStorage
+        var savedEmail = localStorage.getItem("meres_fb_email")||"";
+        var savedPwd   = localStorage.getItem("meres_fb_pwd")||"";
+        if(savedEmail && savedPwd){
+          try { savedPwd = atob(savedPwd); } catch(e){}
+          auth.signInWithEmailAndPassword(savedEmail, savedPwd).then(function(){
+            // onAuthStateChanged se disparará de nuevo con user activo
+          }).catch(function(e){
+            console.warn("Auto-login con credenciales fallido:",e);
+            // Quedarse en pantalla de login normal
+          });
+        }
+        // Si no hay credenciales guardadas, mostrar login normal
       }
-      // Si no hay sesión activa, se queda en la pantalla de login normal
     });
   }
 }
