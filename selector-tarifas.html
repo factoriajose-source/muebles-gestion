@@ -510,41 +510,14 @@ function initFirebase(){
   document.getElementById("lPass").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
 
   // Si viene ?usuario=Alias en la URL (desde menu.html), saltar el login directamente
+  // Igual que proveedores.html — sin comprobar Firebase Auth
   var urlAlias=(new URLSearchParams(window.location.search)).get("usuario")||"";
   if(urlAlias){
-    // Intentar primero con sesión Firebase activa
-    auth.onAuthStateChanged(function(user){
-      if(user){
-        // Sesión activa — entrar directo
-        db.collection("vendedores").get().then(function(sn){
-          sn.forEach(function(d){
-            var v=d.data();
-            if((v.alias||"").toLowerCase()===urlAlias.toLowerCase()){
-              VENDEDOR_ACTUAL={alias:v.alias||urlAlias, nombre:(v.nombre||"")+" "+(v.apellidos||"")};
-            }
-          });
-          if(!VENDEDOR_ACTUAL.alias) VENDEDOR_ACTUAL={alias:urlAlias, nombre:urlAlias};
-          document.getElementById("loginBox").style.display="none";
-          document.getElementById("appBox").style.display="block";
-          cargarProveedoresFirebase();
-          cargarTarifasFirestore();
-        }).catch(function(e){ console.warn("Error cargando vendedor:",e); });
-      } else {
-        // No hay sesión activa — intentar con credenciales guardadas en localStorage
-        var savedEmail = localStorage.getItem("meres_fb_email")||"";
-        var savedPwd   = localStorage.getItem("meres_fb_pwd")||"";
-        if(savedEmail && savedPwd){
-          try { savedPwd = atob(savedPwd); } catch(e){}
-          auth.signInWithEmailAndPassword(savedEmail, savedPwd).then(function(){
-            // onAuthStateChanged se disparará de nuevo con user activo
-          }).catch(function(e){
-            console.warn("Auto-login con credenciales fallido:",e);
-            // Quedarse en pantalla de login normal
-          });
-        }
-        // Si no hay credenciales guardadas, mostrar login normal
-      }
-    });
+    VENDEDOR_ACTUAL={alias:urlAlias, nombre:urlAlias};
+    document.getElementById("loginBox").style.display="none";
+    document.getElementById("appBox").style.display="block";
+    cargarProveedoresFirebase();
+    cargarTarifasFirestore();
   }
 }
 function doLogin(){
