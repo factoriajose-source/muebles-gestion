@@ -292,6 +292,8 @@ tr:last-child td{border-bottom:none}
 
   </div>
   <div style="position:fixed;bottom:10px;left:12px;font-size:11px;color:#888;font-family:monospace;pointer-events:none;font-weight:700">v2.8 — 25/03/2026</div>
+  <!-- BOTÓN FLOTANTE FICHAJE en pantalla de selección -->
+  <button onclick="window._abrirFichajeRapido&&window._abrirFichajeRapido()" style="position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:#1a6b2a;color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(26,107,42,.4);z-index:500;display:flex;align-items:center;justify-content:center;touch-action:manipulation" title="Fichar">⏱️</button>
 </div>
 
 <!-- OVERLAY MÓVIL -->
@@ -3443,23 +3445,23 @@ function updateLoginGrid() {
         overlay.id = "security-overlay";
         overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:1rem";
         const box = document.createElement("div");
-        box.style.cssText = "background:#fff;border-radius:14px;padding:1.5rem;width:100%;max-width:300px;text-align:center";
-        box.innerHTML = "<div style='font-size:32px;margin-bottom:8px'>🔐</div>"
-          +"<div style='font-size:15px;font-weight:700;margin-bottom:16px'>??</div>";
+        box.style.cssText = "background:#fff;border-radius:12px;padding:1rem;width:100%;max-width:220px;text-align:center";
+        box.innerHTML = "<div style='font-size:20px;margin-bottom:6px'>🔐</div>"
+          +"<div style='font-size:13px;font-weight:700;margin-bottom:10px;color:#444'>??</div>";
         const inp = document.createElement("input");
         inp.type = "password";
         inp.inputMode = "numeric";
         inp.maxLength = 2;
         inp.placeholder = "••";
-        inp.style.cssText = "width:100%;padding:14px;border:1.5px solid #ccc;border-radius:8px;font-size:24px;text-align:center;letter-spacing:.3em;margin-bottom:12px;-webkit-appearance:none;font-family:inherit";
+        inp.style.cssText = "width:100%;padding:8px;border:1.5px solid #ccc;border-radius:8px;font-size:20px;text-align:center;letter-spacing:.3em;margin-bottom:8px;-webkit-appearance:none;font-family:inherit";
         const errDiv = document.createElement("div");
-        errDiv.style.cssText = "color:#a32d2d;font-size:12px;margin-bottom:10px;display:none";
+        errDiv.style.cssText = "color:#a32d2d;font-size:11px;margin-bottom:8px;display:none";
         errDiv.textContent = "Respuesta incorrecta";
         const btnOk = document.createElement("button");
-        btnOk.style.cssText = "width:100%;padding:12px;background:#1a6b2a;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px";
+        btnOk.style.cssText = "width:100%;padding:9px;background:#1a6b2a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:6px";
         btnOk.textContent = "Entrar";
         const btnCancel = document.createElement("button");
-        btnCancel.style.cssText = "width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;background:#fff;font-size:13px;cursor:pointer";
+        btnCancel.style.cssText = "width:100%;padding:7px;border:1px solid #ccc;border-radius:8px;background:#fff;font-size:12px;cursor:pointer";
         btnCancel.textContent = "Cancelar";
         btnCancel.addEventListener("click", ()=>overlay.remove());
         function verificar(){
@@ -5514,9 +5516,6 @@ async function imprimirFichasMultiples(aliasSelect, anio, mes, tipo, fechaRef) {
 }
 </script>
 <span id="header-user" style="display:none"></span>
-
-<!-- BOTÓN FLOTANTE FICHAJE -->
-<button id="btn-flotante-fichaje" onclick="window._abrirFichajeRapido&&window._abrirFichajeRapido()" style="position:fixed;bottom:24px;left:24px;width:60px;height:60px;border-radius:50%;background:#1a6b2a;color:#fff;border:none;font-size:26px;cursor:pointer;box-shadow:0 4px 16px rgba(26,107,42,.4);z-index:500;display:flex;align-items:center;justify-content:center;touch-action:manipulation" title="Fichar">⏱️</button>
 
 <script>
 window._abrirFichajeRapido = function() {
