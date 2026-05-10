@@ -4188,7 +4188,9 @@ let REPARTIDORES_FIJOS = ["ALEX","ANTONIO_CONFO","CLEO","DARWIN","EDISON","JAVIE
 
 async function initRepartos() {
   const cont = document.getElementById("repartos-content");
-  cont.innerHTML = "<div class='spinner'>Cargando repartos...</div>";
+  console.log("initRepartos llamado, cont=", cont, "display=", cont ? getComputedStyle(cont.parentElement).display : "?");
+  if(!cont) return;
+  cont.innerHTML = "<div class='card'><p style='padding:1rem;color:#185fa5;font-weight:600'>⏳ Cargando repartos...</p></div>";
   try {
     const sn = await getDocs(collection(db, "repartos"));
     const repartos = [];
