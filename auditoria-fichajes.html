@@ -660,11 +660,19 @@ async function ejecutarRevisionIncompletos(){
       if(r.especial) return; // día especial OK
 
       var ps = [];
-      // Si tiene entrada pero no salida — incompleto, independientemente del horario contractual
-      if(r.ini_m && !r.fin_m) ps.push("falta salida mañana");
-      if(!r.ini_m && r.fin_m) ps.push("falta entrada mañana");
-      if(r.ini_t && !r.fin_t) ps.push("falta salida tarde");
-      if(!r.ini_t && r.fin_t) ps.push("falta entrada tarde");
+      var ESPECIALES = ["FIESTA","VAC","BAJA"];
+      function esFirmaReal(f){ return f && ESPECIALES.indexOf(f)<0; }
+
+      // Incompleto = tiene entrada pero no salida (ni hora ni firma)
+      if(r.ini_m && !r.fin_m && !esFirmaReal(r.firma_fin_m)) ps.push("falta salida mañana");
+      if(!r.ini_m && r.fin_m && !esFirmaReal(r.firma_ini_m)) ps.push("falta entrada mañana");
+      if(r.ini_t && !r.fin_t && !esFirmaReal(r.firma_fin_t)) ps.push("falta salida tarde");
+      if(!r.ini_t && r.fin_t && !esFirmaReal(r.firma_ini_t)) ps.push("falta entrada tarde");
+
+      // También detectar: tiene firma de salida pero falta la HORA de salida
+      if(r.ini_m && esFirmaReal(r.firma_fin_m) && !r.fin_m) ps.push("falta hora salida mañana");
+      if(r.ini_t && esFirmaReal(r.firma_fin_t) && !r.fin_t) ps.push("falta hora salida tarde");
+
       if(ps.length) problemas.push({alias:v.alias, fecha:fecha, problemas:ps, vendedor:v});
     });
   });
@@ -729,17 +737,19 @@ async function corregirSalidas(){
     var r = fichajesMap[p.alias+"_"+p.fecha] || {};
 
     p.problemas.forEach(function(prob){
-      if(prob.indexOf("falta salida")<0) return; // solo salidas
+      if(prob.indexOf("falta salida")<0 && prob.indexOf("falta hora salida")<0) return;
+      var esSoloHora = prob.indexOf("falta hora salida")>=0;
       var turno = prob.indexOf("mañana")>=0 ? "fin_m" : "fin_t";
-      var turnoFirmaOrigen = prob.indexOf("mañana")>=0 ? "firma_ini_m" : "firma_ini_t"; // firma del mismo turno misma entrada
+      var turnoFirmaOrigen = prob.indexOf("mañana")>=0 ? "firma_ini_m" : "firma_ini_t";
       var dd = new Date(p.fecha+"T12:00:00");
       var esSab = dd.getDay()===6;
       var horaContrato = "";
       if(turno==="fin_m") horaContrato = esSab ? (horario.fin_m_sab||horario.fin_m||"") : (horario.fin_m||"");
       if(turno==="fin_t") horaContrato = esSab ? (horario.fin_t_sab||horario.fin_t||"") : (horario.fin_t||"");
 
-      // Buscar firma: usar la firma de entrada del mismo turno del mismo día
-      var firma = r[turnoFirmaOrigen] || null;
+      // Si ya tiene firma de salida, la conservamos; si no, copiamos la de entrada
+      var firmaExistente = r["firma_"+turno];
+      var firma = (firmaExistente && firmaExistente!==null) ? firmaExistente : (r[turnoFirmaOrigen]||null);
 
       correcciones.push({
         alias: p.alias,
@@ -748,6 +758,7 @@ async function corregirSalidas(){
         turnoLabel: turno==="fin_m" ? "Salida Mañana" : "Salida Tarde",
         hora: horaContrato,
         firma: firma,
+        soloHora: esSoloHora, // true = ya tiene firma, solo añadir hora
         fichaje: r
       });
     });
@@ -784,8 +795,8 @@ async function corregirSalidas(){
       +"<td style='padding:7px 8px;font-weight:600'>"+c.alias+"</td>"
       +"<td style='padding:7px 8px;color:#666'>"+dias[dd2.getDay()]+" "+c.fecha.split("-").reverse().join("/")+"</td>"
       +"<td style='padding:7px 8px'>"+c.turnoLabel+"</td>"
-      +"<td style='padding:7px 8px;text-align:center;font-weight:700;color:#1a6b2a'>"+( c.hora||"<span style='color:#c0392b'>Sin hora contractual</span>")+"</td>"
-      +"<td style='padding:7px 8px;text-align:center'>"+(c.firma?"<img src='"+c.firma+"' style='height:28px;max-width:70px;object-fit:contain'>":"<span style='color:#c0392b;font-size:11px'>Sin firma origen</span>")+"</td>"
+      +"<td style='padding:7px 8px;text-align:center;font-weight:700;color:#1a6b2a'>"+(c.hora||"<span style='color:#c0392b'>Sin hora contractual</span>")+"</td>"
+      +"<td style='padding:7px 8px;text-align:center'>"+(c.soloHora?"<span style='color:#2856c8;font-size:11px'>✅ Ya tiene firma</span>":(c.firma?"<img src='"+c.firma+"' style='height:28px;max-width:70px;object-fit:contain'>":"<span style='color:#c0392b;font-size:11px'>Sin firma origen</span>"))+"</td>"
       +"</tr>";
   });
   html += "</tbody></table>"
