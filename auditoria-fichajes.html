@@ -636,7 +636,7 @@ async function ejecutarRevisionIncompletos(){
   // Cargar trabajadores
   var trabSnapshot = await db.collection("vendedores").get();
   var trabajadores = [];
-  trabSnapshot.forEach(function(d){ var v=d.data(); if(v.activo!==false) trabajadores.push(v); });
+  trabSnapshot.forEach(function(d){ var v=d.data(); if(v.activo!==false && v.alias!=="Jose Angel") trabajadores.push(v); });
 
   // Cargar todos los fichajes del mes de una vez
   var prefijo = anio+"-"+mes;
