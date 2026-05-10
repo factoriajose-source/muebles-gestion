@@ -683,7 +683,21 @@ async function ejecutarRevisionIncompletos(){
     return;
   }
 
-  var h = "<div style='font-size:13px;color:#666;margin-bottom:10px'><strong>"+problemas.length+" fichaje(s) incompleto(s)</strong> encontrados en "+mes+"/"+anio+":</div>";
+  // Separar solo salidas (para el botón de corrección)
+  var soloSalidas = problemas.filter(function(p){
+    return p.problemas.some(function(x){ return x.indexOf("falta salida")>=0; });
+  });
+
+  var h = "<div style='font-size:13px;color:#666;margin-bottom:10px'>"
+    +"<strong>"+problemas.length+" fichaje(s) incompleto(s)</strong> encontrados en "+mes+"/"+anio+":"
+    +(soloSalidas.length?"<button onclick='corregirSalidas()' style='margin-left:12px;padding:6px 14px;background:#8e44ad;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer'>🖊️ Olvidó firmar en salidas ("+soloSalidas.length+")</button>":"")
+    +"</div>";
+
+  // Guardar en variable global para corregirSalidas
+  window._salidaProblemas = soloSalidas;
+  window._salidaFichajesMap = fichajesMap;
+  window._salidaTrabajadores = trabajadores;
+
   // Agrupar por trabajador
   var porTrabajador = {};
   problemas.forEach(function(p){
@@ -703,6 +717,131 @@ async function ejecutarRevisionIncompletos(){
     h += "</div>";
   });
   res.innerHTML = h;
+}
+
+async function corregirSalidas(){
+  var problemas = window._salidaProblemas || [];
+  var fichajesMap = window._salidaFichajesMap || {};
+  var trabajadores = window._salidaTrabajadores || [];
+  if(!problemas.length) return;
+
+  // Construir lista de correcciones a previsualizar
+  var correcciones = [];
+  for(var i=0; i<problemas.length; i++){
+    var p = problemas[i];
+    var v = trabajadores.find(function(t){ return t.alias===p.alias; });
+    if(!v) continue;
+    var horario = v.horario || {};
+    var dd = new Date(p.fecha+"T12:00:00");
+    var esSab = dd.getDay()===6;
+    var r = fichajesMap[p.alias+"_"+p.fecha] || {};
+
+    p.problemas.forEach(function(prob){
+      if(prob.indexOf("falta salida")<0) return; // solo salidas
+      var turno = prob.indexOf("mañana")>=0 ? "fin_m" : "fin_t";
+      var turnoFirmaOrigen = prob.indexOf("mañana")>=0 ? "firma_ini_m" : "firma_ini_t"; // firma del mismo turno misma entrada
+      var horaContrato = "";
+      if(turno==="fin_m") horaContrato = esSab ? (horario.fin_m_sab||horario.fin_m||"") : (horario.fin_m||"");
+      if(turno==="fin_t") horaContrato = esSab ? (horario.fin_t_sab||horario.fin_t||"") : (horario.fin_t||"");
+
+      // Buscar firma: usar la firma de entrada del mismo turno del mismo día
+      var firma = r[turnoFirmaOrigen] || null;
+
+      correcciones.push({
+        alias: p.alias,
+        fecha: p.fecha,
+        turno: turno,
+        turnoLabel: turno==="fin_m" ? "Salida Mañana" : "Salida Tarde",
+        hora: horaContrato,
+        firma: firma,
+        fichaje: r
+      });
+    });
+  }
+
+  if(!correcciones.length){ alert("No hay salidas corregibles."); return; }
+
+  // Mostrar modal de confirmación
+  var old = document.getElementById("modal-correcciones");
+  if(old) old.remove();
+
+  var overlay = document.createElement("div");
+  overlay.id = "modal-correcciones";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto";
+
+  var box = document.createElement("div");
+  box.style.cssText = "background:#fff;border-radius:14px;padding:1.5rem;width:100%;max-width:600px;margin:auto";
+
+  var dias = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+  var html = "<div style='font-size:17px;font-weight:800;margin-bottom:6px'>🖊️ Corrección de salidas olvidadas</div>"
+    +"<div style='font-size:13px;color:#888;margin-bottom:14px'>Revisa los datos. Se usará la hora contractual y la firma de entrada del mismo turno.</div>"
+    +"<table style='width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px'>"
+    +"<thead><tr style='background:#f5f4f0'>"
+    +"<th style='padding:7px 8px;text-align:left;border-bottom:2px solid #ddd'>Trabajador</th>"
+    +"<th style='padding:7px 8px;text-align:left;border-bottom:2px solid #ddd'>Fecha</th>"
+    +"<th style='padding:7px 8px;text-align:left;border-bottom:2px solid #ddd'>Turno</th>"
+    +"<th style='padding:7px 8px;text-align:center;border-bottom:2px solid #ddd'>Hora</th>"
+    +"<th style='padding:7px 8px;text-align:center;border-bottom:2px solid #ddd'>Firma</th>"
+    +"</tr></thead><tbody>";
+
+  correcciones.forEach(function(c){
+    var dd2 = new Date(c.fecha+"T12:00:00");
+    html += "<tr style='border-bottom:1px solid #eee'>"
+      +"<td style='padding:7px 8px;font-weight:600'>"+c.alias+"</td>"
+      +"<td style='padding:7px 8px;color:#666'>"+dias[dd2.getDay()]+" "+c.fecha.split("-").reverse().join("/")+"</td>"
+      +"<td style='padding:7px 8px'>"+c.turnoLabel+"</td>"
+      +"<td style='padding:7px 8px;text-align:center;font-weight:700;color:#1a6b2a'>"+( c.hora||"<span style='color:#c0392b'>Sin hora contractual</span>")+"</td>"
+      +"<td style='padding:7px 8px;text-align:center'>"+(c.firma?"<img src='"+c.firma+"' style='height:28px;max-width:70px;object-fit:contain'>":"<span style='color:#c0392b;font-size:11px'>Sin firma origen</span>")+"</td>"
+      +"</tr>";
+  });
+  html += "</tbody></table>"
+    +"<div style='background:#fff8e6;border:1px solid #f0c060;border-radius:8px;padding:10px;font-size:12px;color:#8a6000;margin-bottom:14px'>"
+    +"⚠️ Se guardará <strong>manual:true</strong> y <strong>manual_por:\"Jose Angel\"</strong> en cada fichaje corregido."
+    +"</div>";
+
+  box.innerHTML = html;
+
+  var btnRow = document.createElement("div");
+  btnRow.style.cssText = "display:flex;gap:10px";
+
+  var btnOk = document.createElement("button");
+  btnOk.style.cssText = "flex:2;padding:12px;background:#8e44ad;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer";
+  btnOk.textContent = "✅ Confirmar y guardar ("+correcciones.length+")";
+  btnOk.addEventListener("click", async function(){
+    btnOk.disabled = true; btnOk.textContent = "⏳ Guardando...";
+    var ok=0, err=0;
+    for(var i=0; i<correcciones.length; i++){
+      var c = correcciones[i];
+      if(!c.hora) continue; // sin hora contractual no guardamos
+      var key = c.alias+"_"+c.fecha.replace(/-/g,"_");
+      // Reconstruir clave real: alias_YYYY-MM-DD
+      var docKey = "fichaje_"+c.alias+"_"+c.fecha;
+      try {
+        var upd = {};
+        upd[c.turno] = c.hora;
+        upd["firma_"+c.turno] = c.firma || null;
+        upd["manual"] = true;
+        upd["manual_por"] = "Jose Angel";
+        upd["manual_ts"] = new Date().toISOString();
+        await db.collection("fichajes").doc(docKey).update(upd);
+        ok++;
+      } catch(e){ err++; console.error(e); }
+    }
+    overlay.remove();
+    alert("✅ "+ok+" correcciones guardadas."+(err?" ❌ "+err+" errores.":""));
+    ejecutarRevisionIncompletos(); // refrescar
+  });
+
+  var btnCancel = document.createElement("button");
+  btnCancel.style.cssText = "flex:1;padding:12px;border:1px solid #ccc;border-radius:8px;background:#fff;font-size:14px;cursor:pointer";
+  btnCancel.textContent = "Cancelar";
+  btnCancel.addEventListener("click", function(){ overlay.remove(); });
+
+  btnRow.appendChild(btnOk);
+  btnRow.appendChild(btnCancel);
+  box.appendChild(btnRow);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
 }
 </script>
 </body>
