@@ -814,6 +814,8 @@ function navegarNuevoPresupuesto(){
   navegar('presupuesto','Nuevo presupuesto');
 }
 window.navegarNuevoPresupuesto = navegarNuevoPresupuesto;
+
+function navegar(tab, titulo){
   showTab(tab);
   document.getElementById("main-title").textContent = titulo;
   document.querySelectorAll(".sb-item").forEach(function(el){ el.classList.remove("active"); });
