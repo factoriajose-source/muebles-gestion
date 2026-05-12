@@ -1010,6 +1010,16 @@ function showViewPanel(p) {
             <div class="val" style="font-size:20px;font-weight:700;color:var(--yellow)">${p.MAX_DTO||'—'}</div>
           </div>
           <div class="info-item">
+            <label>PRECIO NETO (€/pto × (1-Dto))</label>
+            ${(()=>{
+              const pts = parseFloat(String(p.PUNTOS||'').replace(',','.')) || 0;
+              const dto = parseFloat(String(p.MAX_DTO||'').replace('%','').replace(',','.')) || 0;
+              const neto = pts > 0 ? (pts * (1 - dto/100)).toFixed(3) : null;
+              return neto
+                ? `<div class="val" style="font-size:20px;font-weight:700;color:#2d7a4f">${neto} €/pto</div>`
+                : `<div class="val">—</div>`;
+            })()}
+          <div class="info-item">
             <label>Portes</label>
             <div class="val">${escHtml(p.PORTES||'—')}</div>
           </div>
@@ -1159,7 +1169,7 @@ window.showEditPanel = (p, isNuevo) => {
       <div class="form-row">
         <div class="form-group">
           <label>Puntos</label>
-          <input type="number" step="0.01" id="fPuntos" value="${t.PUNTOS||''}">
+          <input type="number" step="0.01" id="fPuntos" value="${t.PUNTOS||''}" oninput="calcNetoProveedor()">
         </div>
         <div class="form-group">
           <label>Precio × Punto (P.Coste €)</label>
@@ -1169,7 +1179,11 @@ window.showEditPanel = (p, isNuevo) => {
       <div class="form-row">
         <div class="form-group">
           <label>Dto. máx. vendedores (%)</label>
-          <input type="text" id="fMaxDto" value="${escHtml(t.MAX_DTO||'')}">
+          <input type="text" id="fMaxDto" value="${escHtml(t.MAX_DTO||'')}" oninput="calcNetoProveedor()">
+        </div>
+        <div class="form-group">
+          <label>Precio neto (€/pto × (1-Dto)) — solo lectura</label>
+          <div id="fNetoCalc" style="padding:10px 12px;border-radius:8px;background:var(--bg2);font-size:18px;font-weight:700;color:#2d7a4f;min-height:42px">—</div>
         </div>
         <div class="form-group">
           <label>Dto. Comercial %</label>
@@ -1221,6 +1235,7 @@ window.showEditPanel = (p, isNuevo) => {
   `;
 
   openPanel();
+  setTimeout(calcNetoProveedor, 50);
 };
 
 // ── Helpers
@@ -1229,7 +1244,14 @@ function openPanel() {
   document.getElementById('sidePanel').classList.add('open');
 }
 
-function getFormData() {
+function calcNetoProveedor() {
+  const pts = parseFloat((document.getElementById('fPuntos')?.value||'').replace(',','.')) || 0;
+  const dto = parseFloat((document.getElementById('fMaxDto')?.value||'').replace('%','').replace(',','.')) || 0;
+  const el  = document.getElementById('fNetoCalc');
+  if (!el) return;
+  el.textContent = pts > 0 ? (pts * (1 - dto/100)).toFixed(3) + ' €/pto' : '—';
+}
+window.calcNetoProveedor = calcNetoProveedor;
   const pcosteNuevo = document.getElementById('fPCoste').value.trim();
   const pcosteAnterior = String(currentDoc?.P_COSTE || '').trim();
   // Si cambió P.Coste, guardar la fecha de hoy
