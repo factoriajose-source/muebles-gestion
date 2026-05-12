@@ -721,9 +721,11 @@ let sortAsc = true;
 let currentDoc = null;
 let isNew = false;
 let canVerPCoste = false;
-window._currentDoc = null; // versión global accesible desde onclick HTML
+let canVerVarios = false;
+window._currentDoc = null;
 
 const USUARIOS_PCOSTE = ["Kike","Javi","Jose Angel","Marisa"];
+const USUARIOS_VARIOS = ["Javi","Jose Angel","Marisa"];
 
 // ── Exponer funciones al scope global
 window.doLogin = async () => {
@@ -855,6 +857,9 @@ const urlParams   = new URLSearchParams(window.location.search);
 const usuarioURL  = urlParams.get('usuario') || '';
 
 canVerPCoste = USUARIOS_PCOSTE.some(n =>
+  usuarioURL.toLowerCase().includes(n.toLowerCase())
+);
+canVerVarios = USUARIOS_VARIOS.some(n =>
   usuarioURL.toLowerCase().includes(n.toLowerCase())
 );
 
@@ -1053,7 +1058,7 @@ function showViewPanel(p) {
             <label>Web</label>
             <div class="val">${p.URL ? `<a href="${p.URL}" target="_blank">Ver web ↗</a>` : '—'}</div>
           </div>
-          ${p.Varios ? `<div class="info-item full"><label>Notas / Varios</label><div class="varios-box">${escHtml(p.Varios)}</div></div>` : ''}
+          ${p.Varios && canVerVarios ? `<div class="info-item full"><label>Notas / Varios</label><div class="varios-box">${escHtml(p.Varios)}</div></div>` : ''}
         </div>
       </div>
     </div>
@@ -1222,10 +1227,10 @@ window.showEditPanel = (p, isNuevo) => {
         <label>Web (URL)</label>
         <input type="url" id="fURL" value="${escHtml(t.URL||'')}">
       </div>
-      <div class="form-group">
+      ${canVerVarios ? `<div class="form-group">
         <label>Notas / Varios</label>
         <textarea id="fVarios">${escHtml(t.Varios||'')}</textarea>
-      </div>
+      </div>` : ''}
     </div>
   `;
 
@@ -1278,7 +1283,7 @@ function getFormData() {
     Telefono:     document.getElementById('fTelefono').value.trim(),
     TelefonoMovil:document.getElementById('fTelefonoMovil').value.trim(),
     URL:          document.getElementById('fURL').value.trim(),
-    Varios:       document.getElementById('fVarios').value.trim(),
+    Varios:       (document.getElementById('fVarios')?.value||'').trim(),
     Estado:       document.getElementById('fEstado').value,
   };
 }
