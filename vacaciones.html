@@ -212,7 +212,7 @@ header { background: #1a1714; color: white; padding: 0 24px; height: 54px; displ
 <!-- MODAL -->
 <div class="overlay" id="mOverlay">
   <div class="modal">
-    <h3>Añadir registro</h3>
+    <h3 id="mTitulo">➕ Nuevo registro</h3>
     <div class="fg" style="margin-bottom:14px">
       <label>Tipo</label>
       <div style="display:flex;gap:8px;margin-top:4px">
@@ -229,7 +229,7 @@ header { background: #1a1714; color: white; padding: 0 24px; height: 54px; displ
     <div class="fg"><label>Nota (opcional)</label><textarea id="mNota" placeholder="Ej: Semana de Semana Santa"></textarea></div>
     <div id="mErr" style="background:#fdecea;color:#c0392b;border-radius:8px;padding:10px;font-size:13px;margin-bottom:10px;display:none"></div>
     <div style="display:flex;gap:10px">
-      <button class="btn btn-green" style="flex:1" onclick="guardar()">💾 Guardar</button>
+      <button class="btn btn-green" id="mBtnGuardar" style="flex:1" onclick="guardar()">💾 Guardar</button>
       <button class="btn btn-gray" onclick="cerrarModal()">Cancelar</button>
     </div>
   </div>
@@ -425,6 +425,9 @@ function fsAdd(col,data){
 function fsDel(col,id){
   return db.collection(col).doc(id).delete();
 }
+function fsUpdate(col,id,data){
+  return db.collection(col).doc(id).set(data);
+}
 
 // LOGIN
 document.getElementById("lPass").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
@@ -591,13 +594,17 @@ function renderRegs(regs,alias,year){
         "<div class='rd'>"+dias+" día"+(dias!==1?"s":"")+" naturales</div>"+
         (r.nota?"<div class='rn'>\""+r.nota+"\"</div>":"")+
       "</div>"+
-      "<button class='btn btn-red no-print' style='padding:6px 12px;font-size:12px;flex-shrink:0' onclick='eliminar(\""+r._id+"\")'>Eliminar</button>";
+      "<div style='display:flex;gap:6px;flex-shrink:0'>"+
+      "<button class='btn no-print' style='padding:6px 12px;font-size:12px;background:#185fa5;color:#fff;border-color:#185fa5' onclick='editarRegistro(\""+r._id+"\")'>✏️ Editar</button>"+
+      "<button class='btn btn-red no-print' style='padding:6px 12px;font-size:12px;flex-shrink:0' onclick='eliminar(\""+r._id+"\")'>Eliminar</button>"+
+      "</div>";
     cont.appendChild(div);
   });
 }
 
 // MODAL
 function abrirModal(){
+  editandoId = null;
   var alias=document.getElementById("selTr").value;
   if(alias) document.getElementById("mTr").value=alias;
   var hoy=fStr(new Date());
@@ -606,6 +613,11 @@ function abrirModal(){
   document.getElementById("mNota").value="";
   document.getElementById("mErr").style.display="none";
   document.getElementById("mDias").style.display="none";
+  // Restaurar título
+  var titulo = document.getElementById("mTitulo");
+  if(titulo) titulo.textContent = "➕ Nuevo registro";
+  var btnGuardar = document.getElementById("mBtnGuardar");
+  if(btnGuardar) btnGuardar.textContent = "💾 Guardar";
   selTipo("vacacion");
   calcDias();
   document.getElementById("mOverlay").classList.add("open");
@@ -640,14 +652,48 @@ function guardar(){
   if(ini>fin){err.textContent="La fecha inicio debe ser anterior al fin";err.style.display="block";return;}
   var año=parseInt(ini.split("-")[0]);
   var data={alias:alias,tipo:tipoSel,fechaIni:ini,fechaFin:fin,año:año,nota:nota,creadoPor:currentAlias,creadoTs:new Date().toISOString()};
-  fsAdd("vacaciones_bajas",data).then(function(resp){
-    if(resp.error) throw new Error(resp.error.message);
-    data._id=(resp.name||"").split("/").pop();
-    registros.push(data);
-    cerrarModal();
-    toast("✅ Registro guardado","ok");
-    cargarVista();
-  }).catch(function(e){err.textContent="Error: "+e.message;err.style.display="block";});
+
+  if(editandoId){
+    // EDITAR registro existente
+    fsUpdate("vacaciones_bajas", editandoId, data).then(function(){
+      registros = registros.map(function(r){ return r._id === editandoId ? Object.assign({},data,{_id:editandoId}) : r; });
+      editandoId = null;
+      cerrarModal();
+      toast("✅ Registro actualizado","ok");
+      cargarVista();
+    }).catch(function(e){err.textContent="Error: "+e.message;err.style.display="block";});
+  } else {
+    // NUEVO registro
+    fsAdd("vacaciones_bajas",data).then(function(resp){
+      if(resp.error) throw new Error(resp.error.message);
+      data._id=(resp.name||"").split("/").pop();
+      registros.push(data);
+      cerrarModal();
+      toast("✅ Registro guardado","ok");
+      cargarVista();
+    }).catch(function(e){err.textContent="Error: "+e.message;err.style.display="block";});
+  }
+}
+
+var editandoId = null; // ID del registro que se está editando (null = nuevo)
+
+function editarRegistro(id){
+  var r = registros.find(function(x){ return x._id === id; });
+  if(!r) return;
+  editandoId = id;
+  document.getElementById("mTr").value = r.alias;
+  document.getElementById("mIni").value = r.fechaIni;
+  document.getElementById("mFin").value = r.fechaFin;
+  document.getElementById("mNota").value = r.nota || "";
+  document.getElementById("mErr").style.display = "none";
+  selTipo(r.tipo);
+  calcDias();
+  // Cambiar título del modal
+  var titulo = document.getElementById("mTitulo");
+  if(titulo) titulo.textContent = "✏️ Editar registro";
+  var btnGuardar = document.getElementById("mBtnGuardar");
+  if(btnGuardar) btnGuardar.textContent = "💾 Guardar cambios";
+  document.getElementById("mOverlay").classList.add("open");
 }
 
 function eliminar(id){
