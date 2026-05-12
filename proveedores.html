@@ -1032,10 +1032,10 @@ function showViewPanel(p) {
             <label>Estilo</label>
             <div class="val">${escHtml(p.ESTILO||'—')}</div>
           </div>
-          <div class="info-item">
+          ${canVerVarios ? `<div class="info-item">
             <label>Dto. Comercial %</label>
             <div class="val">${escHtml(p.DC_PCT||'—')}</div>
-          </div>
+          </div>` : ''}
         </div>
       </div>
 
