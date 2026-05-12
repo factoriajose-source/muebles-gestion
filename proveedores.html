@@ -618,7 +618,7 @@
       <label>Contraseña</label>
       <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
     </div>
-    <button class="btn-primary" onclick="doLogin()">Entrar</button>
+    <button class="btn-primary" onclick="window.doLogin()">Entrar</button>
     <div id="loginError">Email o contraseña incorrectos</div>
   </div>
 </div>
@@ -1011,7 +1011,7 @@ function showViewPanel(p) {
           </div>
           <div class="info-item">
             <label>PRECIO NETO (€/pto × (1-Dto))</label>
-            ${(()=>{
+            ${(function(){
               const pts = parseFloat(String(p.PUNTOS||'').replace(',','.')) || 0;
               const dto = parseFloat(String(p.MAX_DTO||'').replace('%','').replace(',','.')) || 0;
               const neto = pts > 0 ? (pts * (1 - dto/100)).toFixed(3) : null;
@@ -1252,6 +1252,8 @@ function calcNetoProveedor() {
   el.textContent = pts > 0 ? (pts * (1 - dto/100)).toFixed(3) + ' €/pto' : '—';
 }
 window.calcNetoProveedor = calcNetoProveedor;
+
+function getFormData() {
   const pcosteNuevo = document.getElementById('fPCoste').value.trim();
   const pcosteAnterior = String(currentDoc?.P_COSTE || '').trim();
   // Si cambió P.Coste, guardar la fecha de hoy
