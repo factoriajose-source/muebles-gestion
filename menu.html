@@ -334,6 +334,7 @@ tr:last-child td{border-bottom:none}
     <div class="sb-item" id="mn-stats" style="display:none" onclick="navegar('stats','Estadísticas')"><span class="ico">📊</span> Estadísticas</div>
     <div class="sb-item" id="mn-editor" style="display:none" onclick="abrirEditor()"><span class="ico">✏️</span> Editor Fichajes</div>
     <div class="sb-item" id="mn-auditoria" style="display:none" onclick="abrirAuditoria()"><span class="ico">🔍</span> Auditoría Fichajes</div>
+    <div class="sb-item" id="mn-vendedores" style="display:none" onclick="abrirVendedores()"><span class="ico">👤</span> Vendedores</div>
 
     <div class="sb-logout"><button onclick="logout()">Cerrar sesión</button></div>
   </nav>
@@ -809,7 +810,22 @@ function login(name) {
 }
 
 // ── MENÚ LATERAL ─────────────────────────────────────────────────────────────
-function toggleSidebar(){
+function abrirVendedores(){
+  // Ir a estadísticas con clave y activar tab vendedores
+  mostrarModalClave(function(){
+    ["presupuesto","lista","visitas","fichajes","repartos","incidencias","stats"].forEach(function(n){
+      var sec=document.getElementById("tab-"+n);
+      if(sec) sec.classList.toggle("active", n==="stats");
+    });
+    document.getElementById("main-title").textContent="Vendedores";
+    document.querySelectorAll(".sb-item").forEach(function(el){el.classList.remove("active");});
+    var mn=document.getElementById("mn-vendedores"); if(mn) mn.classList.add("active");
+    currentStatsTab="vendedores";
+    renderStats();
+  });
+  cerrarSidebar();
+}
+window.abrirVendedores = abrirVendedores;
   document.getElementById("sidebar").classList.toggle("open");
   document.getElementById("sidebar-overlay").classList.toggle("open");
 }
@@ -902,6 +918,9 @@ function actualizarSidebar(name){
   // Editor Fichajes SOLO Jose Angel
   var mnEditor=document.getElementById("mn-editor");
   if(mnEditor) mnEditor.style.display = (name==="Jose Angel") ? "" : "none";
+  // Vendedores SOLO Jose Angel
+  var mnVend=document.getElementById("mn-vendedores");
+  if(mnVend) mnVend.style.display = (name==="Jose Angel") ? "" : "none";
 }
 // ── FIN MENÚ LATERAL ──────────────────────────────────────────────────────────
 
@@ -3578,6 +3597,32 @@ async function toggleVendedorActivo(alias, activo) {
   } catch(e) { showToast("Error: " + e.message); }
 }
 
+var _fotoDNIBase64 = null;
+
+window.cargarFotoDNI = function(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  document.getElementById("vd-dni-file-name").textContent = file.name;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      // Reducir a max 600px de ancho, calidad 70%
+      var canvas = document.createElement("canvas");
+      var maxW = 600;
+      var ratio = Math.min(1, maxW / img.width);
+      canvas.width  = Math.round(img.width  * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      _fotoDNIBase64 = canvas.toDataURL("image/jpeg", 0.7);
+      document.getElementById("vd-dni-img").src = _fotoDNIBase64;
+      document.getElementById("vd-dni-preview").style.display = "block";
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
 function renderVendedores() {
   const cont = document.getElementById("stats-content");
 
@@ -3591,7 +3636,14 @@ function renderVendedores() {
     + "<div><label style='font-size:12px;color:#666;display:block;margin-bottom:3px'>Telefono</label><input id='vd-tel' placeholder='600 000 000' type='tel' style='width:100%;padding:9px 10px;border:1px solid #ccc;border-radius:8px;font-size:15px'></div>"
     + "<div><label style='font-size:12px;color:#666;display:block;margin-bottom:3px'>Email</label><input id='vd-email' placeholder='email@ejemplo.com' type='email' style='width:100%;padding:9px 10px;border:1px solid #ccc;border-radius:8px;font-size:15px'></div>"
     + "</div>"
-    + "<div><label style='font-size:12px;color:#666;display:block;margin-bottom:3px'>Direccion</label><input id='vd-dir' placeholder='Calle, numero, ciudad, CP' style='width:100%;padding:9px 10px;border:1px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:10px'></div>"
+    + "<div><label style='font-size:12px;color:#666;display:block;margin-bottom:3px'>Foto DNI <span style='color:#aaa;font-weight:400'>(apaisado, se reduce automáticamente)</span></label>"
+    + "<div style='display:flex;align-items:center;gap:10px;margin-top:4px'>"
+    + "<button type='button' onclick='document.getElementById(\"vd-dni-file\").click()' style='padding:8px 14px;border:1.5px dashed #ccc;border-radius:8px;background:#f8f6f2;font-size:12px;cursor:pointer;white-space:nowrap'>📷 Cargar foto DNI</button>"
+    + "<input type='file' id='vd-dni-file' accept='image/*' style='display:none' onchange='cargarFotoDNI(event)'>"
+    + "<span id='vd-dni-file-name' style='font-size:11px;color:#888'>Sin imagen</span>"
+    + "</div>"
+    + "<div id='vd-dni-preview' style='margin-top:6px;display:none'><img id='vd-dni-img' style='max-width:280px;max-height:100px;border-radius:6px;border:1px solid #ddd;object-fit:contain'></div>"
+    + "</div>"
     + "<div style='margin-top:10px'><label style='font-size:12px;color:#666;display:block;margin-bottom:6px;font-weight:500'>Horario de trabajo (Lunes a Viernes)</label>"
     + "<div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px'>"
     + "<div><label style='font-size:11px;color:#888;display:block;margin-bottom:3px'>Horas semanales</label><input id='vd-horas' placeholder='Ej: 40' type='number' min='1' max='48' style='width:100%;padding:9px 10px;border:1px solid #ccc;border-radius:8px;font-size:15px'></div>"
@@ -3621,7 +3673,7 @@ function renderVendedores() {
       listHtml += "<tr style='opacity:" + (activo?1:0.5) + "'>"
         + "<td style='font-weight:600'>" + v.alias + "</td>"
         + "<td>" + (v.nombre||"") + " " + (v.apellidos||"") + "</td>"
-        + "<td style='font-size:12px'>" + (v.dni||"-") + "</td>"
+        + "<td style='font-size:12px'>" + (v.dni||"-") + (v.fotoDNI ? " <img src='"+v.fotoDNI+"' style='height:22px;max-width:60px;object-fit:contain;vertical-align:middle;border-radius:3px;margin-left:4px' title='Foto DNI'>" : "") + "</td>"
         + "<td style='font-size:12px'>" + (v.tel||"-") + "</td>"
         + "<td style='font-size:12px'>" + (v.email||"-") + "</td>"
         + "<td><span style='padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;background:" + (activo?"#eaf3de":"#fcebeb") + ";color:" + (activo?"#3b6d11":"#a32d2d") + "'>" + (activo?"Activo":"Baja") + "</span></td>"
@@ -3643,7 +3695,8 @@ function renderVendedores() {
       alias,
       nombre: document.getElementById("vd-nombre").value.trim(),
       apellidos: document.getElementById("vd-apellidos").value.trim(),
-      dni: document.getElementById("vd-dni").value.trim(),
+      dni: document.getElementById("vd-dni").value.trim().toUpperCase(),
+      fotoDNI: _fotoDNIBase64 || undefined,
       tel: document.getElementById("vd-tel").value.trim(),
       email: document.getElementById("vd-email").value.trim(),
       dir: document.getElementById("vd-dir").value.trim(),
