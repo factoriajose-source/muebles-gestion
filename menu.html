@@ -3579,8 +3579,13 @@ function updateVendorSelects() {
 
 async function saveVendedor(data) {
   try {
+    // Añadir fotoDNI solo si hay imagen nueva
+    if (_fotoDNIBase64) data.fotoDNI = _fotoDNIBase64;
+    // Eliminar campos undefined que Firebase no acepta
+    Object.keys(data).forEach(k => { if (data[k] === undefined) delete data[k]; });
     await setDoc(doc(db, "vendedores", data.alias), data);
     showToast("Vendedor guardado: " + data.alias);
+    _fotoDNIBase64 = null;
     await loadVendedores();
     renderVendedores();
   } catch(e) { showToast("Error: " + e.message); }
@@ -3699,7 +3704,6 @@ function renderVendedores() {
       nombre: document.getElementById("vd-nombre").value.trim(),
       apellidos: document.getElementById("vd-apellidos").value.trim(),
       dni: document.getElementById("vd-dni").value.trim().toUpperCase(),
-      fotoDNI: _fotoDNIBase64 || undefined,
       tel: document.getElementById("vd-tel").value.trim(),
       email: document.getElementById("vd-email").value.trim(),
       dir: document.getElementById("vd-dir").value.trim(),
