@@ -3638,6 +3638,7 @@ function renderVendedores() {
     + "<div><label style='font-size:12px;color:#666;display:block;margin-bottom:3px'>Telefono</label><input id='vd-tel' placeholder='600 000 000' type='tel' style='width:100%;padding:9px 10px;border:1px solid #ccc;border-radius:8px;font-size:15px'></div>"
     + "<div><label style='font-size:12px;color:#666;display:block;margin-bottom:3px'>Email</label><input id='vd-email' placeholder='email@ejemplo.com' type='email' style='width:100%;padding:9px 10px;border:1px solid #ccc;border-radius:8px;font-size:15px'></div>"
     + "</div>"
+    + "<div><label style='font-size:12px;color:#666;display:block;margin-bottom:3px'>Direccion</label><input id='vd-dir' placeholder='Calle, numero, ciudad, CP' style='width:100%;padding:9px 10px;border:1px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:10px'></div>"
     + "<div><label style='font-size:12px;color:#666;display:block;margin-bottom:3px'>Foto DNI <span style='color:#aaa;font-weight:400'>(apaisado, se reduce automáticamente)</span></label>"
     + "<div style='display:flex;align-items:center;gap:10px;margin-top:4px'>"
     + "<button type='button' onclick='document.getElementById(\"vd-dni-file\").click()' style='padding:8px 14px;border:1.5px dashed #ccc;border-radius:8px;background:#f8f6f2;font-size:12px;cursor:pointer;white-space:nowrap'>📷 Cargar foto DNI</button>"
@@ -3739,6 +3740,16 @@ function renderVendedores() {
       document.getElementById("vd-tel").value = v.tel||"";
       document.getElementById("vd-email").value = v.email||"";
       document.getElementById("vd-dir").value = v.dir||"";
+      // Mostrar foto DNI si ya tiene una
+      _fotoDNIBase64 = v.fotoDNI || null;
+      if(v.fotoDNI){
+        const img = document.getElementById("vd-dni-img");
+        const prev = document.getElementById("vd-dni-preview");
+        const nm = document.getElementById("vd-dni-file-name");
+        if(img) img.src = v.fotoDNI;
+        if(prev) prev.style.display = "block";
+        if(nm) nm.textContent = "Foto guardada";
+      }
       document.getElementById("vd-horas").value = v.horas||"";
       document.getElementById("vd-ini-m").value = v.horario?v.horario.ini_m:"";
       document.getElementById("vd-fin-m").value = v.horario?v.horario.fin_m:"";
