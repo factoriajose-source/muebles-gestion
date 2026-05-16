@@ -46,7 +46,7 @@ header{background:#1a1714;color:#fff;padding:12px 16px;display:flex;align-items:
 /* TABLA */
 .tabla-wrap{background:#fff;border:1px solid #e0dfd8;border-radius:10px;overflow:hidden;margin-bottom:1rem}
 .tabla-scroll{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:12px;min-width:1100px}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:1200px}
 thead tr{background:#1a1714;color:#fff}
 thead th{padding:10px 8px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
 tbody tr{border-bottom:1px solid #f0ede8;transition:background .1s}
@@ -60,29 +60,35 @@ tbody td{padding:9px 8px;vertical-align:middle}
 .badge-factoria{background:#e8f5ee;color:#1a6b2a}
 .badge-merka{background:#e6f1fb;color:#185fa5}
 .badge-expo{background:#fff3e0;color:#e65100}
-.td-prv{font-size:11px;color:#666}
-.td-prv strong{display:block;color:#1a1714}
-.td-desc{max-width:200px;word-break:break-word;font-size:11px}
+.td-prv{font-size:10px;color:#666;max-width:110px}
+.td-prv strong{display:block;color:#1a1714;font-size:10px}
+.td-desc{max-width:180px;word-break:break-word;font-size:11px}
+.td-notas{max-width:80px;font-size:11px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;position:relative}
+.td-notas:hover::after{content:attr(data-tip);position:absolute;top:-6px;left:0;transform:translateY(-100%);background:#333;color:#fff;padding:5px 8px;border-radius:6px;font-size:11px;white-space:pre-wrap;max-width:220px;z-index:99;line-height:1.4}
 .td-valor{text-align:right;font-family:monospace}
 .td-calculo{text-align:right;font-family:monospace;font-weight:700;color:#c0392b}
 .td-acciones{white-space:nowrap;text-align:right}
-.btn-edit{padding:4px 10px;border:1px solid #185fa5;border-radius:5px;background:#fff;color:#185fa5;font-size:11px;cursor:pointer;margin-right:4px}
+.btn-edit{padding:4px 8px;border:1px solid #185fa5;border-radius:5px;background:#fff;color:#185fa5;font-size:11px;cursor:pointer;margin-right:3px}
 .btn-edit:hover{background:#e6f1fb}
-.btn-del{padding:4px 10px;border:1px solid #c0392b;border-radius:5px;background:#fff;color:#c0392b;font-size:11px;cursor:pointer}
+.btn-amonest{padding:4px 8px;border:1px solid #8e44ad;border-radius:5px;background:#fff;color:#8e44ad;font-size:11px;cursor:pointer;margin-right:3px}
+.btn-amonest:hover{background:#f3e5f5}
+.btn-del{padding:4px 8px;border:1px solid #c0392b;border-radius:5px;background:#fff;color:#c0392b;font-size:11px;cursor:pointer}
 .btn-del:hover{background:#fdecea}
 
 /* SUMATORIO */
-.sumatorio{background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
-.sum-label{font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.05em}
+.sumatorio{background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:30px;flex-wrap:wrap;margin-bottom:1rem}
+.sum-item{display:flex;flex-direction:column;gap:2px}
+.sum-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
 .sum-valor{font-size:22px;font-weight:800;color:#c0392b}
-.sum-registros{font-size:12px;color:#aaa}
+.sum-valor.azul{color:#185fa5}
+.sum-registros{font-size:13px;color:#aaa;margin-left:auto}
 
 .empty{text-align:center;padding:2rem;color:#aaa;font-size:13px}
 
 /* MODAL */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem}
 .overlay.open{display:flex}
-.modal{background:#fff;border-radius:14px;padding:1.5rem;width:100%;max-width:560px;max-height:90vh;overflow-y:auto}
+.modal{background:#fff;border-radius:14px;padding:1.5rem;width:100%;max-width:580px;max-height:90vh;overflow-y:auto}
 .modal h3{font-size:16px;font-weight:700;margin-bottom:1rem;padding-bottom:10px;border-bottom:1px solid #e0dfd8}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .form-grid.full{grid-template-columns:1fr}
@@ -92,15 +98,40 @@ tbody td{padding:9px 8px;vertical-align:middle}
 .fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:#185fa5}
 .fg textarea{resize:vertical;min-height:60px}
 .fg .calc-field{padding:9px 10px;border:1px solid #ddd;border-radius:8px;background:#f8f6f2;font-size:16px;font-weight:700;color:#c0392b;min-height:40px}
-.fg .prv-nombre{padding:8px 10px;border:1px solid #ddd;border-radius:8px;background:#f8f6f2;font-size:13px;color:#444;min-height:38px}
+.fg .prv-nombre{padding:8px 10px;border:1px solid #ddd;border-radius:8px;background:#f8f6f2;font-size:12px;color:#444;min-height:38px}
 .modal-btns{display:flex;gap:10px;margin-top:1rem;padding-top:10px;border-top:1px solid #e0dfd8}
 .btn-guardar{flex:1;padding:11px;background:#1a6b2a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
 .btn-guardar:hover{background:#155722}
 .btn-cancelar{padding:11px 20px;border:1px solid #ccc;border-radius:8px;background:#fff;font-size:14px;cursor:pointer;color:#666}
 .btn-cancelar:hover{background:#f5f4f0}
 #mErr{background:#fdecea;color:#c0392b;border-radius:8px;padding:10px;font-size:13px;margin-bottom:10px;display:none}
-
 .spinner{text-align:center;padding:2rem;color:#888;font-size:13px}
+
+/* CARTA AMONESTACIÓN - IMPRESIÓN */
+@media print {
+  @page{size:A4 portrait;margin:20mm 18mm}
+  body>*:not(#cartaOverlay){display:none!important}
+  #cartaOverlay{display:block!important;position:static!important;background:none!important;padding:0!important}
+  .carta-modal{box-shadow:none!important;border:none!important;max-width:100%!important;padding:0!important}
+  .carta-no-print{display:none!important}
+  .carta-copia{page-break-before:always}
+}
+.carta-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;display:none;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto}
+.carta-overlay.open{display:flex}
+.carta-modal{background:#fff;border-radius:10px;padding:2rem;width:100%;max-width:700px;margin:auto;font-family:Georgia,serif;font-size:13px;line-height:1.7;color:#1a1a18}
+.carta-membrete{border-bottom:2px solid #1a1714;padding-bottom:10px;margin-bottom:20px}
+.carta-membrete h2{font-size:15px;font-weight:700;font-family:system-ui;margin-bottom:2px}
+.carta-membrete p{font-size:11px;color:#666;font-family:system-ui}
+.carta-titulo{text-align:center;font-size:16px;font-weight:700;text-decoration:underline;margin:20px 0;font-family:system-ui;letter-spacing:.05em}
+.carta-cuerpo p{margin-bottom:12px;text-align:justify}
+.carta-dato{font-weight:700;color:#1a1714}
+.carta-firmas{margin-top:30px;display:grid;grid-template-columns:1fr 1fr;gap:30px}
+.carta-firma-box{border-top:1px solid #333;padding-top:8px;font-size:12px;font-family:system-ui}
+.carta-firma-box .firma-linea{height:50px}
+.carta-copia-label{text-align:center;background:#f5f4f0;padding:6px;font-size:11px;font-family:system-ui;color:#888;margin-bottom:16px;border-radius:4px}
+.carta-btns{display:flex;gap:10px;margin-bottom:1rem;font-family:system-ui}
+.btn-imprimir-carta{padding:10px 20px;background:#8e44ad;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-cerrar-carta{padding:10px 16px;border:1px solid #ccc;border-radius:8px;background:#fff;font-size:13px;cursor:pointer}
 
 @media(max-width:600px){
   .form-grid{grid-template-columns:1fr}
@@ -188,6 +219,7 @@ tbody td{padding:9px 8px;vertical-align:middle}
               <th>Tienda</th>
               <th>Proveedor</th>
               <th>Descripción del fallo</th>
+              <th>Notas</th>
               <th style="text-align:right">Valor €</th>
               <th style="text-align:right">Valor Pts</th>
               <th style="text-align:right">Cálculo Fallo €</th>
@@ -195,7 +227,7 @@ tbody td{padding:9px 8px;vertical-align:middle}
             </tr>
           </thead>
           <tbody id="tablaBody">
-            <tr><td colspan="10" class="spinner">Cargando...</td></tr>
+            <tr><td colspan="11" class="spinner">Cargando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -203,14 +235,15 @@ tbody td{padding:9px 8px;vertical-align:middle}
 
     <!-- SUMATORIO -->
     <div class="sumatorio">
-      <div>
-        <div class="sum-label">Total Cálculo Valor Fallo</div>
+      <div class="sum-item">
+        <div class="sum-label">Total Valor €</div>
+        <div class="sum-valor azul" id="sumValorEur">0,00 €</div>
+      </div>
+      <div class="sum-item">
+        <div class="sum-label">Total Cálculo Valor Fallo €</div>
         <div class="sum-valor" id="sumCalculo">0,00 €</div>
       </div>
-      <div>
-        <div class="sum-label">Registros mostrados</div>
-        <div class="sum-registros" id="sumRegistros">0 fallos</div>
-      </div>
+      <div class="sum-registros" id="sumRegistros">0 fallos</div>
     </div>
   </div>
 </div>
@@ -292,6 +325,12 @@ tbody td{padding:9px 8px;vertical-align:middle}
     </div>
     <div class="form-grid full">
       <div class="fg">
+        <label>Notas (opcional)</label>
+        <textarea id="mNotas" placeholder="Observaciones adicionales..." style="min-height:50px"></textarea>
+      </div>
+    </div>
+    <div class="form-grid full">
+      <div class="fg">
         <label>Cálculo Valor Fallo € (Puntos × Precio Neto proveedor)</label>
         <div class="calc-field" id="mCalculo">— €</div>
       </div>
@@ -303,12 +342,24 @@ tbody td{padding:9px 8px;vertical-align:middle}
   </div>
 </div>
 
+<!-- CARTA AMONESTACIÓN -->
+<div class="carta-overlay" id="cartaOverlay">
+  <div class="carta-modal" id="cartaContenido">
+    <div class="carta-btns carta-no-print">
+      <button class="btn-imprimir-carta" onclick="imprimirCarta()">🖨️ Imprimir carta</button>
+      <button class="btn-cerrar-carta" onclick="document.getElementById('cartaOverlay').classList.remove('open')">✕ Cerrar</button>
+    </div>
+    <div id="cartaBody"></div>
+  </div>
+</div>
+
 <script>
 // ── FIREBASE ──────────────────────────────────────────────────────────────────
 var db, auth;
 var USUARIOS_PERMITIDOS = ["Jose Angel","Marisa","Javi","Kike","Angel"];
 var currentUser = "";
 var vendedores = [];
+var vendedoresCompletos = {}; // {alias: {nombre, apellidos, DNI}}
 var proveedoresMap = {}; // {codigo: {nombre, precioPunto, dtoMax, precioNeto}}
 var fallos = [];
 var editandoId = null;
@@ -364,9 +415,13 @@ function mostrarApp(){
 function cargarVendedores(){
   return db.collection("vendedores").get().then(function(sn){
     vendedores = [];
+    vendedoresCompletos = {};
     sn.forEach(function(d){
       var v = d.data();
-      if(v.activo !== false) vendedores.push(v.alias||"");
+      if(v.activo !== false){
+        vendedores.push(v.alias||"");
+        vendedoresCompletos[v.alias||""] = v;
+      }
     });
     vendedores.sort();
     // Rellenar selects de vendedor
@@ -446,21 +501,28 @@ function limpiarFiltros(){
 
 // ── TABLA ─────────────────────────────────────────────────────────────────────
 var MESES = ["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+var MESES_FULL = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
 function renderTabla(lista){
   var tbody = document.getElementById("tablaBody");
   if(!lista.length){
-    tbody.innerHTML = "<tr><td colspan='10' class='empty'>No hay fallos registrados con estos filtros</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='11' class='empty'>No hay fallos registrados con estos filtros</td></tr>";
     document.getElementById("sumCalculo").textContent = "0,00 €";
+    document.getElementById("sumValorEur").textContent = "0,00 €";
     document.getElementById("sumRegistros").textContent = "0 fallos";
     return;
   }
 
   var totalCalculo = 0;
+  var totalValorEur = 0;
   var html = lista.map(function(f){
     var mesStr = f.fecha ? (MESES[parseInt(f.fecha.substring(5,7))]||"") + " " + f.fecha.substring(0,4) : "—";
     var badge = f.tienda==="Factoría"?"badge-factoria":f.tienda==="Merkamueble"?"badge-merka":"badge-expo";
     var calculo = parseFloat(f.calculo)||0;
-    totalCalculo += calculo;
+    var valorEur = parseFloat(f.valorEur)||0;
+    totalCalculo  += calculo;
+    totalValorEur += valorEur;
+    var notasCortas = f.notas ? (f.notas.length>8 ? f.notas.substring(0,8)+"…" : f.notas) : "—";
     return "<tr>"
       +"<td class='td-fecha'>"+mesStr+"</td>"
       +"<td class='td-vendedor'>"+escH(f.vendedor||"")+"</td>"
@@ -468,10 +530,12 @@ function renderTabla(lista){
       +"<td class='td-tienda'><span class='badge-tienda "+badge+"'>"+escH(f.tienda||"")+"</span></td>"
       +"<td class='td-prv'><strong>"+escH(f.prvNombre||"")+"</strong>"+escH(f.prvCod||"")+"</td>"
       +"<td class='td-desc'>"+escH(f.descripcion||"")+"</td>"
-      +"<td class='td-valor'>"+(f.valorEur?fmtEur(f.valorEur):"—")+"</td>"
+      +"<td class='td-notas' data-tip='"+escH(f.notas||"—")+"'>"+escH(notasCortas)+"</td>"
+      +"<td class='td-valor'>"+(valorEur>0?fmtEur(valorEur):"—")+"</td>"
       +"<td class='td-valor'>"+(f.valorPts?f.valorPts+" pts":"—")+"</td>"
       +"<td class='td-calculo'>"+(calculo>0?fmtEur(calculo):"—")+"</td>"
       +"<td class='td-acciones'>"
+        +"<button class='btn-amonest' onclick='abrirCarta(\""+f._id+"\")' title='Carta amonestación'>📄</button>"
         +"<button class='btn-edit' onclick='abrirModalEditar(\""+f._id+"\")'>✏️</button>"
         +"<button class='btn-del'  onclick='eliminarFallo(\""+f._id+"\")'>🗑</button>"
       +"</td>"
@@ -479,7 +543,8 @@ function renderTabla(lista){
   }).join("");
 
   tbody.innerHTML = html;
-  document.getElementById("sumCalculo").textContent   = fmtEur(totalCalculo);
+  document.getElementById("sumCalculo").textContent  = fmtEur(totalCalculo);
+  document.getElementById("sumValorEur").textContent = fmtEur(totalValorEur);
   document.getElementById("sumRegistros").textContent = lista.length + " fallo"+(lista.length!==1?"s":"");
 }
 
@@ -522,6 +587,7 @@ function abrirModalEditar(id){
   }
   document.getElementById("mValorEur").value = f.valorEur||"";
   document.getElementById("mValorPts").value = f.valorPts||"";
+  document.getElementById("mNotas").value    = f.notas||"";
   calcFallo();
   document.getElementById("mOverlay").classList.add("open");
 }
@@ -542,6 +608,7 @@ function limpiarModal(){
   document.getElementById("mDescCustom").style.display = "none";
   document.getElementById("mValorEur").value   = "";
   document.getElementById("mValorPts").value   = "";
+  document.getElementById("mNotas").value      = "";
   document.getElementById("mCalculo").textContent = "— €";
   document.getElementById("mErr").style.display = "none";
   _prvNetoActual = 0;
@@ -603,6 +670,8 @@ function guardarFallo(){
   var valorPts = parseFloat(document.getElementById("mValorPts").value) || 0;
   var calculo  = (valorPts > 0 && _prvNetoActual > 0) ? valorPts * _prvNetoActual : 0;
 
+  var notas    = document.getElementById("mNotas").value.trim();
+
   if(!vend){ err.textContent="Selecciona un vendedor"; err.style.display="block"; return; }
   if(!desc){ err.textContent="Introduce la descripción del fallo"; err.style.display="block"; return; }
 
@@ -614,6 +683,7 @@ function guardarFallo(){
     prvCod:   prvCod,
     prvNombre:prvNombre,
     descripcion: desc,
+    notas:       notas,
     valorEur: valorEur,
     valorPts: valorPts,
     calculo:  parseFloat(calculo.toFixed(2)),
@@ -642,6 +712,64 @@ function eliminarFallo(id){
   db.collection("fallos").doc(id).delete().then(function(){
     cargarFallos();
   });
+}
+
+// ── CARTA AMONESTACIÓN ────────────────────────────────────────────────────────
+function abrirCarta(id){
+  var f = fallos.find(function(x){ return x._id===id; });
+  if(!f) return;
+
+  // Buscar datos del trabajador en vendedoresData (nombre completo y DNI)
+  var vd = vendedoresCompletos[f.vendedor] || {};
+  var nombreCompleto = ((vd.nombre||"")+" "+(vd.apellidos||"")).trim() || f.vendedor;
+  var dni = vd.DNI || vd.dni || "___________";
+
+  var mesStr = f.fecha ? MESES_FULL[parseInt(f.fecha.substring(5,7))] + " de " + f.fecha.substring(0,4) : "—";
+  var hoy = new Date();
+  var fechaHoy = hoy.getDate() + " de " + MESES_FULL[hoy.getMonth()+1] + " de " + hoy.getFullYear();
+  var valorFallo = parseFloat(f.calculo)>0 ? fmtEur(f.calculo) : (parseFloat(f.valorEur)>0 ? fmtEur(f.valorEur) : "valor no especificado");
+
+  function cuerpoHTML(esCopia){
+    return (esCopia ? "<div class='carta-copia'><div class='carta-copia-label'>— COPIA PARA EL TRABAJADOR/A —</div>" : "")
+    +"<div class='carta-membrete'>"
+    +"<h2>MERES CENTRAL DE COMPRAS S.L. — CIF: B74102807</h2>"
+    +"<p>Crta. Oviedo-Santander Km8, 33199 Meres, Siero (Asturias)</p>"
+    +"</div>"
+    +"<div class='carta-titulo'>CARTA DE AMONESTACIÓN</div>"
+    +"<div class='carta-cuerpo'>"
+    +"<p>En <span class='carta-dato'>Meres (Siero)</span>, a <span class='carta-dato'>"+fechaHoy+"</span></p>"
+    +"<p>Sr./Sra. <span class='carta-dato'>"+escH(nombreCompleto)+"</span>"+(dni!=="___________"?" — DNI: <span class='carta-dato'>"+escH(dni)+"</span>":"")+"</p>"
+    +"<p>Por medio de la presente, la dirección de <strong>Meres Central de Compras S.L.</strong> le comunica una amonestación formal por escrito debido a la incidencia detectada en el pedido nº <span class='carta-dato'>"+escH(f.pedido||"—")+"</span>, tramitado en <span class='carta-dato'>"+escH(f.tienda||"—")+"</span> durante <span class='carta-dato'>"+mesStr+"</span>, correspondiente al proveedor <span class='carta-dato'>"+escH(f.prvNombre||f.prvCod||"—")+"</span>.</p>"
+    +"<p>El error cometido ha sido clasificado como: <span class='carta-dato'>"+escH(f.descripcion||"—")+"</span>.</p>"
+    +"<p>Dicha incidencia ha ocasionado un perjuicio económico para la empresa valorado en aproximadamente <span class='carta-dato'>"+valorFallo+"</span>.</p>"
+    +(f.notas ? "<p><em>Observaciones adicionales: "+escH(f.notas)+"</em></p>" : "")
+    +"<p>La empresa, aun comprendiendo que los errores pueden producirse en el desarrollo habitual de la actividad, considera necesario dejar constancia formal de lo sucedido dada su repercusión económica, e insta a <strong>extremar la diligencia en la gestión y revisión de pedidos</strong>.</p>"
+    +"<p>La presente amonestación quedará incorporada a su expediente laboral.</p>"
+    +"<p>Sin otro particular,</p>"
+    +"</div>"
+    +"<div class='carta-firmas'>"
+    +"<div class='carta-firma-box'>"
+    +"<div class='firma-linea'></div>"
+    +"<strong>Por la empresa</strong><br>José Ángel López Pérez — Gerente"
+    +"</div>"
+    +"<div class='carta-firma-box'>"
+    +"<div class='firma-linea'></div>"
+    +"<strong>Recibí</strong><br>"+escH(nombreCompleto)+"<br><small>Fecha: ______________________</small>"
+    +"</div>"
+    +"</div>"
+    +"<p style='margin-top:16px;font-size:10px;color:#aaa;font-family:system-ui'>Documento generado en dos ejemplares: uno para la empresa y otro para el trabajador/a.</p>"
+    +(esCopia ? "</div>" : "");
+  }
+
+  document.getElementById("cartaBody").innerHTML = cuerpoHTML(false) + cuerpoHTML(true);
+  document.getElementById("cartaOverlay").classList.add("open");
+}
+
+function imprimirCarta(){
+  var tituloOrig = document.title;
+  document.title = " ";
+  window.print();
+  setTimeout(function(){ document.title = tituloOrig; }, 1500);
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
