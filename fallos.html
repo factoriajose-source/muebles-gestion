@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🪑 Meres · Control de Fallos</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f5f4f0;color:#1a1a18;font-size:14px}
+
+/* LOGIN */
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem;background:#f5f4f0}
+.login-card{background:#fff;border:1px solid #e0dfd8;border-radius:16px;padding:2rem;width:100%;max-width:360px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.login-logo{font-size:40px;margin-bottom:.5rem}
+.login-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.login-sub{font-size:12px;color:#888;margin-bottom:1.5rem}
+.login-card label{font-size:12px;color:#666;display:block;text-align:left;margin-bottom:3px}
+.login-card input{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:12px}
+.btn-login{width:100%;padding:12px;background:#1a6b2a;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer}
+#loginErr{color:#c0392b;font-size:12px;margin-top:8px;display:none}
+
+/* APP */
+#appScreen{display:none}
+header{background:#1a1714;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header-title{font-size:16px;font-weight:700}
+.header-title span{color:#c4571a}
+.header-right{display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(255,255,255,.6)}
+.btn-salir{padding:5px 12px;border:1px solid rgba(255,255,255,.2);border-radius:6px;background:transparent;color:rgba(255,255,255,.7);font-size:12px;cursor:pointer}
+.btn-salir:hover{background:rgba(255,255,255,.1);color:#fff}
+
+.wrap{max-width:1400px;margin:0 auto;padding:1rem}
+
+/* FILTROS */
+.filtros-bar{background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:12px 16px;margin-bottom:1rem;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.filtros-bar .fg{display:flex;flex-direction:column;gap:3px}
+.filtros-bar label{font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.filtros-bar select{padding:7px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;background:#fff;min-width:120px}
+.btn-limpiar{padding:7px 14px;border:1px solid #ccc;border-radius:7px;background:#fff;font-size:12px;cursor:pointer;color:#666;white-space:nowrap}
+.btn-limpiar:hover{background:#f5f4f0}
+.btn-nuevo{padding:8px 16px;background:#1a6b2a;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:auto}
+.btn-nuevo:hover{background:#155722}
+
+/* TABLA */
+.tabla-wrap{background:#fff;border:1px solid #e0dfd8;border-radius:10px;overflow:hidden;margin-bottom:1rem}
+.tabla-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:1100px}
+thead tr{background:#1a1714;color:#fff}
+thead th{padding:10px 8px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+tbody tr{border-bottom:1px solid #f0ede8;transition:background .1s}
+tbody tr:hover{background:#fafaf8}
+tbody td{padding:9px 8px;vertical-align:middle}
+.td-fecha{white-space:nowrap;color:#666;font-size:11px}
+.td-vendedor{font-weight:600}
+.td-pedido{font-family:monospace;font-size:11px}
+.td-tienda{font-size:11px}
+.badge-tienda{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
+.badge-factoria{background:#e8f5ee;color:#1a6b2a}
+.badge-merka{background:#e6f1fb;color:#185fa5}
+.badge-expo{background:#fff3e0;color:#e65100}
+.td-prv{font-size:11px;color:#666}
+.td-prv strong{display:block;color:#1a1714}
+.td-desc{max-width:200px;word-break:break-word;font-size:11px}
+.td-valor{text-align:right;font-family:monospace}
+.td-calculo{text-align:right;font-family:monospace;font-weight:700;color:#c0392b}
+.td-acciones{white-space:nowrap;text-align:right}
+.btn-edit{padding:4px 10px;border:1px solid #185fa5;border-radius:5px;background:#fff;color:#185fa5;font-size:11px;cursor:pointer;margin-right:4px}
+.btn-edit:hover{background:#e6f1fb}
+.btn-del{padding:4px 10px;border:1px solid #c0392b;border-radius:5px;background:#fff;color:#c0392b;font-size:11px;cursor:pointer}
+.btn-del:hover{background:#fdecea}
+
+/* SUMATORIO */
+.sumatorio{background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.sum-label{font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.05em}
+.sum-valor{font-size:22px;font-weight:800;color:#c0392b}
+.sum-registros{font-size:12px;color:#aaa}
+
+.empty{text-align:center;padding:2rem;color:#aaa;font-size:13px}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:14px;padding:1.5rem;width:100%;max-width:560px;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:1rem;padding-bottom:10px;border-bottom:1px solid #e0dfd8}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-grid.full{grid-template-columns:1fr}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:11px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.fg input,.fg select,.fg textarea{padding:9px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px;width:100%;font-family:inherit}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:#185fa5}
+.fg textarea{resize:vertical;min-height:60px}
+.fg .calc-field{padding:9px 10px;border:1px solid #ddd;border-radius:8px;background:#f8f6f2;font-size:16px;font-weight:700;color:#c0392b;min-height:40px}
+.fg .prv-nombre{padding:8px 10px;border:1px solid #ddd;border-radius:8px;background:#f8f6f2;font-size:13px;color:#444;min-height:38px}
+.modal-btns{display:flex;gap:10px;margin-top:1rem;padding-top:10px;border-top:1px solid #e0dfd8}
+.btn-guardar{flex:1;padding:11px;background:#1a6b2a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+.btn-guardar:hover{background:#155722}
+.btn-cancelar{padding:11px 20px;border:1px solid #ccc;border-radius:8px;background:#fff;font-size:14px;cursor:pointer;color:#666}
+.btn-cancelar:hover{background:#f5f4f0}
+#mErr{background:#fdecea;color:#c0392b;border-radius:8px;padding:10px;font-size:13px;margin-bottom:10px;display:none}
+
+.spinner{text-align:center;padding:2rem;color:#888;font-size:13px}
+
+@media(max-width:600px){
+  .form-grid{grid-template-columns:1fr}
+  .filtros-bar{flex-direction:column}
+  .btn-nuevo{margin-left:0;width:100%}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">⚠️</div>
+    <div class="login-title">Control de Fallos</div>
+    <div class="login-sub">Meres Central de Compras · Acceso restringido</div>
+    <label>Email</label>
+    <input type="email" id="lEmail" placeholder="correo@ejemplo.com" autocomplete="username">
+    <label>Contraseña</label>
+    <input type="password" id="lPass" placeholder="••••••••" autocomplete="current-password">
+    <button class="btn-login" onclick="doLogin()">Entrar</button>
+    <div id="loginErr">Email o contraseña incorrectos</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appScreen">
+  <header>
+    <div class="header-title">🪑 MERES · <span>Control de Fallos</span></div>
+    <div class="header-right">
+      <span id="userInfo"></span>
+      <button class="btn-salir" onclick="doLogout()">Salir</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <!-- FILTROS -->
+    <div class="filtros-bar">
+      <div class="fg">
+        <label>Año</label>
+        <select id="fAnio" onchange="aplicarFiltros()">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Mes</label>
+        <select id="fMes" onchange="aplicarFiltros()">
+          <option value="">Todos</option>
+          <option value="01">Enero</option><option value="02">Febrero</option>
+          <option value="03">Marzo</option><option value="04">Abril</option>
+          <option value="05">Mayo</option><option value="06">Junio</option>
+          <option value="07">Julio</option><option value="08">Agosto</option>
+          <option value="09">Septiembre</option><option value="10">Octubre</option>
+          <option value="11">Noviembre</option><option value="12">Diciembre</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Vendedor</label>
+        <select id="fVendedor" onchange="aplicarFiltros()">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Tienda</label>
+        <select id="fTienda" onchange="aplicarFiltros()">
+          <option value="">Todas</option>
+          <option value="Factoría">Factoría</option>
+          <option value="Merkamueble">Merkamueble</option>
+          <option value="ExpoSofá">ExpoSofá</option>
+        </select>
+      </div>
+      <button class="btn-limpiar" onclick="limpiarFiltros()">✕ Limpiar</button>
+      <button class="btn-nuevo" onclick="abrirModalNuevo()">+ Nuevo fallo</button>
+    </div>
+
+    <!-- TABLA -->
+    <div class="tabla-wrap">
+      <div class="tabla-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Vendedor</th>
+              <th>Pedido</th>
+              <th>Tienda</th>
+              <th>Proveedor</th>
+              <th>Descripción del fallo</th>
+              <th style="text-align:right">Valor €</th>
+              <th style="text-align:right">Valor Pts</th>
+              <th style="text-align:right">Cálculo Fallo €</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tablaBody">
+            <tr><td colspan="10" class="spinner">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SUMATORIO -->
+    <div class="sumatorio">
+      <div>
+        <div class="sum-label">Total Cálculo Valor Fallo</div>
+        <div class="sum-valor" id="sumCalculo">0,00 €</div>
+      </div>
+      <div>
+        <div class="sum-label">Registros mostrados</div>
+        <div class="sum-registros" id="sumRegistros">0 fallos</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUEVO/EDITAR -->
+<div class="overlay" id="mOverlay">
+  <div class="modal">
+    <h3 id="mTitulo">➕ Nuevo fallo</h3>
+    <div id="mErr"></div>
+    <div class="form-grid">
+      <div class="fg">
+        <label>Año</label>
+        <select id="mAnio"></select>
+      </div>
+      <div class="fg">
+        <label>Mes</label>
+        <select id="mMes">
+          <option value="01">Enero</option><option value="02">Febrero</option>
+          <option value="03">Marzo</option><option value="04">Abril</option>
+          <option value="05">Mayo</option><option value="06">Junio</option>
+          <option value="07">Julio</option><option value="08">Agosto</option>
+          <option value="09">Septiembre</option><option value="10">Octubre</option>
+          <option value="11">Noviembre</option><option value="12">Diciembre</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="fg">
+        <label>Vendedor</label>
+        <select id="mVendedor"></select>
+      </div>
+      <div class="fg">
+        <label>Tienda</label>
+        <select id="mTienda">
+          <option value="Factoría">Factoría</option>
+          <option value="Merkamueble">Merkamueble</option>
+          <option value="ExpoSofá">ExpoSofá</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="fg">
+        <label>Nº Pedido</label>
+        <input type="text" id="mPedido" placeholder="Ej: 12345">
+      </div>
+      <div class="fg">
+        <label>Nº Proveedor</label>
+        <input type="text" id="mPrvCod" placeholder="Ej: 827" oninput="buscarProveedor()">
+      </div>
+    </div>
+    <div class="form-grid full">
+      <div class="fg">
+        <label>Nombre Proveedor (auto)</label>
+        <div class="prv-nombre" id="mPrvNombre">—</div>
+      </div>
+    </div>
+    <div class="form-grid full">
+      <div class="fg">
+        <label>Descripción del fallo</label>
+        <select id="mDescTipo" onchange="toggleDescCustom()">
+          <option value="Error de medidas">Error de medidas</option>
+          <option value="Color incorrecto">Color incorrecto</option>
+          <option value="Modelo equivocado">Modelo equivocado</option>
+          <option value="Mano equivocada">Mano equivocada</option>
+          <option value="otro">Otro (especificar)...</option>
+        </select>
+        <input type="text" id="mDescCustom" placeholder="Describe el fallo..." style="margin-top:6px;display:none">
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="fg">
+        <label>Valor € (coste directo)</label>
+        <input type="number" step="0.01" id="mValorEur" placeholder="0.00" oninput="calcFallo()">
+      </div>
+      <div class="fg">
+        <label>Valor Puntos</label>
+        <input type="number" step="1" id="mValorPts" placeholder="0" oninput="calcFallo()">
+      </div>
+    </div>
+    <div class="form-grid full">
+      <div class="fg">
+        <label>Cálculo Valor Fallo € (Puntos × Precio Neto proveedor)</label>
+        <div class="calc-field" id="mCalculo">— €</div>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-guardar" onclick="guardarFallo()">💾 Guardar</button>
+      <button class="btn-cancelar" onclick="cerrarModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── FIREBASE ──────────────────────────────────────────────────────────────────
+var db, auth;
+var USUARIOS_PERMITIDOS = ["Jose Angel","Marisa","Javi","Kike","Angel"];
+var currentUser = "";
+var vendedores = [];
+var proveedoresMap = {}; // {codigo: {nombre, precioPunto, dtoMax, precioNeto}}
+var fallos = [];
+var editandoId = null;
+
+window.addEventListener("load", function(){
+  firebase.initializeApp({
+    apiKey:"AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
+    authDomain:"muebles-presupuestos.firebaseapp.com",
+    projectId:"muebles-presupuestos",
+    storageBucket:"muebles-presupuestos.firebasestorage.app",
+    messagingSenderId:"37365883872",
+    appId:"1:37365883872:web:842ca4d318c01652684185"
+  });
+  db   = firebase.firestore();
+  auth = firebase.auth();
+
+  document.getElementById("lPass").addEventListener("keydown", function(e){
+    if(e.key==="Enter") doLogin();
+  });
+
+  auth.onAuthStateChanged(function(user){
+    if(user) mostrarApp();
+  });
+});
+
+// ── LOGIN ─────────────────────────────────────────────────────────────────────
+function doLogin(){
+  var email = document.getElementById("lEmail").value.trim();
+  var pass  = document.getElementById("lPass").value;
+  var err   = document.getElementById("loginErr");
+  err.style.display = "none";
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(function(){ mostrarApp(); })
+    .catch(function(){ err.style.display = "block"; });
+}
+
+function doLogout(){
+  auth.signOut().then(function(){
+    document.getElementById("appScreen").style.display = "none";
+    document.getElementById("loginScreen").style.display = "flex";
+    currentUser = "";
+  });
+}
+
+// ── ARRANQUE APP ──────────────────────────────────────────────────────────────
+function mostrarApp(){
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("appScreen").style.display   = "block";
+  Promise.all([cargarVendedores(), cargarProveedores()])
+    .then(function(){ cargarFallos(); });
+}
+
+function cargarVendedores(){
+  return db.collection("vendedores").get().then(function(sn){
+    vendedores = [];
+    sn.forEach(function(d){
+      var v = d.data();
+      if(v.activo !== false) vendedores.push(v.alias||"");
+    });
+    vendedores.sort();
+    // Rellenar selects de vendedor
+    var opts = vendedores.map(function(v){
+      return "<option value='"+v+"'>"+v+"</option>";
+    }).join("");
+    document.getElementById("fVendedor").innerHTML = "<option value=''>Todos</option>" + opts;
+    document.getElementById("mVendedor").innerHTML = opts;
+    // Usuario actual (solo info)
+    if(!currentUser && auth.currentUser){
+      currentUser = auth.currentUser.email;
+      document.getElementById("userInfo").textContent = currentUser;
+    }
+  });
+}
+
+function cargarProveedores(){
+  return db.collection("proveedores").get().then(function(sn){
+    proveedoresMap = {};
+    sn.forEach(function(d){
+      var p = d.data();
+      var cod = String(p.Codigo||p.codigo||"").trim();
+      if(!cod) return;
+      var pts  = parseFloat(String(p.PUNTOS||"0").replace(",",".")) || 0;
+      var dto  = parseFloat(String(p.MAX_DTO||"0").replace(",",".").replace("%","")) || 0;
+      var neto = pts > 0 ? pts*(1-dto/100) : 0;
+      proveedoresMap[cod] = {nombre:p.Nombre||p.nombre||cod, precioPunto:pts, dtoMax:dto, precioNeto:neto};
+    });
+  });
+}
+
+function cargarFallos(){
+  db.collection("fallos").orderBy("fecha","desc").get().then(function(sn){
+    fallos = [];
+    sn.forEach(function(d){ fallos.push(Object.assign({_id:d.id}, d.data())); });
+    poblarFiltroAnios();
+    aplicarFiltros();
+  }).catch(function(e){ console.error(e); });
+}
+
+// ── FILTROS ───────────────────────────────────────────────────────────────────
+function poblarFiltroAnios(){
+  var anios = {};
+  fallos.forEach(function(f){ if(f.fecha) anios[f.fecha.substring(0,4)]=1; });
+  var sel = document.getElementById("fAnio");
+  var val = sel.value;
+  sel.innerHTML = "<option value=''>Todos</option>";
+  Object.keys(anios).sort().reverse().forEach(function(a){
+    sel.innerHTML += "<option value='"+a+"'"+( a===val?" selected":"")+">"+a+"</option>";
+  });
+}
+
+function aplicarFiltros(){
+  var fA = document.getElementById("fAnio").value;
+  var fM = document.getElementById("fMes").value;
+  var fV = document.getElementById("fVendedor").value;
+  var fT = document.getElementById("fTienda").value;
+
+  var filtrados = fallos.filter(function(f){
+    if(fA && (!f.fecha || f.fecha.substring(0,4)!==fA)) return false;
+    if(fM && (!f.fecha || f.fecha.substring(5,7)!==fM)) return false;
+    if(fV && f.vendedor !== fV) return false;
+    if(fT && f.tienda !== fT) return false;
+    return true;
+  });
+
+  renderTabla(filtrados);
+}
+
+function limpiarFiltros(){
+  document.getElementById("fAnio").value    = "";
+  document.getElementById("fMes").value     = "";
+  document.getElementById("fVendedor").value= "";
+  document.getElementById("fTienda").value  = "";
+  aplicarFiltros();
+}
+
+// ── TABLA ─────────────────────────────────────────────────────────────────────
+var MESES = ["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+function renderTabla(lista){
+  var tbody = document.getElementById("tablaBody");
+  if(!lista.length){
+    tbody.innerHTML = "<tr><td colspan='10' class='empty'>No hay fallos registrados con estos filtros</td></tr>";
+    document.getElementById("sumCalculo").textContent = "0,00 €";
+    document.getElementById("sumRegistros").textContent = "0 fallos";
+    return;
+  }
+
+  var totalCalculo = 0;
+  var html = lista.map(function(f){
+    var mesStr = f.fecha ? (MESES[parseInt(f.fecha.substring(5,7))]||"") + " " + f.fecha.substring(0,4) : "—";
+    var badge = f.tienda==="Factoría"?"badge-factoria":f.tienda==="Merkamueble"?"badge-merka":"badge-expo";
+    var calculo = parseFloat(f.calculo)||0;
+    totalCalculo += calculo;
+    return "<tr>"
+      +"<td class='td-fecha'>"+mesStr+"</td>"
+      +"<td class='td-vendedor'>"+escH(f.vendedor||"")+"</td>"
+      +"<td class='td-pedido'>"+escH(f.pedido||"")+"</td>"
+      +"<td class='td-tienda'><span class='badge-tienda "+badge+"'>"+escH(f.tienda||"")+"</span></td>"
+      +"<td class='td-prv'><strong>"+escH(f.prvNombre||"")+"</strong>"+escH(f.prvCod||"")+"</td>"
+      +"<td class='td-desc'>"+escH(f.descripcion||"")+"</td>"
+      +"<td class='td-valor'>"+(f.valorEur?fmtEur(f.valorEur):"—")+"</td>"
+      +"<td class='td-valor'>"+(f.valorPts?f.valorPts+" pts":"—")+"</td>"
+      +"<td class='td-calculo'>"+(calculo>0?fmtEur(calculo):"—")+"</td>"
+      +"<td class='td-acciones'>"
+        +"<button class='btn-edit' onclick='abrirModalEditar(\""+f._id+"\")'>✏️</button>"
+        +"<button class='btn-del'  onclick='eliminarFallo(\""+f._id+"\")'>🗑</button>"
+      +"</td>"
+      +"</tr>";
+  }).join("");
+
+  tbody.innerHTML = html;
+  document.getElementById("sumCalculo").textContent   = fmtEur(totalCalculo);
+  document.getElementById("sumRegistros").textContent = lista.length + " fallo"+(lista.length!==1?"s":"");
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────────────
+function abrirModalNuevo(){
+  editandoId = null;
+  document.getElementById("mTitulo").textContent = "➕ Nuevo fallo";
+  limpiarModal();
+  // Fecha actual
+  var hoy = new Date();
+  document.getElementById("mAnio").value = String(hoy.getFullYear());
+  document.getElementById("mMes").value  = String(hoy.getMonth()+1).padStart(2,"0");
+  document.getElementById("mOverlay").classList.add("open");
+}
+
+function abrirModalEditar(id){
+  var f = fallos.find(function(x){ return x._id===id; });
+  if(!f) return;
+  editandoId = id;
+  document.getElementById("mTitulo").textContent = "✏️ Editar fallo";
+  limpiarModal();
+  if(f.fecha){
+    document.getElementById("mAnio").value = f.fecha.substring(0,4);
+    document.getElementById("mMes").value  = f.fecha.substring(5,7);
+  }
+  document.getElementById("mVendedor").value = f.vendedor||"";
+  document.getElementById("mTienda").value   = f.tienda||"";
+  document.getElementById("mPedido").value   = f.pedido||"";
+  document.getElementById("mPrvCod").value   = f.prvCod||"";
+  document.getElementById("mPrvNombre").textContent = f.prvNombre||"—";
+  // Descripción
+  var tipos = ["Error de medidas","Color incorrecto","Modelo equivocado","Mano equivocada"];
+  if(tipos.indexOf(f.descripcion)>=0){
+    document.getElementById("mDescTipo").value = f.descripcion;
+    document.getElementById("mDescCustom").style.display = "none";
+  } else {
+    document.getElementById("mDescTipo").value = "otro";
+    document.getElementById("mDescCustom").style.display = "block";
+    document.getElementById("mDescCustom").value = f.descripcion||"";
+  }
+  document.getElementById("mValorEur").value = f.valorEur||"";
+  document.getElementById("mValorPts").value = f.valorPts||"";
+  calcFallo();
+  document.getElementById("mOverlay").classList.add("open");
+}
+
+function limpiarModal(){
+  // Rellenar años en modal
+  var anioSel = document.getElementById("mAnio");
+  var hoy = new Date().getFullYear();
+  anioSel.innerHTML = "";
+  for(var y=hoy-2; y<=hoy+1; y++){
+    anioSel.innerHTML += "<option value='"+y+"'"+(y===hoy?" selected":"")+">"+y+"</option>";
+  }
+  document.getElementById("mPedido").value     = "";
+  document.getElementById("mPrvCod").value     = "";
+  document.getElementById("mPrvNombre").textContent = "—";
+  document.getElementById("mDescTipo").value   = "Error de medidas";
+  document.getElementById("mDescCustom").value = "";
+  document.getElementById("mDescCustom").style.display = "none";
+  document.getElementById("mValorEur").value   = "";
+  document.getElementById("mValorPts").value   = "";
+  document.getElementById("mCalculo").textContent = "— €";
+  document.getElementById("mErr").style.display = "none";
+  _prvNetoActual = 0;
+}
+
+function cerrarModal(){
+  document.getElementById("mOverlay").classList.remove("open");
+  editandoId = null;
+}
+
+function toggleDescCustom(){
+  var esCustum = document.getElementById("mDescTipo").value === "otro";
+  document.getElementById("mDescCustom").style.display = esCustum ? "block" : "none";
+}
+
+// ── PROVEEDOR ─────────────────────────────────────────────────────────────────
+var _prvNetoActual = 0;
+function buscarProveedor(){
+  var cod = document.getElementById("mPrvCod").value.trim();
+  var el  = document.getElementById("mPrvNombre");
+  var p   = proveedoresMap[cod] || proveedoresMap[parseInt(cod)] || null;
+  if(p){
+    el.textContent = "✅ " + p.nombre + " | " + p.precioPunto + " €/pt | Dto: " + p.dtoMax + "% | Neto: " + p.precioNeto.toFixed(3) + " €/pt";
+    el.style.color = "#2d7a4f";
+    _prvNetoActual = p.precioNeto;
+  } else {
+    el.textContent = cod ? "Código no encontrado" : "—";
+    el.style.color = cod ? "#c0392b" : "#aaa";
+    _prvNetoActual = 0;
+  }
+  calcFallo();
+}
+
+// ── CÁLCULO ───────────────────────────────────────────────────────────────────
+function calcFallo(){
+  var pts = parseFloat(document.getElementById("mValorPts").value) || 0;
+  var calculo = (pts > 0 && _prvNetoActual > 0) ? pts * _prvNetoActual : 0;
+  document.getElementById("mCalculo").textContent = calculo > 0 ? fmtEur(calculo) : "— €";
+  document.getElementById("mCalculo").style.color = calculo > 0 ? "#c0392b" : "#aaa";
+}
+
+// ── GUARDAR ───────────────────────────────────────────────────────────────────
+function guardarFallo(){
+  var err = document.getElementById("mErr");
+  err.style.display = "none";
+
+  var anio = document.getElementById("mAnio").value;
+  var mes  = document.getElementById("mMes").value;
+  var vend = document.getElementById("mVendedor").value;
+  var tienda = document.getElementById("mTienda").value;
+  var pedido = document.getElementById("mPedido").value.trim();
+  var prvCod = document.getElementById("mPrvCod").value.trim();
+  var prvNombre = (proveedoresMap[prvCod] || proveedoresMap[parseInt(prvCod)] || {}).nombre || "";
+  var descTipo = document.getElementById("mDescTipo").value;
+  var desc = descTipo === "otro"
+    ? document.getElementById("mDescCustom").value.trim()
+    : descTipo;
+  var valorEur = parseFloat(document.getElementById("mValorEur").value) || 0;
+  var valorPts = parseFloat(document.getElementById("mValorPts").value) || 0;
+  var calculo  = (valorPts > 0 && _prvNetoActual > 0) ? valorPts * _prvNetoActual : 0;
+
+  if(!vend){ err.textContent="Selecciona un vendedor"; err.style.display="block"; return; }
+  if(!desc){ err.textContent="Introduce la descripción del fallo"; err.style.display="block"; return; }
+
+  var data = {
+    fecha:    anio + "-" + mes,
+    vendedor: vend,
+    tienda:   tienda,
+    pedido:   pedido,
+    prvCod:   prvCod,
+    prvNombre:prvNombre,
+    descripcion: desc,
+    valorEur: valorEur,
+    valorPts: valorPts,
+    calculo:  parseFloat(calculo.toFixed(2)),
+    creadoPor: auth.currentUser ? auth.currentUser.email : "",
+    ts: new Date().toISOString()
+  };
+
+  var promise = editandoId
+    ? db.collection("fallos").doc(editandoId).set(data)
+    : db.collection("fallos").add(data);
+
+  promise.then(function(){
+    cerrarModal();
+    cargarFallos();
+  }).catch(function(e){
+    err.textContent = "Error: " + e.message;
+    err.style.display = "block";
+  });
+}
+
+// ── ELIMINAR ──────────────────────────────────────────────────────────────────
+function eliminarFallo(id){
+  var f = fallos.find(function(x){ return x._id===id; });
+  var msg = "¿Eliminar este fallo"+(f?" de "+f.vendedor+" ("+f.descripcion+")?":"?");
+  if(!confirm(msg)) return;
+  db.collection("fallos").doc(id).delete().then(function(){
+    cargarFallos();
+  });
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function escH(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function fmtEur(n){ return parseFloat(n||0).toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2})+" €"; }
+</script>
+</body>
+</html>

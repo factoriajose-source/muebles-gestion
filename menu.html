@@ -328,6 +328,7 @@ tr:last-child td{border-bottom:none}
     <div class="sb-section">Gestión</div>
     <div class="sb-item" id="mn-repartos" onclick="navegar('repartos','Repartos')"><span class="ico">🚚</span> Repartos</div>
     <div class="sb-item" id="mn-incidencias" onclick="navegar('incidencias','Incidencias')"><span class="ico">⚠️</span> Incidencias</div>
+    <div class="sb-item" id="mn-fallos" onclick="abrirFallos()" style="display:none"><span class="ico">🔴</span> Control de Fallos</div>
 
     <div class="sb-divider"></div>
     <div class="sb-section" id="mn-sec-admin" style="display:none">Administración</div>
@@ -920,10 +921,20 @@ function actualizarSidebar(name){
   // Editor Fichajes SOLO Jose Angel
   var mnEditor=document.getElementById("mn-editor");
   if(mnEditor) mnEditor.style.display = (name==="Jose Angel") ? "" : "none";
-  // Vendedores SOLO Jose Angel
-  var mnVend=document.getElementById("mn-vendedores");
+  // Fallos: Jose Angel, Marisa, Javi, Kike, Angel
+  var puedeVerFallos = ["Jose Angel","Marisa","Javi","Kike","Angel"].includes(name);
+  var mnFallos = document.getElementById("mn-fallos");
+  if(mnFallos) mnFallos.style.display = puedeVerFallos ? "" : "none";
   if(mnVend) mnVend.style.display = (name==="Jose Angel") ? "" : "none";
 }
+
+function abrirFallos(){
+  var a=document.createElement("a");
+  a.href="fallos.html"; a.target="_blank"; a.rel="noopener";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  cerrarSidebar();
+}
+window.abrirFallos = abrirFallos;
 // ── FIN MENÚ LATERAL ──────────────────────────────────────────────────────────
 
 function logout() {
