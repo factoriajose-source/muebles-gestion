@@ -925,6 +925,8 @@ function actualizarSidebar(name){
   var puedeVerFallos = ["Jose Angel","Marisa","Javi","Kike","Angel"].includes(name);
   var mnFallos = document.getElementById("mn-fallos");
   if(mnFallos) mnFallos.style.display = puedeVerFallos ? "" : "none";
+  // Vendedores SOLO Jose Angel
+  var mnVend = document.getElementById("mn-vendedores");
   if(mnVend) mnVend.style.display = (name==="Jose Angel") ? "" : "none";
 }
 
