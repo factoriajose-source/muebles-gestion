@@ -812,14 +812,11 @@ function login(name) {
 
 // ── MENÚ LATERAL ─────────────────────────────────────────────────────────────
 function abrirVendedores(){
-  mostrarModalClave(function(){
-    navegar('stats','Vendedores');
-    // Activar directamente el sub-tab de vendedores tras renderizar
-    setTimeout(function(){
-      var btnVend = document.getElementById("st-tab-vendedores");
-      if(btnVend) btnVend.click();
-    }, 300);
-  });
+  navegar('stats','Vendedores');
+  setTimeout(function(){
+    var btnVend = document.getElementById("st-tab-vendedores");
+    if(btnVend) btnVend.click();
+  }, 400);
   cerrarSidebar();
 }
 window.abrirVendedores = abrirVendedores;
