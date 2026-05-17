@@ -812,17 +812,13 @@ function login(name) {
 
 // ── MENÚ LATERAL ─────────────────────────────────────────────────────────────
 function abrirVendedores(){
-  // Ir a estadísticas con clave y activar tab vendedores
   mostrarModalClave(function(){
-    ["presupuesto","lista","visitas","fichajes","repartos","incidencias","stats"].forEach(function(n){
-      var sec=document.getElementById("tab-"+n);
-      if(sec) sec.classList.toggle("active", n==="stats");
-    });
-    document.getElementById("main-title").textContent="Vendedores";
-    document.querySelectorAll(".sb-item").forEach(function(el){el.classList.remove("active");});
-    var mn=document.getElementById("mn-vendedores"); if(mn) mn.classList.add("active");
-    currentStatsTab="vendedores";
-    renderStats();
+    navegar('stats','Vendedores');
+    // Activar directamente el sub-tab de vendedores tras renderizar
+    setTimeout(function(){
+      var btnVend = document.getElementById("st-tab-vendedores");
+      if(btnVend) btnVend.click();
+    }, 300);
   });
   cerrarSidebar();
 }
