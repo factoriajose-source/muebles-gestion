@@ -74,6 +74,21 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
 .toast{position:fixed;bottom:20px;right:20px;background:#1a1714;color:white;padding:11px 18px;border-radius:8px;font-size:13px;z-index:999;display:none;max-width:320px;}
 .toast.ok{border-left:4px solid #2d7a4f;}.toast.err{border-left:4px solid #c0392b;}.toast.info{border-left:4px solid #2856c8;}
 @media print{header,.tabs,.filtros,.btn-add,.qty-ctrl,.no-print{display:none!important;}.card{box-shadow:none;border:1px solid #ddd;}}
+/* IMPRIMIR TARIFA */
+.tarifa-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:800;display:none;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto}
+.tarifa-overlay.open{display:flex}
+.tarifa-modal{background:#fff;border-radius:12px;padding:1.5rem;width:100%;max-width:680px;margin:auto}
+.tarifa-modal h3{font-size:15px;font-weight:700;margin-bottom:1rem;padding-bottom:10px;border-bottom:1px solid #e0dfd8}
+.tarifa-filtros{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end}
+.tarifa-filtros .fg{display:flex;flex-direction:column;gap:3px;flex:1;min-width:150px}
+.tarifa-filtros label{font-size:11px;color:#666;font-weight:600;text-transform:uppercase}
+.tarifa-filtros select{padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px}
+#tarifa-print-area{display:none}
+@media print{
+  #tarifa-print-area{display:block!important}
+  body>*:not(#tarifa-print-area){display:none!important}
+  @page{size:A4 landscape;margin:10mm 12mm}
+}
 </style>
 </head>
 <body>
@@ -95,6 +110,7 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
 <header>
   <div class="brand">MERES &middot; <span>Selector de Tarifas</span></div>
   <button class="btn btn-gray no-print" style="padding:5px 12px;font-size:12px" onclick="window.print()">Imprimir</button>
+  <button class="btn no-print" style="padding:5px 12px;font-size:12px;background:#1a1714;color:#fff;border-color:#1a1714" onclick="abrirImprimirTarifa()">🖨️ Imprimir tarifa</button>
 </header>
 <div class="tabs no-print">
   <button class="tab-btn act" id="tb-selector" onclick="showTab('selector')">Catalogo + Presupuesto</button>
@@ -507,20 +523,8 @@ function initFirebase(){
   firebase.initializeApp({apiKey:"AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",authDomain:"muebles-presupuestos.firebaseapp.com",projectId:"muebles-presupuestos",storageBucket:"muebles-presupuestos.firebasestorage.app",messagingSenderId:"37365883872",appId:"1:37365883872:web:842ca4d318c01652684185"});
   db=firebase.firestore();
   auth=firebase.auth();
+  // Adjuntar listener del login
   document.getElementById("lPass").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
-
-  // Si viene ?usuario=Alias en la URL (desde menu.html), saltar el login directamente
-  // Igual que proveedores.html — sin comprobar Firebase Auth
-  var urlAlias=(new URLSearchParams(window.location.search)).get("usuario")
-              || localStorage.getItem("meres_usuario_actual")
-              || "";
-  if(urlAlias){
-    VENDEDOR_ACTUAL={alias:urlAlias, nombre:urlAlias};
-    document.getElementById("loginBox").style.display="none";
-    document.getElementById("appBox").style.display="block";
-    cargarProveedoresFirebase();
-    cargarTarifasFirestore();
-  }
 }
 function doLogin(){
   var email=document.getElementById("lEmail").value.trim();
@@ -2388,6 +2392,197 @@ function editarBorrarModeloCompleto(){
   }).catch(function(e){ toast("Error: " + e.message, "err"); });
 }
 // ─── FIN EDITOR DE TARIFAS ────────────────────────────────────────────────────
+
+// ─── IMPRIMIR TARIFA ──────────────────────────────────────────────────────────
+function escHtml(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function abrirImprimirTarifa(){
+  var sel = document.getElementById("tp-prv");
+  sel.innerHTML = "<option value=''>-- Selecciona proveedor --</option>";
+  // Poblar con proveedores únicos de ARTICULOS
+  var prvs = {};
+  ARTICULOS.forEach(function(a){ prvs[a.prv] = a.prvNom||a.prv; });
+  Object.keys(prvs).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(cod){
+    var pd = PROVEEDORES_MAP[cod]||PROVEEDORES_MAP[parseInt(cod)]||{};
+    var nom = pd.nombre||prvs[cod];
+    sel.innerHTML += "<option value='"+cod+"'>"+cod+" - "+nom+"</option>";
+  });
+  // Poner el proveedor del filtro actual si hay uno
+  var prvActual = document.getElementById("f-prv").value;
+  if(prvActual) sel.value = prvActual;
+  tpSincModelos();
+  document.getElementById("tarifa-overlay").classList.add("open");
+}
+
+function tpSincModelos(){
+  var prv = document.getElementById("tp-prv").value;
+  var sel = document.getElementById("tp-mod");
+  sel.innerHTML = "<option value=''>Todos los modelos</option>";
+  if(!prv){ document.getElementById("tp-info").style.display="none"; return; }
+  var modelos = {};
+  ARTICULOS.filter(function(a){ return String(a.prv)===String(prv); })
+    .forEach(function(a){ modelos[a.mod]=1; });
+  Object.keys(modelos).sort().forEach(function(m){
+    sel.innerHTML += "<option value='"+m+"'>"+m+"</option>";
+  });
+  // Poner modelo del filtro actual si coincide
+  var modActual = document.getElementById("f-mod").value;
+  if(modActual && modelos[modActual]) sel.value = modActual;
+  tpPreview();
+}
+
+function tpPreview(){
+  var prv = document.getElementById("tp-prv").value;
+  var mod = document.getElementById("tp-mod").value;
+  var infoEl = document.getElementById("tp-info");
+  if(!prv){ infoEl.style.display="none"; return; }
+  var pd = PROVEEDORES_MAP[prv]||PROVEEDORES_MAP[parseInt(prv)]||{};
+  var arts = ARTICULOS.filter(function(a){
+    return String(a.prv)===String(prv) && (!mod || a.mod===mod);
+  });
+  if(!arts.length){ infoEl.style.display="none"; return; }
+  var neto = pd.precioPunto && pd.dtoMax!=null
+    ? (pd.precioPunto*(1-pd.dtoMax/100)).toFixed(3) : "—";
+  infoEl.style.display="block";
+  infoEl.innerHTML = "✅ <strong>"+(pd.nombre||prv)+"</strong>"
+    +" &nbsp;·&nbsp; "+pd.precioPunto+" €/pt"
+    +" &nbsp;·&nbsp; Dto: "+pd.dtoMax+"%"
+    +" &nbsp;·&nbsp; Precio neto: "+neto+" €/pt"
+    +" &nbsp;·&nbsp; <strong>"+arts.length+" artículos</strong>";
+}
+
+function ejecutarImpresionTarifa(){
+  var prv = document.getElementById("tp-prv").value;
+  var mod = document.getElementById("tp-mod").value;
+  if(!prv){ toast("Selecciona un proveedor","err"); return; }
+
+  var pd = PROVEEDORES_MAP[prv]||PROVEEDORES_MAP[parseInt(prv)]||{};
+  var precioPunto = pd.precioPunto||0;
+  var dtoMax = pd.dtoMax||0;
+  var precioNeto = precioPunto*(1-dtoMax/100);
+
+  var arts = ARTICULOS.filter(function(a){
+    return String(a.prv)===String(prv) && (!mod||a.mod===mod);
+  });
+  if(!arts.length){ toast("No hay artículos para estos filtros","err"); return; }
+
+  // Agrupar por modelo
+  var modelos = {};
+  arts.forEach(function(a){
+    if(!modelos[a.mod]) modelos[a.mod]=[];
+    modelos[a.mod].push(a);
+  });
+
+  var hoy = new Date();
+  var fechaStr = hoy.getDate()+"/"+(hoy.getMonth()+1)+"/"+hoy.getFullYear();
+
+  var html = "<div style='font-family:system-ui,sans-serif;font-size:11px;color:#1a1714'>";
+
+  Object.keys(modelos).sort().forEach(function(modNom, idx){
+    var lista = modelos[modNom];
+    // Recoger todas las series únicas del modelo
+    var series = {};
+    lista.forEach(function(a){
+      if(a.categorias) Object.keys(a.categorias).forEach(function(s){ series[s]=1; });
+    });
+    var seriesArr = Object.keys(series).sort();
+
+    if(idx>0) html += "<div style='page-break-before:always'></div>";
+
+    // Membrete
+    html += "<div style='display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1a1714;padding-bottom:8px;margin-bottom:10px'>"
+      +"<div><div style='font-size:13px;font-weight:700'>MERES CENTRAL DE COMPRAS S.L. — CIF: B74102807</div>"
+      +"<div style='font-size:10px;color:#666'>Tarifa de precios de venta al público · Uso interno · Confidencial</div></div>"
+      +"<div style='text-align:right;font-size:10px;color:#666'>Generado: "+fechaStr+"</div></div>";
+
+    // Cabecera proveedor/modelo
+    html += "<div style='background:#f5f4f0;border-radius:6px;padding:8px 12px;margin-bottom:10px;display:flex;gap:24px;flex-wrap:wrap;align-items:center'>"
+      +"<div><div style='font-size:9px;color:#888;text-transform:uppercase;letter-spacing:.06em'>Proveedor</div>"
+      +"<div style='font-size:13px;font-weight:700'>"+prv+" · "+(pd.nombre||prv)+"</div></div>"
+      +"<div><div style='font-size:9px;color:#888;text-transform:uppercase;letter-spacing:.06em'>Modelo</div>"
+      +"<div style='font-size:13px;font-weight:700'>"+modNom+"</div></div>"
+      +"<div><div style='font-size:9px;color:#888;text-transform:uppercase;letter-spacing:.06em'>€ / Punto (P.Coste)</div>"
+      +"<div style='font-size:13px;font-weight:700;color:#1a6b2a'>"+precioPunto+" €/pt</div></div>"
+      +"<div><div style='font-size:9px;color:#888;text-transform:uppercase;letter-spacing:.06em'>Dto. máx. vendedores</div>"
+      +"<div style='font-size:13px;font-weight:700;color:#c4571a'>"+dtoMax+"%</div></div>"
+      +"<div><div style='font-size:9px;color:#888;text-transform:uppercase;letter-spacing:.06em'>Precio neto (€/pt × (1-dto))</div>"
+      +"<div style='font-size:13px;font-weight:700'>"+precioNeto.toFixed(3)+" €/pt</div></div>"
+      +"</div>";
+
+    // Tabla
+    html += "<table style='width:100%;border-collapse:collapse;font-size:10px'><thead>"
+      +"<tr style='background:#1a1714;color:#fff'>"
+      +"<th style='padding:6px 8px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.05em'>Ref.</th>"
+      +"<th style='padding:6px 8px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.05em'>Artículo</th>"
+      +(lista[0].med?"<th style='padding:6px 8px;text-align:left;font-size:9px;text-transform:uppercase'>Medidas</th>":"");
+
+    seriesArr.forEach(function(s){
+      html += "<th style='padding:6px 8px;text-align:right;font-size:9px;text-transform:uppercase;letter-spacing:.05em'>"+s+"</th>";
+    });
+    html += "</tr></thead><tbody>";
+
+    lista.sort(function(a,b){return (a.nom||"").localeCompare(b.nom||"","es");}).forEach(function(a, ri){
+      var bg = ri%2===0?"#fff":"#f8f6f2";
+      html += "<tr style='background:"+bg+";border-bottom:0.5px solid #e0dfd8'>"
+        +"<td style='padding:5px 8px;font-family:monospace;font-size:10px;color:#888'>"+escHtml(a.ref||"")+"</td>"
+        +"<td style='padding:5px 8px;font-weight:600'>"+escHtml(a.nom||"")+"</td>"
+        +(lista[0].med?"<td style='padding:5px 8px;font-size:9px;color:#888'>"+escHtml(a.med||"—")+"</td>":"");
+
+      seriesArr.forEach(function(s){
+        var pts = a.categorias && a.categorias[s] ? parseFloat(a.categorias[s]) : null;
+        var precio = pts ? (pts*precioNeto).toFixed(0) : null;
+        html += "<td style='padding:5px 8px;text-align:right;font-family:monospace;font-weight:600'>"
+          +(precio ? precio+" €" : "<span style='color:#ccc'>—</span>")+"</td>";
+      });
+      html += "</tr>";
+    });
+
+    html += "</tbody></table>";
+    html += "<div style='margin-top:8px;font-size:9px;color:#aaa;display:flex;justify-content:space-between'>"
+      +"<span>Precios = Puntos × "+precioPunto+" €/pt × (1 - "+dtoMax+"%) — Precios orientativos de venta</span>"
+      +"<span>Meres Central de Compras S.L. · CIF B74102807</span></div>";
+  });
+
+  html += "</div>";
+
+  // Renderizar y lanzar impresión
+  var area = document.getElementById("tarifa-print-area");
+  area.innerHTML = html;
+  document.getElementById("tarifa-overlay").classList.remove("open");
+  var tituloOrig = document.title;
+  document.title = " ";
+  window.print();
+  setTimeout(function(){
+    document.title = tituloOrig;
+    area.innerHTML = "";
+  }, 2000);
+}
+// ─── FIN IMPRIMIR TARIFA ──────────────────────────────────────────────────────
 </script>
+<!-- OVERLAY IMPRIMIR TARIFA -->
+<div class="tarifa-overlay" id="tarifa-overlay">
+  <div class="tarifa-modal">
+    <h3>🖨️ Imprimir tarifa de precios</h3>
+    <div class="tarifa-filtros">
+      <div class="fg">
+        <label>Proveedor</label>
+        <select id="tp-prv" onchange="tpSincModelos()"></select>
+      </div>
+      <div class="fg">
+        <label>Modelo</label>
+        <select id="tp-mod" onchange="tpPreview()">
+          <option value="">Todos los modelos</option>
+        </select>
+      </div>
+    </div>
+    <div id="tp-info" style="background:#f0f7f0;border-radius:8px;padding:10px 14px;font-size:12px;color:#2d7a4f;margin-bottom:14px;display:none"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="ejecutarImpresionTarifa()" style="flex:1;padding:11px;background:#1a1714;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🖨️ Imprimir A4 apaisado</button>
+      <button onclick="document.getElementById('tarifa-overlay').classList.remove('open')" style="padding:11px 18px;border:1px solid #ccc;border-radius:8px;background:#fff;font-size:13px;cursor:pointer">Cancelar</button>
+    </div>
+  </div>
+</div>
+<!-- ÁREA DE IMPRESIÓN -->
+<div id="tarifa-print-area"></div>
+
 </body>
 </html>
