@@ -251,6 +251,34 @@
 <body>
 
 <!-- MODAL SELECTOR DE TIENDA -->
+
+<!-- LOGIN OVERLAY -->
+<div id="login-overlay" style="display:none;position:fixed;inset:0;background:#f5f4f0;z-index:99999;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:white;border-radius:16px;padding:2rem;width:100%;max-width:360px;box-shadow:0 4px 24px rgba(0,0,0,0.10);text-align:center;">
+    <div style="font-size:40px;margin-bottom:8px;">🪑</div>
+    <div style="font-size:20px;font-weight:600;margin-bottom:4px;color:#1A1D2E;">Facturación</div>
+    <div style="font-size:13px;color:#888;margin-bottom:24px;">Meres Central de Compras S.L.</div>
+    <div style="display:flex;flex-direction:column;gap:10px;text-align:left;">
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Email</label>
+        <input id="login-email" type="email" placeholder="correo@ejemplo.com" autocomplete="username"
+          style="width:100%;padding:11px 13px;border:1.5px solid #E2E5EF;border-radius:8px;font-size:14px;font-family:inherit;outline:none;"
+          value="">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Contraseña</label>
+        <input id="login-pwd" type="password" placeholder="••••••••" autocomplete="current-password"
+          style="width:100%;padding:11px 13px;border:1.5px solid #E2E5EF;border-radius:8px;font-size:14px;font-family:inherit;outline:none;">
+      </div>
+      <div id="login-err" style="color:#E53E3E;font-size:13px;min-height:18px;"></div>
+      <button id="login-btn" onclick="hacerLogin()"
+        style="width:100%;padding:13px;background:#7A9A01;color:white;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;">
+        Entrar
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="modal-tienda">
   <div class="modal-box">
     <h3>Seleccionar tienda</h3>
@@ -501,17 +529,45 @@ const LOGOS = {
 // ══════════════════════════════════════════════════
 //  AUTH
 // ══════════════════════════════════════════════════
+// ── LOGIN SCREEN ──────────────────────────────────
+function mostrarLogin() {
+  document.getElementById('login-overlay').style.display = 'flex';
+}
+function ocultarLogin() {
+  document.getElementById('login-overlay').style.display = 'none';
+}
+async function hacerLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pwd   = document.getElementById('login-pwd').value;
+  const err   = document.getElementById('login-err');
+  err.textContent = '';
+  if (!email || !pwd) { err.textContent = 'Introduce email y contraseña'; return; }
+  try {
+    document.getElementById('login-btn').textContent = 'Entrando...';
+    await auth.signInWithEmailAndPassword(email, pwd);
+    localStorage.setItem('meres_fb_email', email);
+  } catch(e) {
+    let msg = 'Email o contraseña incorrectos';
+    if (e.code === 'auth/too-many-requests') msg = 'Demasiados intentos. Espera unos minutos.';
+    if (e.code === 'auth/network-request-failed') msg = 'Sin conexión a internet';
+    err.textContent = msg;
+    document.getElementById('login-btn').textContent = 'Entrar';
+  }
+}
+document.getElementById('login-pwd').addEventListener('keydown', e => { if(e.key==='Enter') hacerLogin(); });
+
 auth.onAuthStateChanged(user => {
   if (user) {
     currentUser = user;
+    ocultarLogin();
     const nombre = user.displayName || user.email.split('@')[0];
-    document.getElementById('user-name').textContent = nombre;
-    document.getElementById('user-avatar').textContent = nombre.substring(0,2).toUpperCase();
+    const nombreMostrar = nombre.charAt(0).toUpperCase() + nombre.slice(1);
+    document.getElementById('user-name').textContent = nombreMostrar;
+    document.getElementById('user-avatar').textContent = nombreMostrar.substring(0,2).toUpperCase();
     cargarSeccion('facturas');
   } else {
-    // Sin auth, modo demo
-    currentUser = { email: 'joseangel@meres.es', displayName: 'José Ángel', uid: 'demo' };
-    cargarSeccion('facturas');
+    currentUser = null;
+    mostrarLogin();
   }
 });
 
@@ -1064,7 +1120,15 @@ function imprimirDocumento(id) {
       ${t.sociedad} &mdash; CIF: ${t.cif} &mdash; ${t.cp_ciudad}
     </div>
     <script>window.onload=()=>{ setTimeout(()=>window.print(),400); }<\/script>
-  </body></html>`);
+  
+<script>
+  const _savedEmail = localStorage.getItem('meres_fb_email');
+  if (_savedEmail) {
+    const _inp = document.getElementById('login-email');
+    if (_inp) _inp.value = _savedEmail;
+  }
+</script>
+</body></html>`);
   win.document.close();
 }
 
