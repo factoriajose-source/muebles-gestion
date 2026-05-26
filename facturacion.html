@@ -186,29 +186,32 @@ tbody tr:hover .ra{opacity:1;}
     <button class="btn bp" id="bnew">+ Nueva factura</button>
   </div>
   <div id="cnt">
-    <div class="mg" id="mg">
-      <div class="mc"><div class="mcl">Total facturado</div><div class="mcv" id="m1">&#x2014;</div><div class="mcs">Este a&#xF1;o</div></div>
-      <div class="mc"><div class="mcl">Pendiente cobro</div><div class="mcv" id="m2" style="color:var(--war)">&#x2014;</div><div class="mcs">Enviadas</div></div>
-      <div class="mc"><div class="mcl">Cobrado</div><div class="mcv" id="m3" style="color:var(--suc)">&#x2014;</div><div class="mcs">Este a&#xF1;o</div></div>
-      <div class="mc"><div class="mcl">Vencidas</div><div class="mcv" id="m4" style="color:var(--dan)">&#x2014;</div><div class="mcs">Requieren atenci&#xF3;n</div></div>
-    </div>
-    <div class="tc">
-      <div class="th3">
-        <div class="sb"><span class="si">&#x1F50D;</span><input type="text" id="sinp" placeholder="Buscar cliente, n&#xFA;mero..."></div>
-        <select class="fs" id="fest">
-          <option value="">Todos los estados</option>
-          <option value="borrador">Borrador</option><option value="enviada">Enviada</option>
-          <option value="cobrada">Cobrada</option><option value="vencida">Vencida</option>
-          <option value="pendiente">Pendiente</option><option value="aceptado">Aceptado</option>
-          <option value="rechazado">Rechazado</option><option value="entregado">Entregado</option>
-        </select>
-        <select class="fs" id="fyr">
-          <option value="">Todos los a&#xF1;os</option>
-          <option value="2026">2026</option><option value="2025">2025</option><option value="2024">2024</option>
-        </select>
+    <div id="cnt-main">
+      <div class="mg" id="mg">
+        <div class="mc"><div class="mcl">Total facturado</div><div class="mcv" id="m1">&#x2014;</div><div class="mcs">Este a&#xF1;o</div></div>
+        <div class="mc"><div class="mcl">Pendiente cobro</div><div class="mcv" id="m2" style="color:var(--war)">&#x2014;</div><div class="mcs">Enviadas</div></div>
+        <div class="mc"><div class="mcl">Cobrado</div><div class="mcv" id="m3" style="color:var(--suc)">&#x2014;</div><div class="mcs">Este a&#xF1;o</div></div>
+        <div class="mc"><div class="mcl">Vencidas</div><div class="mcv" id="m4" style="color:var(--dan)">&#x2014;</div><div class="mcs">Requieren atenci&#xF3;n</div></div>
       </div>
-      <div id="tbl"></div>
+      <div class="tc">
+        <div class="th3">
+          <div class="sb"><span class="si">&#x1F50D;</span><input type="text" id="sinp" placeholder="Buscar cliente, n&#xFA;mero..."></div>
+          <select class="fs" id="fest">
+            <option value="">Todos los estados</option>
+            <option value="borrador">Borrador</option><option value="enviada">Enviada</option>
+            <option value="cobrada">Cobrada</option><option value="vencida">Vencida</option>
+            <option value="pendiente">Pendiente</option><option value="aceptado">Aceptado</option>
+            <option value="rechazado">Rechazado</option><option value="entregado">Entregado</option>
+          </select>
+          <select class="fs" id="fyr">
+            <option value="">Todos los a&#xF1;os</option>
+            <option value="2026">2026</option><option value="2025">2025</option><option value="2024">2024</option>
+          </select>
+        </div>
+        <div id="tbl"></div>
+      </div>
     </div>
+    <div id="cnt-tes" style="display:none"></div>
   </div>
 </div>
 
@@ -328,8 +331,15 @@ function goSec(s,el){
   var bn=gi("bnew");
   bn.textContent=btns[s];
   bn.style.display=btns[s]?"":"none";
-  gi("mg").style.display=s==="tesoreria"?"none":"";
-  if(s==="tesoreria")renderTes();else cargar();
+  if(s==="tesoreria"){
+    gi("cnt-main").style.display="none";
+    gi("cnt-tes").style.display="";
+    renderTes();
+  } else {
+    gi("cnt-main").style.display="";
+    gi("cnt-tes").style.display="none";
+    cargar();
+  }
 }
 
 function setFT(t){
@@ -397,8 +407,10 @@ function filtrar(){
 
 function renderT(d){
   var venc=SEC==="facturas";
+  var alb=SEC==="albaranes";
   var hdr="<table><thead><tr><th>Numero</th><th>Tienda</th><th>Cliente</th><th>Fecha</th>";
   if(venc)hdr+="<th>Vencimiento</th>";
+  if(alb)hdr+="<th>Factura origen</th>";
   hdr+="<th>Estado</th><th>Total</th><th></th></tr></thead><tbody>";
   var rows="";
   if(!d.length){
@@ -417,12 +429,14 @@ function renderT(d){
       r+="<td><span class='tc2'>"+(x.cliente||"--")+"</span></td>";
       r+="<td>"+fD(x.fecha)+"</td>";
       if(venc)r+="<td>"+fD(x.vencimiento)+"</td>";
+      if(alb)r+="<td><span class='tn'>"+(x.facturaOrigen||"--")+"</span></td>";
       r+="<td><span class='est "+ec+"'>"+esL+"</span></td>";
       r+="<td><span class='ti'>"+fE(x.total||0)+"</span></td>";
       r+="<td><div class='ra'>";
       r+="<div class='ib act-edit' title='Editar'>&#x270F;&#xFE0F;</div>";
       r+="<div class='ib act-print' title='Imprimir'>&#x1F5A8;&#xFE0F;</div>";
       if(SEC==="presupuestos"&&es==="aceptado")r+="<div class='ib act-cvt' title='A factura'>&#x1F9FE;</div>";
+      if(SEC==="albaranes"&&es==="pendiente")r+="<div class='ib act-entregar' title='Marcar entregado' style='background:#E6F8EE;color:#276749'>&#x2705;</div>";
       r+="<div class='ib act-del' title='Eliminar'>&#x1F5D1;&#xFE0F;</div>";
       r+="</div></td></tr>";
       rows+=r;
@@ -439,6 +453,8 @@ function renderT(d){
     if(pr)pr.addEventListener("click",function(e){e.stopPropagation();imprimirD(id);});
     var cv=tr.querySelector(".act-cvt");
     if(cv)cv.addEventListener("click",function(e){e.stopPropagation();cvt(id);});
+    var en=tr.querySelector(".act-entregar");
+    if(en)en.addEventListener("click",function(e){e.stopPropagation();marcarEntregado(id);});
     var dl=tr.querySelector(".act-del");
     if(dl)dl.addEventListener("click",function(e){e.stopPropagation();elimD(id);});
   });
@@ -469,7 +485,9 @@ function abrirF(doc,tie){
   var topts=Object.keys(T).map(function(k){return "<option value='"+k+"'"+(((doc&&doc.tienda)||tie)===k?" selected":"")+">"+ T[k].n+"</option>";}).join("");
   var eopts=ests.map(function(e){return "<option value='"+e+"'"+(doc&&doc.estado===e?" selected":"")+">"+ e.charAt(0).toUpperCase()+e.slice(1)+"</option>";}).join("");
   var vencField=SEC==="facturas"?"<div class='fl'><label>Vencimiento</label><input type='date' id='fvnc' value='"+(doc&&doc.vencimiento?doc.vencimiento:vs)+"'></div>":"<div></div>";
+  var origenInfo=(SEC==="albaranes"&&doc&&doc.facturaOrigen)?"<div style='background:#EEF2DC;border-left:3px solid var(--lf);padding:10px 14px;border-radius:6px;margin-bottom:16px;font-size:13px'>&#x1F4CB; Albaran generado desde la factura <strong>"+doc.facturaOrigen+"</strong></div>":"";
   gi("pbod").innerHTML=
+    origenInfo+
     "<div class='sdv'>Datos del documento</div>"+
     "<div class='fg'>"+
     "<div class='fl'><label>Tienda</label><select class='fi' id='ftie'>"+topts+"</select></div>"+
@@ -509,14 +527,16 @@ function abrirF(doc,tie){
   renderL();
 
   var pfot="<button class='btn bo' id='pcan'>Cancelar</button>";
-  if(doc)pfot+="<button class='btn bo' id='pprt'>Imprimir</button>";
-  if(SEC==="presupuestos"&&doc&&doc.estado==="aceptado")pfot+="<button class='btn bo' id='pcvt'>A Factura</button>";
-  pfot+="<button class='btn bp' id='pguard'>Guardar</button>";
+  if(doc)pfot+="<button class='btn bo' id='pprt'>&#x1F5A8;&#xFE0F; Imprimir</button>";
+  if(SEC==="presupuestos"&&doc&&doc.estado==="aceptado")pfot+="<button class='btn bo' id='pcvt'>&#x1F9FE; A Factura</button>";
+  if(SEC==="facturas"&&doc)pfot+="<button class='btn bo' id='palbaran'>&#x1F69A; Crear Albaran</button>";
+  pfot+="<button class='btn bp' id='pguard'>&#x1F4BE; Guardar</button>";
   gi("pfot").innerHTML=pfot;
   gi("pcan").addEventListener("click",cerrar);
   gi("pguard").addEventListener("click",guardar);
   if(gi("pprt"))gi("pprt").addEventListener("click",function(){if(doc)imprimirD(doc.id);});
   if(gi("pcvt"))gi("pcvt").addEventListener("click",function(){if(doc)cvt(doc.id);});
+  if(gi("palbaran"))gi("palbaran").addEventListener("click",function(){if(doc)crearAlbaran(doc.id);});
   abrirPanel();
 }
 
@@ -685,6 +705,55 @@ function imprimirD(id){
   w.document.close();
 }
 
+function crearAlbaran(id){
+  var doc=DOCS.find(function(d){return d.id===id;});
+  if(!doc)return;
+  // Comprobar si ya existe albarán para esta factura
+  db.collection("albaranes").where("facturaOrigen","==",doc.numero||doc.id).get().then(function(snap){
+    if(!snap.empty){
+      if(!confirm("Ya existe un albaran para esta factura. Crear otro igualmente?"))return;
+    }
+    genNum(doc.tienda,"albaranes").then(function(num){
+      var alb={
+        tienda:doc.tienda,
+        cliente:doc.cliente,
+        nif:doc.nif||"",
+        telefono:doc.telefono||"",
+        direccion:doc.direccion||"",
+        fecha:new Date().toISOString().split("T")[0],
+        estado:"pendiente",
+        facturaOrigen:doc.numero||doc.id,
+        facturaId:doc.id,
+        lineas:doc.lineas||[],
+        baseImponible:doc.baseImponible||0,
+        iva:doc.iva||0,
+        total:doc.total||0,
+        numero:num,
+        uid:CU.uid,
+        obs:"Albaran generado desde factura "+(doc.numero||""),
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+      };
+      db.collection("albaranes").add(alb).then(function(){
+        toast("Albaran creado: "+num);
+        cerrar();
+        // Preguntar si ir a albaranes
+        setTimeout(function(){
+          if(confirm("Albaran "+num+" creado. Ver albaranes ahora?")){
+            goSec("albaranes",gi("nav-albaranes"));
+          }
+        },500);
+      }).catch(function(e){toast("Error: "+e.message);});
+    });
+  }).catch(function(){
+    // Si falla la comprobación, crear igualmente
+    genNum(doc.tienda,"albaranes").then(function(num){
+      var alb={tienda:doc.tienda,cliente:doc.cliente,nif:doc.nif||"",telefono:doc.telefono||"",direccion:doc.direccion||"",fecha:new Date().toISOString().split("T")[0],estado:"pendiente",facturaOrigen:doc.numero||doc.id,facturaId:doc.id,lineas:doc.lineas||[],baseImponible:doc.baseImponible||0,iva:doc.iva||0,total:doc.total||0,numero:num,uid:CU.uid,obs:"Albaran desde factura "+(doc.numero||""),createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+      db.collection("albaranes").add(alb).then(function(){toast("Albaran creado: "+num);cerrar();}).catch(function(e){toast("Error: "+e.message);});
+    });
+  });
+}
+
 function cvt(id){
   var doc=DOCS.find(function(d){return d.id===id;});
   if(!doc||!confirm("Convertir este presupuesto en factura?"))return;
@@ -701,33 +770,94 @@ function cvt(id){
   }).catch(function(e){toast("Error: "+e.message);});
 }
 
+function marcarEntregado(id){
+  if(!confirm("Marcar este albaran como ENTREGADO?"))return;
+  db.collection("albaranes").doc(id).update({
+    estado:"entregado",
+    fechaEntrega:new Date().toISOString().split("T")[0],
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    toast("Albaran marcado como entregado");
+    cargar();
+  }).catch(function(e){toast("Error: "+e.message);});
+}
+
 function renderTes(){
-  gi("cnt").innerHTML=
-    "<div style='display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px'>"+
-    ["lafactoria","exposofa","merkamueble"].map(function(t){return "<div class='mc' style='border-left:3px solid "+T[t].col+"'><div class='mcl'>"+T[t].nc+"</div><div class='mcv' style='color:"+T[t].col+"' id='ts"+t+"'>--</div><div class='mcs' id='ts"+t+"s'>cargando...</div></div>";}).join("")+
-    "<div class='mc' style='border-left:3px solid #3B5FBF'><div class='mcl'>Consolidado</div><div class='mcv' style='color:#3B5FBF' id='tsall'>--</div><div class='mcs'>Las 3 tiendas</div></div>"+
-    "</div>"+
-    "<div class='tc' style='padding:24px'><h3 style='font-size:14px;font-weight:600;margin-bottom:16px;color:var(--tm)'>Pendientes de cobro</h3><div id='tslis'><div class='ld'><div class='sp'></div> Cargando...</div></div></div>";
+  gi("cnt-tes").innerHTML='<div class="ld"><div class="sp"></div> Calculando tesoreria...</div>';
   db.collection("facturas").get().then(function(snap){
     var docs=snap.docs.map(function(d){var o=d.data();o.id=d.id;return o;});
-    var tot=0;
+    var datos={};
+    var totGlobal=0, penGlobal=0, cobGlobal=0, vecGlobal=0;
     ["lafactoria","exposofa","merkamueble"].forEach(function(t){
       var td=docs.filter(function(d){return d.tienda===t;});
       var cob=td.filter(function(d){return d.estado==="cobrada";}).reduce(function(s,d){return s+(d.total||0);},0);
       var pen=td.filter(function(d){return d.estado==="enviada";}).reduce(function(s,d){return s+(d.total||0);},0);
-      tot+=cob;
-      var e1=gi("ts"+t),e2=gi("ts"+t+"s");
-      if(e1)e1.textContent=fE(cob);
-      if(e2)e2.innerHTML="<span style='color:var(--war)'>"+fE(pen)+" pendiente</span>";
+      var vec=td.filter(function(d){return d.estado==="vencida";}).reduce(function(s,d){return s+(d.total||0);},0);
+      var tot=td.reduce(function(s,d){return s+(d.total||0);},0);
+      datos[t]={cob:cob,pen:pen,vec:vec,tot:tot,num:td.length};
+      totGlobal+=tot; penGlobal+=pen; cobGlobal+=cob; vecGlobal+=vec;
     });
-    gi("tsall").textContent=fE(tot);
-    var pen=docs.filter(function(d){return d.estado==="enviada"||d.estado==="vencida";});
-    var ph=pen.map(function(d){
-      var pc=PCLS[d.tienda]||"";
-      return "<div style='display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--bd)'><span class='pill "+pc+"'>"+(T[d.tienda]&&T[d.tienda].nc||d.tienda)+"</span><span class='tn'>"+(d.numero||"")+"</span><span style='flex:1;font-weight:500'>"+(d.cliente||"")+"</span><span class='est "+(ECLS[d.estado]||"eb")+"'>"+(d.estado||"")+"</span><span style='font-weight:600;font-family:monospace'>"+fE(d.total)+"</span></div>";
-    }).join("");
-    gi("tslis").innerHTML=ph||"<div style='text-align:center;padding:30px;color:var(--tl)'>No hay facturas pendientes</div>";
-  }).catch(function(e){gi("tslis").innerHTML="<p style='padding:20px;color:var(--tm)'>Error al cargar</p>";});
+
+    // Tarjetas resumen globales
+    var html="<div style='display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px'>";
+    html+="<div class='mc'><div class='mcl'>Total facturado</div><div class='mcv'>"+fE(totGlobal)+"</div><div class='mcs'>Las 3 tiendas</div></div>";
+    html+="<div class='mc'><div class='mcl'>Cobrado</div><div class='mcv' style='color:var(--suc)'>"+fE(cobGlobal)+"</div><div class='mcs'>Facturas cobradas</div></div>";
+    html+="<div class='mc'><div class='mcl'>Pendiente cobro</div><div class='mcv' style='color:var(--war)'>"+fE(penGlobal)+"</div><div class='mcs'>Enviadas sin cobrar</div></div>";
+    html+="<div class='mc'><div class='mcl'>Vencidas</div><div class='mcv' style='color:var(--dan)'>"+fE(vecGlobal)+"</div><div class='mcs'>Requieren atencion</div></div>";
+    html+="</div>";
+
+    // Tarjetas por tienda
+    html+="<div style='display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px'>";
+    ["lafactoria","exposofa","merkamueble"].forEach(function(t){
+      var d=datos[t];
+      html+="<div class='mc' style='border-left:4px solid "+T[t].col+"'>";
+      html+="<div class='mcl' style='color:"+T[t].col+"'>"+T[t].nc+"</div>";
+      html+="<div class='mcv'>"+fE(d.tot)+"</div>";
+      html+="<div style='margin-top:10px;font-size:12.5px;display:flex;flex-direction:column;gap:4px'>";
+      html+="<div style='display:flex;justify-content:space-between'><span style='color:var(--suc)'>Cobrado</span><strong>"+fE(d.cob)+"</strong></div>";
+      html+="<div style='display:flex;justify-content:space-between'><span style='color:var(--war)'>Pendiente</span><strong>"+fE(d.pen)+"</strong></div>";
+      html+="<div style='display:flex;justify-content:space-between;color:var(--tl)'><span>Facturas</span><strong>"+d.num+"</strong></div>";
+      html+="</div></div>";
+    });
+    html+="</div>";
+
+    // Lista de pendientes y vencidas
+    var pendientes=docs.filter(function(d){return d.estado==="enviada"||d.estado==="vencida";});
+    pendientes.sort(function(a,b){return (a.vencimiento||"")>(b.vencimiento||"")?1:-1;});
+
+    html+="<div class='tc'>";
+    html+="<div style='padding:16px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px'>";
+    html+="<span style='font-size:14px;font-weight:600'>Pendientes de cobro</span>";
+    html+="<span style='font-size:12px;color:var(--tm);background:var(--bg);padding:2px 8px;border-radius:10px'>"+pendientes.length+"</span>";
+    html+="</div>";
+
+    if(pendientes.length===0){
+      html+="<div style='text-align:center;padding:40px;color:var(--tl)'>No hay facturas pendientes &#x1F389;</div>";
+    } else {
+      html+="<table><thead><tr><th>Numero</th><th>Tienda</th><th>Cliente</th><th>Vencimiento</th><th>Estado</th><th>Importe</th></tr></thead><tbody>";
+      pendientes.forEach(function(d){
+        var pc=PCLS[d.tienda]||"";
+        var ec=ECLS[d.estado]||"eb";
+        var esL=d.estado.charAt(0).toUpperCase()+d.estado.slice(1);
+        var venc=d.vencimiento?fD(d.vencimiento):"--";
+        var esVenc=d.estado==="vencida";
+        html+="<tr style='"+(esVenc?"background:#FFF5F5;":"")+"'>";
+        html+="<td><span class='tn'>"+(d.numero||"--")+"</span></td>";
+        html+="<td><span class='pill "+pc+"'>"+(T[d.tienda]&&T[d.tienda].nc||d.tienda)+"</span></td>";
+        html+="<td><span class='tc2'>"+(d.cliente||"--")+"</span></td>";
+        html+="<td style='"+(esVenc?"color:var(--dan);font-weight:600":"")+"'>"+venc+"</td>";
+        html+="<td><span class='est "+ec+"'>"+esL+"</span></td>";
+        html+="<td><span class='ti'>"+fE(d.total||0)+"</span></td>";
+        html+="</tr>";
+      });
+      html+="</tbody></table>";
+    }
+    html+="</div>";
+
+    gi("cnt-tes").innerHTML=html;
+  }).catch(function(e){
+    gi("cnt-tes").innerHTML="<div style='padding:40px;text-align:center;color:var(--tm)'>Error al cargar datos de tesoreria: "+e.message+"</div>";
+  });
 }
 
 function abrirPanel(){gi("ov").style.display="block";gi("pan").classList.add("open");}
