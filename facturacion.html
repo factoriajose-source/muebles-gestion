@@ -530,34 +530,52 @@ function delL(i){LIN.splice(i,1);renderL();}
 function upL(i,k,v){LIN[i][k]=v;if(LIN[i].tipo==="art")LIN[i].sub=(LIN[i].cant||0)*(LIN[i].precio||0);calcT();}
 
 function renderL(){
-  var c=gi("lc");if(!c)return;
+  var c=document.getElementById("lc");if(!c)return;
   var h="";
   LIN.forEach(function(l,i){
     if(l.tipo==="art"){
-      h+="<div class='lr'>";
-      h+="<textarea placeholder='Descripcion del articulo...' onchange="upL("+i+",'desc',this.value)">"+(l.desc||"")+"</textarea>";
-      h+="<input type='number' min='0' step='0.01' value='"+(l.cant||1)+"' onchange="upL("+i+",'cant',parseFloat(this.value)||0)">";
-      h+="<input type='number' min='0' step='0.01' value='"+(l.precio||0)+"' onchange="upL("+i+",'precio',parseFloat(this.value)||0)">";
-      h+="<select class='fi' onchange="upL("+i+",'iva',parseInt(this.value))">";
+      h+="<div class='lr' data-idx='"+i+"'>";
+      h+="<textarea class='ldesc' placeholder='Descripcion...'>"+(l.desc||"")+"</textarea>";
+      h+="<input class='lcant' type='number' min='0' step='0.01' value='"+(l.cant||1)+"'>";
+      h+="<input class='lprecio' type='number' min='0' step='0.01' value='"+(l.precio||0)+"'>";
+      h+="<select class='fi liva'>";
       h+="<option value='21'"+(l.iva==21?" selected":"")+" >21%</option>";
       h+="<option value='10'"+(l.iva==10?" selected":"")+" >10%</option>";
       h+="<option value='4'"+(l.iva==4?" selected":"")+" >4%</option>";
       h+="<option value='0'"+(l.iva==0?" selected":"")+" >0%</option></select>";
-      h+="<button class='bdl' onclick='delL("+i+")'>X</button></div>";
+      h+="<button class='bdl ldel'>X</button></div>";
     }else if(l.tipo==="dto"){
-      h+="<div class='lr' style='background:#FFF8F0;border-color:#FDDCBC;grid-template-columns:1fr 70px 100px auto 36px'>";
-      h+="<input type='text' value='"+(l.desc||"Descuento")+"' onchange="upL("+i+",'desc',this.value)">";
-      h+="<input type='number' min='0' max='100' step='.1' value='"+(l.pct||0)+"' onchange="upL("+i+",'pct',parseFloat(this.value)||0)" placeholder='%'>";
-      h+="<input type='number' min='0' step='.01' value='"+(l.imp||0)+"' onchange="upL("+i+",'imp',parseFloat(this.value)||0)" placeholder='EUR'>";
+      h+="<div class='lr' style='background:#FFF8F0;border-color:#FDDCBC;grid-template-columns:1fr 70px 100px auto 36px' data-idx='"+i+"'>";
+      h+="<input class='ldesc' type='text' value='"+(l.desc||"Descuento")+"'>";
+      h+="<input class='lpct' type='number' min='0' max='100' step='.1' value='"+(l.pct||0)+"' placeholder='%'>";
+      h+="<input class='limp' type='number' min='0' step='.01' value='"+(l.imp||0)+"' placeholder='EUR'>";
       h+="<span style='font-size:11px;color:var(--tm);padding:7px 4px'>DTO.</span>";
-      h+="<button class='bdl' onclick='delL("+i+")'>X</button></div>";
+      h+="<button class='bdl ldel'>X</button></div>";
     }else{
-      h+="<div class='lr' style='grid-template-columns:1fr 36px;background:#F9F9FF;border-color:#DDE0F5'>";
-      h+="<input type='text' value='"+(l.desc||"")+"' onchange="upL("+i+",'desc',this.value)" placeholder='Texto informativo...'>";
-      h+="<button class='bdl' onclick='delL("+i+")'>X</button></div>";
+      h+="<div class='lr' style='grid-template-columns:1fr 36px;background:#F9F9FF;border-color:#DDE0F5' data-idx='"+i+"'>";
+      h+="<input class='ldesc' type='text' value='"+(l.desc||"")+"' placeholder='Texto informativo...'>";
+      h+="<button class='bdl ldel'>X</button></div>";
     }
   });
-  gi("lc").innerHTML=h||"<div style='text-align:center;padding:20px;color:var(--tl);font-size:13px'>Añade articulos con los botones de abajo</div>";
+  c.innerHTML=h||"<div style='text-align:center;padding:20px;color:var(--tl);font-size:13px'>Añade articulos con los botones de abajo</div>";
+  // Eventos sin onclick inline
+  c.querySelectorAll(".lr").forEach(function(row){
+    var i=parseInt(row.getAttribute("data-idx"));
+    var desc=row.querySelector(".ldesc");
+    var cant=row.querySelector(".lcant");
+    var precio=row.querySelector(".lprecio");
+    var iva=row.querySelector(".liva");
+    var pct=row.querySelector(".lpct");
+    var imp=row.querySelector(".limp");
+    var del=row.querySelector(".ldel");
+    if(desc)desc.addEventListener("change",function(){upL(i,"desc",this.value);});
+    if(cant)cant.addEventListener("change",function(){upL(i,"cant",parseFloat(this.value)||0);});
+    if(precio)precio.addEventListener("change",function(){upL(i,"precio",parseFloat(this.value)||0);});
+    if(iva)iva.addEventListener("change",function(){upL(i,"iva",parseInt(this.value));});
+    if(pct)pct.addEventListener("change",function(){upL(i,"pct",parseFloat(this.value)||0);});
+    if(imp)imp.addEventListener("change",function(){upL(i,"imp",parseFloat(this.value)||0);});
+    if(del)del.addEventListener("click",function(){delL(i);});
+  });
   calcT();
 }
 
