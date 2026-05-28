@@ -863,7 +863,25 @@ function abrirSelectorModal(){
     db.collection("tarifas_modelos").limit(2000).get(),
     db.collection("proveedores").get()
   ]).then(function(res){
-    var arts=res[0].docs.map(function(d){var o=d.data();o.id=d.id;return o;});
+    // Cada doc tiene un campo "articulos" que es array — hay que aplanarlo
+    var arts=[];
+    res[0].docs.forEach(function(d){
+      var data=d.data();
+      if(data.articulos&&Array.isArray(data.articulos)){
+        // Estructura normal: doc por proveedor+modelo con array de artículos
+        data.articulos.forEach(function(a){
+          // Asegurarse de que tiene prv y mod del documento padre si no los tiene
+          if(!a.prv)a.prv=data.prv||"";
+          if(!a.mod)a.mod=data.mod||"";
+          if(!a.prvNom)a.prvNom=data.prvNom||data.prv||"";
+          arts.push(a);
+        });
+      } else {
+        // Estructura alternativa: artículo directo en el documento
+        var o=data;o.id=d.id;
+        arts.push(o);
+      }
+    });
     var prvMap={};
     res[1].docs.forEach(function(d){
       var o=d.data();var cod=d.id;
@@ -880,7 +898,19 @@ function abrirSelectorModal(){
   }).catch(function(e){
     // Solo tarifas sin proveedores
     db.collection("tarifas_modelos").limit(2000).get().then(function(snap){
-      window._selArts=snap.docs.map(function(d){var o=d.data();o.id=d.id;return o;});
+      var arts2=[];
+      snap.docs.forEach(function(d){
+        var data=d.data();
+        if(data.articulos&&Array.isArray(data.articulos)){
+          data.articulos.forEach(function(a){
+            if(!a.prv)a.prv=data.prv||"";
+            if(!a.mod)a.mod=data.mod||"";
+            if(!a.prvNom)a.prvNom=data.prvNom||"";
+            arts2.push(a);
+          });
+        } else {var o=data;o.id=d.id;arts2.push(o);}
+      });
+      window._selArts=arts2;
       window._selPrvMap={};
       iniciarFiltrosSel();
       renderCatalogoSel();
