@@ -991,10 +991,17 @@ function abrirSelectorModal(){
         "<td style='padding:8px 10px;text-align:center;font-weight:700;color:#2856c8;font-size:12px' id='pts-"+a.prv+"-"+a.ref+"'>"+(pts!==undefined?Math.round(pts):"--")+"</td>"+
         "<td style='padding:8px 10px'>"+telaHtml+"</td>"+
         "<td style='padding:8px 10px;text-align:right;font-weight:700;color:#1a1714;font-size:13px' id='prec-"+a.prv+"-"+a.ref+"'>"+(precio!==null?fmtE(precio):"<span style='color:#aaa;font-size:11px'>Sin datos</span>")+"</td>"+
-        "<td style='padding:8px 10px;text-align:center'><button onclick='selAnadir(""+a.prv+"",""+a.ref+"")' style='padding:5px 12px;background:#E8480A;color:#fff;border:none;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap'>+ Añadir</button></td>"+
+        "<td style='padding:8px 10px;text-align:center'><button class='sel-add-btn' data-prv='"+a.prv+"' data-ref='"+a.ref+"' style='padding:5px 12px;background:#E8480A;color:#fff;border:none;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap'>+ Añadir</button></td>"+
         "</tr>";
     });
     tbody2.innerHTML=html;
+    // Eventos delegados — sin onclick inline
+    tbody2.querySelectorAll(".sel-add-btn").forEach(function(btn){
+      btn.addEventListener("click",function(e){
+        e.stopPropagation();
+        selAnadir(this.getAttribute("data-prv"),this.getAttribute("data-ref"));
+      });
+    });
   }
 }
 
