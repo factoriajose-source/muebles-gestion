@@ -787,133 +787,281 @@ function abrirSelectorModal(){
 
   var overlay=document.createElement("div");
   overlay.id="sel-modal";
-  overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto";
+  overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:flex;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto";
   overlay.addEventListener("click",function(e){if(e.target===overlay)overlay.remove();});
 
   var box=document.createElement("div");
-  box.style.cssText="background:#fff;border-radius:14px;width:100%;max-width:900px;max-height:80vh;display:flex;flex-direction:column";
+  box.style.cssText="background:#fff;border-radius:14px;width:100%;max-width:960px;display:flex;flex-direction:column;max-height:85vh";
 
+  // CABECERA
   var hdr=document.createElement("div");
-  hdr.style.cssText="padding:16px 20px;border-bottom:1px solid #E2E5EF;display:flex;align-items:center;gap:12px;flex-shrink:0";
-
-  var titulo=document.createElement("div");
-  titulo.style.cssText="flex:1;font-size:15px;font-weight:600";
-  titulo.textContent="Selector de Tarifas";
-
+  hdr.style.cssText="padding:14px 20px;border-bottom:1px solid #E2E5EF;display:flex;align-items:center;gap:10px;flex-shrink:0";
+  var tit=document.createElement("div");
+  tit.style.cssText="font-size:15px;font-weight:600;flex:0 0 auto";
+  tit.textContent="Selector de Tarifas";
   var buscar=document.createElement("input");
   buscar.type="text";
-  buscar.placeholder="Buscar por modelo, proveedor...";
-  buscar.style.cssText="flex:2;padding:8px 12px;border:1.5px solid #E2E5EF;border-radius:8px;font-size:13px;font-family:inherit;outline:none";
-
+  buscar.placeholder="Buscar por nombre, ref, medidas...";
+  buscar.style.cssText="flex:1;padding:7px 12px;border:1.5px solid #E2E5EF;border-radius:8px;font-size:13px;font-family:inherit;outline:none";
   var cerrarBtn=document.createElement("button");
   cerrarBtn.textContent="Cerrar";
   cerrarBtn.style.cssText="padding:6px 14px;border:1px solid #E2E5EF;border-radius:6px;background:#fff;cursor:pointer;font-family:inherit;font-size:13px";
   cerrarBtn.addEventListener("click",function(){overlay.remove();});
+  hdr.appendChild(tit);hdr.appendChild(buscar);hdr.appendChild(cerrarBtn);
 
-  hdr.appendChild(titulo);
-  hdr.appendChild(buscar);
-  hdr.appendChild(cerrarBtn);
+  // FILTROS EN CASCADA
+  var filtros=document.createElement("div");
+  filtros.style.cssText="padding:10px 20px;border-bottom:1px solid #E2E5EF;display:flex;gap:8px;flex-wrap:wrap;background:#F5F6FA;flex-shrink:0";
 
+  var selPrv=document.createElement("select");
+  selPrv.style.cssText="padding:6px 10px;border:1px solid #E2E5EF;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:#fff;min-width:200px";
+  var selMod=document.createElement("select");
+  selMod.style.cssText="padding:6px 10px;border:1px solid #E2E5EF;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:#fff;min-width:180px";
+  var selCat=document.createElement("select");
+  selCat.style.cssText="padding:6px 10px;border:1px solid #E2E5EF;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:#fff;min-width:150px";
+  var contador=document.createElement("span");
+  contador.style.cssText="font-size:12px;color:#9BA3AF;align-self:center;margin-left:auto";
+
+  filtros.appendChild(selPrv);filtros.appendChild(selMod);filtros.appendChild(selCat);filtros.appendChild(contador);
+
+  // LISTA
   var lista=document.createElement("div");
   lista.id="sel-lista";
-  lista.style.cssText="flex:1;overflow-y:auto;padding:16px";
+  lista.style.cssText="flex:1;overflow-y:auto;padding:0";
   lista.innerHTML="<div class='ld'><div class='sp'></div> Cargando tarifas...</div>";
 
-  box.appendChild(hdr);
-  box.appendChild(lista);
-  overlay.appendChild(box);
-  document.body.appendChild(overlay);
+  box.appendChild(hdr);box.appendChild(filtros);box.appendChild(lista);
+  overlay.appendChild(box);document.body.appendChild(overlay);
 
-  db.collection("tarifas_modelos").limit(500).get().then(function(snap){
-    window._selArts=snap.docs.map(function(d){var o=d.data();o.id=d.id;return o;});
-    renderSelectorArts(window._selArts);
-    buscar.addEventListener("input",function(){
-      var q=this.value.toLowerCase();
-      var filtrados=window._selArts.filter(function(a){
-        return [a.modelo,a.proveedor,a.referencia,a.nombre,a.descripcion].join(" ").toLowerCase().indexOf(q)>=0;
-      });
-      renderSelectorArts(filtrados);
+  // Cargar artículos y proveedores
+  Promise.all([
+    db.collection("tarifas_modelos").limit(2000).get(),
+    db.collection("proveedores").get()
+  ]).then(function(results){
+    var arts=results[0].docs.map(function(d){var o=d.data();o.id=d.id;return o;});
+    var prvMap={};
+    results[1].docs.forEach(function(d){
+      var o=d.data();var cod=d.id;
+      var pp=parseFloat(o.precioPunto||o.precio_punto||o.PrecioPunto||0);
+      var dto=parseFloat(o.dtoMax||o.dto_max||o.DtoMax||0);
+      var nom=o.nombre||o.Nombre||o.name||cod;
+      prvMap[cod]={nombre:nom,precioPunto:pp,dtoMax:dto};
+      if(/^\d+$/.test(cod))prvMap[parseInt(cod)]={nombre:nom,precioPunto:pp,dtoMax:dto};
     });
+    window._selArts=arts;
+    window._selPrvMap=prvMap;
+    poblarFiltrosSel(arts,prvMap);
+    renderSelectorArts(arts,prvMap);
   }).catch(function(e){
-    lista.innerHTML="<div style='padding:20px;color:#E53E3E;text-align:center'>Error al cargar tarifas: "+e.message+"</div>";
+    // Si falla proveedores, intenta solo tarifas
+    db.collection("tarifas_modelos").limit(2000).get().then(function(snap){
+      var arts=snap.docs.map(function(d){var o=d.data();o.id=d.id;return o;});
+      window._selArts=arts;window._selPrvMap={};
+      poblarFiltrosSel(arts,{});
+      renderSelectorArts(arts,{});
+    }).catch(function(e2){
+      lista.innerHTML="<div style='padding:20px;color:#E53E3E;text-align:center'>Error: "+e2.message+"</div>";
+    });
   });
+
+  function getFiltered(){
+    var prv=selPrv.value,mod=selMod.value,cat=selCat.value,q=buscar.value.toLowerCase().trim();
+    return (window._selArts||[]).filter(function(a){
+      if(prv&&a.prv!==prv)return false;
+      if(mod&&a.mod!==mod)return false;
+      if(cat&&!(a.categorias&&a.categorias[cat]!==undefined)&&a.cat!==cat)return false;
+      if(q){var txt=(a.nom||"")+" "+(a.mod||"")+" "+(a.ref||"")+" "+(a.med||"")+" "+(a.prvNom||"");if(txt.toLowerCase().indexOf(q)<0)return false;}
+      return true;
+    });
+  }
+
+  function poblarFiltrosSel(arts,prvMap){
+    var prvs={},mods={},cats={};
+    arts.forEach(function(a){
+      if(a.prv)prvs[a.prv]=a.prvNom||a.prv;
+      if(a.mod)mods[a.mod]=1;
+      if(a.cat)cats[a.cat]=1;
+    });
+    selPrv.innerHTML="<option value=''>Todos los proveedores ("+Object.keys(prvs).length+")</option>";
+    Object.keys(prvs).sort(function(a,b){return parseInt(a)-parseInt(b)||a.localeCompare(b);}).forEach(function(p){
+      var pd=prvMap[p]||prvMap[parseInt(p)]||{};
+      var nom=pd.nombre||prvs[p];
+      var pp=pd.precioPunto?" — "+pd.precioPunto+"€/pt":"";
+      var o=document.createElement("option");o.value=p;o.textContent=p+" · "+nom+pp;selPrv.appendChild(o);
+    });
+    selMod.innerHTML="<option value=''>Todos los modelos ("+Object.keys(mods).length+")</option>";
+    Object.keys(mods).sort().forEach(function(m){var o=document.createElement("option");o.value=m;o.textContent=m;selMod.appendChild(o);});
+    selCat.innerHTML="<option value=''>Todas las categorias ("+Object.keys(cats).length+")</option>";
+    Object.keys(cats).sort().forEach(function(c){var o=document.createElement("option");o.value=c;o.textContent=c;selCat.appendChild(o);});
+  }
+
+  function actualizarCascada(){
+    var prv=selPrv.value;
+    var mods={},cats={};
+    (window._selArts||[]).forEach(function(a){
+      if(prv&&a.prv!==prv)return;
+      if(a.mod)mods[a.mod]=1;
+      if(a.cat)cats[a.cat]=1;
+    });
+    var cvMod=selMod.value,cvCat=selCat.value;
+    selMod.innerHTML="<option value=''>Todos los modelos ("+Object.keys(mods).length+")</option>";
+    Object.keys(mods).sort().forEach(function(m){var o=document.createElement("option");o.value=m;o.textContent=m;selMod.appendChild(o);});
+    if(mods[cvMod])selMod.value=cvMod;
+    selCat.innerHTML="<option value=''>Todas las categorias ("+Object.keys(cats).length+")</option>";
+    Object.keys(cats).sort().forEach(function(c){var o=document.createElement("option");o.value=c;o.textContent=c;selCat.appendChild(o);});
+    if(cats[cvCat])selCat.value=cvCat;
+  }
+
+  selPrv.addEventListener("change",function(){actualizarCascada();renderSelectorArts(getFiltered(),window._selPrvMap||{});});
+  selMod.addEventListener("change",function(){renderSelectorArts(getFiltered(),window._selPrvMap||{});});
+  selCat.addEventListener("change",function(){renderSelectorArts(getFiltered(),window._selPrvMap||{});});
+  buscar.addEventListener("input",function(){renderSelectorArts(getFiltered(),window._selPrvMap||{});});
 }
 
-function renderSelectorArts(arts){
+function calcPrecioSel(art,cat,prvMap){
+  var pts=art.categorias&&art.categorias[cat];
+  if(pts===undefined||pts===null)return 0;
+  var pd=prvMap[art.prv]||prvMap[parseInt(art.prv)]||{};
+  if(pd.precioPunto)return Math.round(pts*pd.precioPunto*(1-((pd.dtoMax||0)/100)));
+  // Si no hay precioPunto, los puntos son precio directo
+  return pts;
+}
+
+function renderSelectorArts(arts,prvMap){
+  if(!prvMap)prvMap=window._selPrvMap||{};
   var lista=document.getElementById("sel-lista");
   if(!lista)return;
+  var cont=lista.closest(".sel-modal-box")||lista.parentElement;
+  var cEl=cont?cont.querySelector("span"):null;
+
   if(!arts.length){
-    lista.innerHTML="<div style='text-align:center;padding:30px;color:#9BA3AF'>No se encontraron articulos</div>";
+    lista.innerHTML="<div style='text-align:center;padding:40px;color:#9BA3AF'>No se encontraron articulos</div>";
     return;
   }
-  lista.innerHTML="";
-  var grid=document.createElement("div");
-  grid.style.cssText="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px";
+
+  // Actualizar contador
+  var cSpan=document.querySelector("#sel-modal span");
+  if(cSpan)cSpan.textContent=arts.length+" articulo"+(arts.length!==1?"s":"");
+
+  // Tabla compacta en vez de cards — más eficiente para muchos artículos
+  var table=document.createElement("table");
+  table.style.cssText="width:100%;border-collapse:collapse;font-size:13px";
+  var thead=document.createElement("thead");
+  thead.innerHTML="<tr style='background:#F5F6FA;position:sticky;top:0'>" +
+    "<th style='padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6B7080;border-bottom:1px solid #E2E5EF'>Proveedor · Modelo</th>" +
+    "<th style='padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6B7080;border-bottom:1px solid #E2E5EF'>Ref.</th>" +
+    "<th style='padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6B7080;border-bottom:1px solid #E2E5EF'>Nombre</th>" +
+    "<th style='padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6B7080;border-bottom:1px solid #E2E5EF'>Medidas</th>" +
+    "<th style='padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6B7080;border-bottom:1px solid #E2E5EF'>Cat.</th>" +
+    "<th style='padding:8px 12px;text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6B7080;border-bottom:1px solid #E2E5EF'>Precio</th>" +
+    "<th style='padding:8px 12px;border-bottom:1px solid #E2E5EF'></th>" +
+    "</tr>";
+  table.appendChild(thead);
+  var tbody=document.createElement("tbody");
+
   arts.forEach(function(a){
-    var precio=a.precio_publico||a.precioPublico||a.pvp||a.precio||a.price||0;
-    var nombre=a.nombre||a.modelo||a.descripcion||a.desc||"Sin nombre";
-    var proveedor=a.proveedor||a.fabrica||a.marca||"";
-    var ref=a.referencia||a.ref||a.modelo||"";
-    var medidas=a.medidas||a.dimensiones||"";
-    var imgUrl=a.imagen||a.img||a.imageUrl||"";
+    var pd=prvMap[a.prv]||prvMap[parseInt(a.prv)]||{};
+    var cats=Object.keys(a.categorias||{});
+    var cat1=cats[0]||"UNICO";
+    var precio=calcPrecioSel(a,cat1,prvMap);
+    var precioStr=precio>0?fE(precio):"--";
+    var prvLabel=(a.prv||"")+" · "+(pd.nombre||a.prvNom||"");
+    var modLabel=a.mod||"";
+    var hasMultiCat=cats.length>1;
 
-    var card=document.createElement("div");
-    card.style.cssText="border:1.5px solid #E2E5EF;border-radius:10px;padding:12px;cursor:pointer;transition:all .15s";
-    card.addEventListener("mouseenter",function(){this.style.borderColor="var(--acc)";this.style.background="var(--acl)";});
-    card.addEventListener("mouseleave",function(){this.style.borderColor="#E2E5EF";this.style.background="#fff";});
-    card.addEventListener("click",function(){seleccionarArt(a.id);});
+    var tr=document.createElement("tr");
+    tr.style.cssText="border-bottom:1px solid #F0F1F5;cursor:pointer;transition:background .1s";
+    tr.addEventListener("mouseenter",function(){this.style.background="#F5F6FA";});
+    tr.addEventListener("mouseleave",function(){this.style.background="";});
 
-    if(imgUrl){
-      var img=document.createElement("img");
-      img.src=imgUrl;
-      img.style.cssText="width:100%;height:110px;object-fit:contain;border-radius:6px;margin-bottom:8px;background:#f5f5f5";
-      card.appendChild(img);
+    var tdPrv=document.createElement("td");
+    tdPrv.style.cssText="padding:9px 12px;";
+    tdPrv.innerHTML="<span style='font-size:11px;color:#6B7080'>"+prvLabel+"</span><br><span style='font-weight:600;font-size:12px'>"+modLabel+"</span>";
+
+    var tdRef=document.createElement("td");
+    tdRef.style.cssText="padding:9px 12px;font-family:monospace;font-size:12px;color:#6B7080";
+    tdRef.textContent=a.ref||"";
+
+    var tdNom=document.createElement("td");
+    tdNom.style.cssText="padding:9px 12px;font-weight:500;max-width:220px";
+    tdNom.textContent=a.nom||"";
+
+    var tdMed=document.createElement("td");
+    tdMed.style.cssText="padding:9px 12px;font-size:12px;color:#6B7080;white-space:nowrap";
+    tdMed.textContent=a.med||"";
+
+    var tdCat=document.createElement("td");
+    tdCat.style.cssText="padding:9px 12px;font-size:11px;color:#6B7080";
+    tdCat.textContent=a.cat||"";
+
+    var tdPrecio=document.createElement("td");
+    tdPrecio.style.cssText="padding:9px 12px;text-align:right;font-weight:700;color:var(--acc);white-space:nowrap";
+
+    if(hasMultiCat){
+      // Select para elegir tela/acabado
+      var selCatArt=document.createElement("select");
+      selCatArt.style.cssText="font-size:11px;padding:2px 4px;border:1px solid #E2E5EF;border-radius:4px;max-width:80px;margin-right:4px";
+      cats.forEach(function(c){var o=document.createElement("option");o.value=c;o.textContent=c;selCatArt.appendChild(o);});
+      var prEl=document.createElement("span");
+      prEl.textContent=precioStr;
+      selCatArt.addEventListener("change",function(){
+        var p=calcPrecioSel(a,this.value,prvMap);
+        prEl.textContent=p>0?fE(p):"--";
+      });
+      tdPrecio.appendChild(selCatArt);
+      tdPrecio.appendChild(prEl);
+    } else {
+      tdPrecio.textContent=precioStr;
     }
-    var n=document.createElement("div");
-    n.style.cssText="font-size:13px;font-weight:600;margin-bottom:4px";
-    n.textContent=nombre;
-    card.appendChild(n);
-    if(proveedor){
-      var p=document.createElement("div");
-      p.style.cssText="font-size:11.5px;color:#6B7080";
-      p.textContent="Proveedor: "+proveedor;
-      card.appendChild(p);
-    }
-    if(ref&&ref!==nombre){
-      var r=document.createElement("div");
-      r.style.cssText="font-size:11.5px;color:#6B7080";
-      r.textContent="Ref: "+ref;
-      card.appendChild(r);
-    }
-    if(medidas){
-      var m=document.createElement("div");
-      m.style.cssText="font-size:11.5px;color:#6B7080";
-      m.textContent="Medidas: "+medidas;
-      card.appendChild(m);
-    }
-    var pr=document.createElement("div");
-    pr.style.cssText="font-size:14px;font-weight:700;color:var(--acc);margin-top:6px";
-    pr.textContent=fE(precio);
-    card.appendChild(pr);
-    grid.appendChild(card);
+
+    var tdBtn=document.createElement("td");
+    tdBtn.style.cssText="padding:9px 12px;text-align:center";
+    var btn=document.createElement("button");
+    btn.textContent="+ Añadir";
+    btn.style.cssText="padding:5px 10px;background:var(--acc);color:#fff;border:none;border-radius:6px;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap";
+    btn.addEventListener("click",function(e){
+      e.stopPropagation();
+      var catSel=tdPrecio.querySelector("select");
+      var catEleg=catSel?catSel.value:(cats[0]||"UNICO");
+      var pr=calcPrecioSel(a,catEleg,prvMap);
+      var descCompleta=(a.nom||"")+(hasMultiCat?" ["+catEleg+"]":"");
+      LIN.push({tipo:"art",desc:descCompleta,fabrica:pd.nombre||a.prvNom||a.prv||"",modelo:a.mod||"",medidas:a.med||"",cant:1,precio:pr,iva:21,sub:pr,ref:a.ref||""});
+      renderL();
+      var modal=document.getElementById("sel-modal");
+      if(modal)modal.remove();
+      toast("Añadido: "+(a.nom||a.ref||"articulo"));
+    });
+    tr.addEventListener("click",function(){btn.click();});
+    tdBtn.appendChild(btn);
+
+    tr.appendChild(tdPrv);tr.appendChild(tdRef);tr.appendChild(tdNom);tr.appendChild(tdMed);tr.appendChild(tdCat);tr.appendChild(tdPrecio);tr.appendChild(tdBtn);
+    tbody.appendChild(tr);
   });
-  lista.appendChild(grid);
+
+  table.appendChild(tbody);
+  lista.innerHTML="";
+  var infoBar=document.createElement("div");
+  infoBar.style.cssText="padding:8px 16px;font-size:12px;color:#9BA3AF;border-bottom:1px solid #F0F1F5;background:#FAFBFF";
+  infoBar.textContent=arts.length+" articulo"+(arts.length!==1?"s")+" encontrado"+(arts.length!==1?"s":"");
+  lista.appendChild(infoBar);
+  lista.appendChild(table);
 }
 
 function seleccionarArt(id){
+  // Función de compatibilidad — ya no se usa directamente
   if(!window._selArts)return;
   var a=window._selArts.find(function(x){return x.id===id;});
   if(!a)return;
-  var precio=a.precio_publico||a.precioPublico||a.pvp||a.precio||a.price||0;
-  var nombre=a.nombre||a.modelo||a.descripcion||a.desc||"Sin nombre";
-  var proveedor=a.proveedor||a.fabrica||a.marca||"";
-  var ref=a.referencia||a.ref||a.modelo||"";
-  var medidas=a.medidas||a.dimensiones||"";
-  LIN.push({tipo:"art",desc:nombre,fabrica:proveedor,modelo:ref,medidas:medidas,cant:1,precio:precio,iva:21,sub:precio});
+  var prvMap=window._selPrvMap||{};
+  var cats=Object.keys(a.categorias||{});
+  var cat1=cats[0]||"UNICO";
+  var precio=calcPrecioSel(a,cat1,prvMap);
+  var pd=prvMap[a.prv]||prvMap[parseInt(a.prv)]||{};
+  LIN.push({tipo:"art",desc:a.nom||"",fabrica:pd.nombre||a.prvNom||"",modelo:a.mod||"",medidas:a.med||"",cant:1,precio:precio,iva:21,sub:precio});
   renderL();
   var modal=document.getElementById("sel-modal");
   if(modal)modal.remove();
-  toast("Añadido: "+nombre);
+  toast("Añadido: "+(a.nom||"articulo"));
 }
 
 
