@@ -884,10 +884,13 @@ function abrirSelectorModal(){
     });
     var prvMap={};
     res[1].docs.forEach(function(d){
-      var o=d.data();var cod=d.id;
-      var pp=parseFloat(String(o.precioPunto||o.PUNTOS||o.puntos||o.precio_punto||"0").replace(",","."))||0;
-      var dto=parseFloat(o.dtoMax||o.dto_max||o.DtoMax||0);
-      var nom=o.nombre||o.Nombre||o.name||cod;
+      var o=d.data();
+      // El codigo del proveedor está en el campo Codigo, no en el ID del documento
+      var cod=String(o.Codigo||o.codigo||d.id||"").trim();
+      if(!cod)return;
+      var pp=parseFloat(String(o.PUNTOS||o.puntos||o.precioPunto||"0").replace(",","."))||0;
+      var dto=parseFloat(String(o.MAX_DTO||o.dtoMax||"0").replace(",",".").replace("%",""))||0;
+      var nom=o.Nombre||o.nombre||cod;
       prvMap[cod]={nombre:nom,precioPunto:pp,dtoMax:dto};
       if(/^\d+$/.test(cod))prvMap[parseInt(cod)]={nombre:nom,precioPunto:pp,dtoMax:dto};
     });
