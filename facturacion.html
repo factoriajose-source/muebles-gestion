@@ -113,6 +113,7 @@ tbody tr:hover .ra{opacity:1;}
 .topt img{max-height:28px;max-width:110px;object-fit:contain;}
 .tall{justify-content:center;font-weight:600;font-size:14px;color:#3B5FBF;border-color:#B0C0E8;background:#EEF2F8;}
 .es3{text-align:center;padding:60px 20px;color:var(--tm);}
+.sel-row:hover{background:#fffef5;}
 </style>
 </head>
 <body>
@@ -983,7 +984,7 @@ function abrirSelectorModal(){
       } else {
         telaHtml="<span style='font-size:10px;color:#888'>"+ta+"</span>";
       }
-      html+="<tr style='border-bottom:1px solid #f0f0f0' onmouseover='this.style.background="#fffef5"' onmouseout='this.style.background=""'>"+
+      html+="<tr class='sel-row' style='border-bottom:1px solid #f0f0f0'>"+
         "<td style='padding:8px 10px'><strong style='font-size:12px'>"+a.nom+"</strong>"+(a.cat?"<br><span style='font-size:10px;color:#aaa'>"+a.cat+"</span>":"")+"</td>"+
         "<td style='padding:8px 10px;color:#888;font-size:11px'>"+a.ref+"</td>"+
         "<td style='padding:8px 10px;color:#888;font-size:10px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' title='"+a.med+"'>"+a.med+"</td>"+
