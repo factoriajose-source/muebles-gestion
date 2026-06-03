@@ -1914,8 +1914,7 @@ function importarTarifaMulti(){
     var categorias={};
     var valid=false;
     Object.keys(colsPts).forEach(function(ci){
-      var v=parseFloat(String(row[parseInt(ci)]||"").replace(",","."));
-      if(!isNaN(v)&&v>=0){ categorias[colsPts[ci]]=v; valid=true; }
+      var v=parseFloat(String(row[parseInt(ci)]===undefined||row[parseInt(ci)]===null?"":row[parseInt(ci)]).replace(",","."));
     });
     if(!valid) continue;
 
