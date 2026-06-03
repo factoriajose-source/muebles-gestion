@@ -575,7 +575,8 @@ function cargarProveedoresFirebase(){
 }
 
 function cargarTarifasFirestore(){
-  ARTICULOS=[];
+  var gnesis=cargarGNESIS();
+  ARTICULOS=gnesis;
   renderArt();
   // Cargar tarifas Y precargar imágenes en paralelo
   var p1=db.collection("tarifas_modelos").get().then(function(sn){
@@ -586,7 +587,7 @@ function cargarTarifasFirestore(){
         importadas=importadas.concat(data.articulos);
       }
     });
-    ARTICULOS=importadas;
+    ARTICULOS=gnesis.concat(importadas);
     console.log("Tarifas cargadas:",importadas.length,"artículos");
     renderTarifas();
     renderArt();
@@ -627,6 +628,10 @@ function eliminarTarifaFirestore(prv, mod, callback){
   db.collection("tarifas_modelos").doc(docId).delete()
     .then(function(){ if(callback)callback(null); })
     .catch(function(e){ if(callback)callback(e); });
+}
+
+function cargarGNESIS(){
+  return [{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"115",nom:"Bajo 2 cajones + 1 puerta",med:"126x53 cm F41",cat:"Bajos TV",categorias:{"UNICO":430}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"120",nom:"Bajo 2 cajones + 2 puertas",med:"154x53 cm F41",cat:"Bajos TV",categorias:{"UNICO":467}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"125",nom:"Bajo 2 cajones + 2 puertas",med:"181x53 cm F41",cat:"Bajos TV",categorias:{"UNICO":535}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"130",nom:"Bajo 1 puerta + 1 estante",med:"126x53 cm F41",cat:"Bajos TV",categorias:{"UNICO":335}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"135",nom:"Bajo 2 puertas + 1 estante",med:"154x53 cm F41",cat:"Bajos TV",categorias:{"UNICO":389}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"140",nom:"Bajo 2 puertas + 1 estante",med:"181x53 cm F41",cat:"Bajos TV",categorias:{"UNICO":399}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"500i",nom:"Modulo 1P cristal izquierda",med:"55x147 cm F36",cat:"Modulos",categorias:{"UNICO":430}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"500D",nom:"Modulo 1P cristal derecha",med:"55x147 cm F36",cat:"Modulos",categorias:{"UNICO":430}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"505i",nom:"Modulo 1P cristal izquierda",med:"82x147 cm F36",cat:"Modulos",categorias:{"UNICO":560}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"505D",nom:"Modulo 1P cristal derecha",med:"82x147 cm F36",cat:"Modulos",categorias:{"UNICO":560}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"600i",nom:"Modulo Supra izquierda 3P",med:"92x147 cm F36",cat:"Modulos",categorias:{"UNICO":695}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"600D",nom:"Modulo Supra derecha 3P",med:"92x147 cm F36",cat:"Modulos",categorias:{"UNICO":695}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"550i",nom:"Vitrina 1P cristal izquierda",med:"55x183 cm F36",cat:"Vitrinas",categorias:{"UNICO":565}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"550D",nom:"Vitrina 1P cristal derecha",med:"55x183 cm F36",cat:"Vitrinas",categorias:{"UNICO":565}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"555i",nom:"Vitrina 1P cristal izquierda",med:"82x183 cm F36",cat:"Vitrinas",categorias:{"UNICO":705}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"555D",nom:"Vitrina 1P cristal derecha",med:"82x183 cm F36",cat:"Vitrinas",categorias:{"UNICO":705}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"605i",nom:"Vitrina Supra izquierda 3P",med:"92x183 cm F36",cat:"Vitrinas",categorias:{"UNICO":820}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"605D",nom:"Vitrina Supra derecha 3P",med:"92x183 cm F36",cat:"Vitrinas",categorias:{"UNICO":820}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"640",nom:"Estanteria",med:"55x183 cm F36",cat:"Estanterias",categorias:{"UNICO":385}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"645",nom:"Estanteria",med:"82x183 cm F36",cat:"Estanterias",categorias:{"UNICO":505}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"650",nom:"Galeria",med:"126x16 cm F27",cat:"Estanterias",categorias:{"UNICO":113}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"655",nom:"Galeria",med:"154x16 cm F27",cat:"Estanterias",categorias:{"UNICO":136}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"700",nom:"Aparador 3 puertas",med:"154x90 cm F41",cat:"Aparadores",categorias:{"UNICO":640}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"701",nom:"Aparador 3 puertas + 1 cajon",med:"154x90 cm F41",cat:"Aparadores",categorias:{"UNICO":700}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"705",nom:"Aparador 3 puertas + 1 cajon",med:"181x90 cm F41",cat:"Aparadores",categorias:{"UNICO":795}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"710",nom:"Aparador 4 puertas + hueco",med:"126x126 cm F41",cat:"Aparadores",categorias:{"UNICO":750}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"800",nom:"Pata Marco 55 cm",med:"F33 14cm Grafito",cat:"Patas",categorias:{"UNICO":85}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"805",nom:"Pata Marco 82 cm",med:"F33 14cm Grafito",cat:"Patas",categorias:{"UNICO":97}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"810",nom:"Pata Marco 126 cm",med:"F38 14cm Grafito",cat:"Patas",categorias:{"UNICO":105}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"815",nom:"Pata Marco 153 cm",med:"F38 14cm Grafito",cat:"Patas",categorias:{"UNICO":123}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"820",nom:"Pata Marco 181 cm",med:"F38 14cm Grafito",cat:"Patas",categorias:{"UNICO":132}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"850",nom:"Juego 4 patas Recta",med:"Plateado 2cm",cat:"Patas",categorias:{"UNICO":20}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"851",nom:"Pata Recta 1 unidad",med:"Plateado 2cm",cat:"Patas",categorias:{"UNICO":7}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"855",nom:"Juego 4 patas Home",med:"Oscillo 12cm",cat:"Patas",categorias:{"UNICO":55}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"856",nom:"Pata Home 1 unidad",med:"Oscillo 12cm",cat:"Patas",categorias:{"UNICO":18}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"830",nom:"Base 30mm 55cm",med:"55x35 cm F35",cat:"Bases",categorias:{"UNICO":37}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"831",nom:"Base 30mm 82cm",med:"82x35 cm F35",cat:"Bases",categorias:{"UNICO":52}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"832",nom:"Base 30mm 126cm",med:"126x40 cm F40",cat:"Bases",categorias:{"UNICO":68}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"833",nom:"Base 30mm 154cm",med:"154x40 cm F40",cat:"Bases",categorias:{"UNICO":85}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"834",nom:"Base 30mm 181cm",med:"181x40 cm F40",cat:"Bases",categorias:{"UNICO":100}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"900",nom:"Mesa centro elevable Tierra",med:"110x56 alt46cm",cat:"Mesas centro",categorias:{"UNICO":250}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"910",nom:"Mesa Marte pata Marco",med:"100x50 alt49cm",cat:"Mesas centro",categorias:{"UNICO":267}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"911",nom:"Mesa Marte con zocalo",med:"100x50 alt43cm",cat:"Mesas centro",categorias:{"UNICO":200}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"912",nom:"Mesa Marte patas Recta",med:"100x50 alt35cm",cat:"Mesas centro",categorias:{"UNICO":170}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"913",nom:"Mesa Marte patas Home",med:"100x50 alt45cm",cat:"Mesas centro",categorias:{"UNICO":195}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"950",nom:"Mesa cuadrada extensible",med:"90x90-180x90 cm",cat:"Mesas comedor",categorias:{"UNICO":460}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"955",nom:"Mesa rectangular extensible",med:"140x90-200x90 cm",cat:"Mesas comedor",categorias:{"UNICO":515}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"960",nom:"Mesa Venus extensible",med:"140x90-200x90 cm",cat:"Mesas comedor",categorias:{"UNICO":1240}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"875",nom:"Kit 2 LEDs barra 51cm",med:"Iluminacion",cat:"Accesorios",categorias:{"UNICO":125}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"880",nom:"Kit LED barra 80cm",med:"Iluminacion",cat:"Accesorios",categorias:{"UNICO":100}},{prv:"678",prvNom:"Fabri-Kit / Exojo",mod:"GNESIS",ref:"885",nom:"Kit 2 LEDs barra 80cm",med:"Iluminacion",cat:"Accesorios",categorias:{"UNICO":125}}];
 }
 
 function calcPrecio(art,cat){
@@ -1024,7 +1029,7 @@ function importarTarifa(){
     var categorias={};var valid=false;
     Object.keys(colsPts).forEach(function(ci){
       var v=parseFloat(String(row[parseInt(ci)]||"").replace(",","."));
-      if(!isNaN(v)&&v>0){categorias[colsPts[ci]]=v;valid=true;}
+      if(!isNaN(v)&&v>=0){categorias[colsPts[ci]]=v;valid=true;}
     });
     if(!valid)continue;
     arts.push({prv:cod,prvNom:pd.nombre||cod,mod:modelo,ref:colRef?String(row[parseInt(colRef)]||"").trim():String(r-rowHead+1),nom:nom,med:colMed?String(row[parseInt(colMed)]||"").trim():"",cat:colCat?String(row[parseInt(colCat)]||"").trim():"",categorias:categorias});
@@ -1910,7 +1915,7 @@ function importarTarifaMulti(){
     var valid=false;
     Object.keys(colsPts).forEach(function(ci){
       var v=parseFloat(String(row[parseInt(ci)]||"").replace(",","."));
-      if(!isNaN(v)&&v>0){ categorias[colsPts[ci]]=v; valid=true; }
+      if(!isNaN(v)&&v>=0){ categorias[colsPts[ci]]=v; valid=true; }
     });
     if(!valid) continue;
 
@@ -2110,7 +2115,7 @@ function importarTarifaFilas(){
     var serie=String(row[colSerieIdx]||"").trim().toUpperCase();
     var pts=parseFloat(String(row[colPtsIdx]||"").replace(/\./g,"").replace(",","."));
 
-    if(!mod||!nom||!serie||isNaN(pts)||pts<=0) continue;
+    if(!mod||!nom||!serie||isNaN(pts)||pts<0) continue;
     if(mod==="MODELO"||nom==="ARTICULO") continue; // cabeceras repetidas
 
     // Quitar " - Tela" o " - tela" del final del nombre
