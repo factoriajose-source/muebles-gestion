@@ -777,7 +777,7 @@ function renderArt(){
       +"<td><div>"+telaHtml+"</div>"
         +"<div class='precio-pub' id='prec-"+a.prv+"-"+a.ref+"'>"+(precio!==null?fmtEur(precio):"<span style='color:#aaa;font-size:11px'>Sin datos proveedor</span>")+"</div>"
       +"</td>"
-      +"<td><button class='btn-add' data-prv='"+a.prv+"' data-ref='"+a.ref+"' onclick='addPresFromRowBtn(this)'>+ Anadir</button></td>"
+      +"<td><button class='btn-add' data-prv='"+a.prv+"' data-ref='"+a.ref+"' data-mod='"+a.mod+"' onclick='addPresFromRowBtn(this)'>+ Anadir</button></td>"
       +"</tr>";
   });
   tbody.innerHTML=html;
@@ -806,13 +806,15 @@ function reCalcRow(sel,tela,prv,ref){
 function addPresFromRowBtn(btn){
   var prv=btn.getAttribute("data-prv");
   var ref=btn.getAttribute("data-ref");
-  addPresFromRow(prv,ref);
+  var mod=btn.getAttribute("data-mod")||"";
+  addPresFromRow(prv,ref,mod);
 }
 
-function addPresFromRow(prv,ref){
-  var mod=document.getElementById("f-mod").value;
-  // Buscar con modelo activo primero, luego sin modelo
-  var art=ARTICULOS.find(function(a){return a.prv===prv&&a.ref===ref&&(!mod||a.mod===mod);});
+function addPresFromRow(prv,ref,modForced){
+  var mod=modForced||document.getElementById("f-mod").value;
+  // Buscar con modelo exacto primero, luego sin modelo
+  var art=ARTICULOS.find(function(a){return a.prv===prv&&a.ref===ref&&a.mod===mod;});
+  if(!art)art=ARTICULOS.find(function(a){return a.prv===prv&&a.ref===ref&&(!mod||a.mod===mod);});
   if(!art)art=ARTICULOS.find(function(a){return a.prv===prv&&a.ref===ref;});
   if(!art)return;
   var sel=document.getElementById("tsel-"+prv+"-"+ref);
@@ -1917,7 +1919,6 @@ function importarTarifaMulti(){
       var celda = row[parseInt(ci)];
       var str = (celda === undefined || celda === null) ? "" : String(celda);
       var v = parseFloat(str.replace(",","."));
-      console.log("ci="+ci+" celda="+JSON.stringify(celda)+" str="+str+" v="+v+" isNaN="+isNaN(v));
       if(!isNaN(v) && v>=0){ categorias[colsPts[ci]]=v; valid=true; }
     });
     if(!valid) continue;
