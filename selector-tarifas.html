@@ -1030,7 +1030,9 @@ function importarTarifa(){
     if(!nom)continue;
     var categorias={};var valid=false;
     Object.keys(colsPts).forEach(function(ci){
-      var v=parseFloat(String(row[parseInt(ci)]||"").replace(",","."));
+      var celda=row[parseInt(ci)];
+      var str=(celda===undefined||celda===null)?"":String(celda);
+      var v=parseFloat(str.replace(",","."));
       if(!isNaN(v)&&v>=0){categorias[colsPts[ci]]=v;valid=true;}
     });
     if(!valid)continue;
