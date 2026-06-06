@@ -503,6 +503,7 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
           </tr>
         </thead>
         <tbody id="edit-tbody"></tbody>
+        <tfoot id="edit-tfoot"></tfoot>
       </table>
     </div>
     <div id="edit-vacio" style="display:none;text-align:center;padding:30px;color:#666">Elige proveedor y modelo para ver los artículos.</div>
@@ -2320,7 +2321,75 @@ function editarRenderTabla(){
       + "</tr>";
   });
   tbody.innerHTML = html;
+
+  // Fila para añadir nuevo artículo al final
+  var tfootEl = document.getElementById("edit-tfoot");
+  if(!tfootEl) return;
+  // Recoger categorías del primer artículo para saber cuántas columnas hay
+  var catKeys = EDITAR_ARTICULOS.length > 0 ? Object.keys(EDITAR_ARTICULOS[0].categorias||{}) : [];
+  var catInputs = "";
+  if(catKeys.length === 0){
+    catInputs = "<input type='number' step='0.01' id='new-pts-UNICO' placeholder='0' "
+      + "style='width:70px;padding:4px;border:1px solid #666;border-radius:4px;background:#1e1e1e;color:white;font-size:12px'> pts";
+  } else {
+    catKeys.forEach(function(k){
+      catInputs += "<div style='display:flex;align-items:center;gap:4px;margin-bottom:3px'>"
+        + "<span style='color:#aaa;font-size:11px;min-width:50px'>"+k+":</span>"
+        + "<input type='number' step='0.01' id='new-pts-"+k+"' placeholder='0' "
+        + "style='width:65px;padding:3px;border:1px solid #666;border-radius:4px;background:#1e1e1e;color:white;font-size:12px'> pts"
+        + "</div>";
+    });
+  }
+  tfootEl.innerHTML = "<tr style='background:#0d2a0d'>"
+    + "<td style='padding:6px 8px;border:1px solid #444'><input type='text' id='new-ref' placeholder='Ref.' style='width:70px;padding:5px;border:1px solid #666;border-radius:4px;background:#1e1e1e;color:white;font-size:12px'></td>"
+    + "<td style='padding:6px 8px;border:1px solid #444'><input type='text' id='new-nom' placeholder='Nombre artículo...' style='width:100%;padding:5px;border:1px solid #666;border-radius:4px;background:#1e1e1e;color:white;font-size:13px'></td>"
+    + "<td style='padding:6px 8px;border:1px solid #444'><input type='text' id='new-med' placeholder='Medidas' style='width:90px;padding:5px;border:1px solid #666;border-radius:4px;background:#1e1e1e;color:white;font-size:12px'></td>"
+    + "<td style='padding:6px 8px;border:1px solid #444'>"+catInputs+"</td>"
+    + "<td style='padding:6px 8px;border:1px solid #444;text-align:center'>"
+      + "<button onclick='editarAñadirArticulo()' style='background:#1a6b2a;color:white;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:13px;font-weight:700'>➕ Añadir</button>"
+    + "</td>"
+    + "</tr>";
 }
+
+function editarAñadirArticulo(){
+  var ref = (document.getElementById("new-ref")||{}).value||"";
+  var nom = (document.getElementById("new-nom")||{}).value||"";
+  var med = (document.getElementById("new-med")||{}).value||"";
+  if(!nom.trim()){ alert("Escribe el nombre del artículo"); return; }
+
+  // Recoger categorías
+  var categorias = {};
+  var catKeys = EDITAR_ARTICULOS.length > 0 ? Object.keys(EDITAR_ARTICULOS[0].categorias||{}) : [];
+  if(catKeys.length === 0){
+    var v = parseFloat((document.getElementById("new-pts-UNICO")||{}).value||0);
+    categorias["UNICO"] = isNaN(v)?0:v;
+  } else {
+    catKeys.forEach(function(k){
+      var v = parseFloat((document.getElementById("new-pts-"+k)||{}).value||0);
+      categorias[k] = isNaN(v)?0:v;
+    });
+  }
+
+  // Datos del modelo actual
+  var prv = document.getElementById("edit-prv").value;
+  var mod = document.getElementById("edit-mod").value;
+  var pd  = PROVEEDORES_MAP[prv]||PROVEEDORES_MAP[parseInt(prv)]||{};
+
+  var nuevoArt = {
+    prv: prv,
+    prvNom: pd.nombre||prv,
+    mod: mod,
+    ref: ref.trim(),
+    nom: nom.trim(),
+    med: med.trim(),
+    cat: EDITAR_ARTICULOS.length > 0 ? (EDITAR_ARTICULOS[0].cat||"") : "",
+    categorias: categorias
+  };
+
+  EDITAR_ARTICULOS.push(nuevoArt);
+  editarRenderTabla();
+}
+window.editarAñadirArticulo = editarAñadirArticulo;
 
 function editarCambiarNom(i, valor){
   EDITAR_ARTICULOS[i].nom = valor;
