@@ -241,8 +241,10 @@ window.addEventListener("load", function(){
 
   // Login anónimo para leer Firestore
   auth.signInAnonymously().then(function(){
+    console.log("Auth anónimo OK");
     cargarEmpleados();
-  }).catch(function(){
+  }).catch(function(e){
+    console.log("Auth anónimo falló:", e.code, e.message);
     cargarEmpleados(); // intentar igualmente
   });
 });
@@ -294,7 +296,9 @@ function pedirGeoYContinuar(){
 
 // ── CARGAR EMPLEADOS ──────────────────────────────────────────────────────────
 function cargarEmpleados(){
+  console.log("Cargando empleados... db=", !!db);
   db.collection("vendedores").get().then(function(sn){
+    console.log("Empleados cargados:", sn.size);
     vendedoresData = [];
     sn.forEach(function(d){
       var v = d.data();
@@ -302,8 +306,9 @@ function cargarEmpleados(){
     });
     vendedoresData.sort(function(a,b){ return (a.alias||"").localeCompare(b.alias||"","es"); });
     renderGrid();
-  }).catch(function(){
-    document.getElementById("vendorGrid").innerHTML = "<p style='color:#c0392b;font-size:13px;text-align:center'>Error cargando empleados</p>";
+  }).catch(function(e){
+    console.error("Error cargando empleados:", e.code, e.message);
+    document.getElementById("vendorGrid").innerHTML = "<p style='color:#c0392b;font-size:13px;text-align:center'>Error: "+e.message+"</p>";
   });
 }
 
