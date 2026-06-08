@@ -3703,11 +3703,11 @@ function renderVendedores() {
     + "</div>"
     + "<div><label style='font-size:12px;color:#666;display:block;margin-bottom:3px'>Direccion</label><input id='vd-dir' placeholder='Calle, numero, ciudad, CP' style='width:100%;padding:9px 10px;border:1px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:10px'></div>"
     + "<div style='margin-bottom:10px;padding:10px;background:#f8f6f2;border-radius:8px'>"
-    + "<label id='label-ficha-manual' style='display:flex;align-items:center;gap:10px;cursor:pointer'>"
+    + "<div id='label-ficha-manual' style='display:flex;align-items:center;gap:10px;cursor:pointer'>"
     + "<span id='checkbox-ficha-manual-wrap'></span>"
     + "<div><span style='font-size:13px;font-weight:600'>Ficha horaria manual (firma en papel)</span>"
     + "<div style='font-size:11px;color:#888'>Marcar si el trabajador firma en papel. Cuando fiche digitalmente, desmarcar.</div></div>"
-    + "</label>"
+    + "</div>"
     + "</div>"
     + "<div><label style='font-size:12px;color:#666;display:block;margin-bottom:3px'>Foto DNI <span style='color:#aaa;font-weight:400'>(apaisado, se reduce automáticamente)</span></label>"
     + "<div style='display:flex;align-items:center;gap:10px;margin-top:4px'>"
@@ -3784,9 +3784,7 @@ function renderVendedores() {
       console.log("CHECKBOX CHANGE! checked=", this.checked);
     });
     cbWrap.appendChild(cb);
-    // Asociar label
-    const lbl = document.getElementById("label-ficha-manual");
-    if(lbl) lbl.htmlFor = "vd-ficha-manual";
+    // NO usar htmlFor - causa doble toggle y se anula
   }
 
   // Wire save button
