@@ -4,9 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>🪑 Meres · Fichaje</title>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;font-family:system-ui,-apple-system,sans-serif;background:#f5f4f0;color:#1a1a18}
@@ -160,13 +157,15 @@ canvas{border:1.5px solid #ccc;border-radius:8px;touch-action:none;display:block
 
 <div class="toast" id="toast"></div>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script>
-// EmailJS config
+// ── FIREBASE ──────────────────────────────────────────────────────────────────
 var EMAILJS_SERVICE  = "service_mxk8n0b";
 var EMAILJS_TEMPLATE = "template_civu0yo";
 var EMAILJS_KEY      = "bjD6946WO3_QvpQ9Q";
-emailjs.init(EMAILJS_KEY);
 
 // Zona permitida
 var ZONA_PERMITIDA = ["siero","meres","granda"];
@@ -228,6 +227,9 @@ var _firmaDrawing = false;
 var _firmaLastX = 0, _firmaLastY = 0;
 
 window.addEventListener("load", function(){
+  // Inicializar EmailJS
+  if(typeof emailjs !== "undefined") emailjs.init(EMAILJS_KEY);
+
   firebase.initializeApp({
     apiKey:"AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
     authDomain:"muebles-presupuestos.firebaseapp.com",
