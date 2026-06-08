@@ -3770,6 +3770,15 @@ function renderVendedores() {
 
   cont.innerHTML = formHtml + listHtml;
 
+  // Forzar que el checkbox sea interactivo (puede bloquearse en algunos navegadores con innerHTML)
+  const cbFicha = document.getElementById("vd-ficha-manual");
+  if(cbFicha){
+    cbFicha.style.pointerEvents = "auto";
+    cbFicha.style.cursor = "pointer";
+    cbFicha.parentElement.style.pointerEvents = "auto";
+    cbFicha.parentElement.style.cursor = "pointer";
+  }
+
   // Wire save button
   document.getElementById("btn-vd-save").addEventListener("click", async () => {
     const alias = document.getElementById("vd-alias").value.trim();
