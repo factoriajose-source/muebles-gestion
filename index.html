@@ -194,7 +194,21 @@ async function alertarFueraDeZona(empleado, turno, hora, direccion, geo){
     + "Dirección: "+direccion+"\n"
     + "Coordenadas: "+geo.lat+", "+geo.lon+" (precisión: "+geo.acc+")";
 
-  // 1. Guardar en Firebase
+  // 1. Email PRIMERO — funciona aunque Firebase falle
+  try {
+    if(typeof emailjs !== "undefined"){
+      await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+        to_email: "factoria.jose@gmail.com",
+        subject:  "⚠️ Fichaje fuera de zona: "+empleado.alias,
+        message:  mensaje,
+        from_name: "Meres Fichaje",
+        reply_to: "factoria.jose@gmail.com"
+      });
+      console.log("Email alerta enviado OK");
+    }
+  } catch(e){ console.error("Error enviando email:", e); }
+
+  // 2. Guardar en Firebase (puede fallar si hay límite)
   try {
     await db.collection("alertas_geo").add({
       alias: empleado.alias,
@@ -208,19 +222,7 @@ async function alertarFueraDeZona(empleado, turno, hora, direccion, geo){
       leida: false,
       ts: new Date().toISOString()
     });
-  } catch(e){ console.error("Error guardando alerta geo:", e); }
-
-  // 2. Enviar email via EmailJS
-  try {
-    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
-      to_email: "factoria.jose@gmail.com",
-      subject:  "⚠️ Fichaje fuera de zona: "+empleado.alias,
-      message:  mensaje,
-      from_name: "Meres Fichaje",
-      reply_to: "factoria.jose@gmail.com"
-    });
-    console.log("Email alerta enviado");
-  } catch(e){ console.error("Error enviando email alerta:", e); }
+  } catch(e){ console.error("Error guardando alerta geo (Firebase):", e); }
 }
 </script>
 <script>
