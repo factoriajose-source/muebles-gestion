@@ -2647,11 +2647,39 @@ async function initFichajes() {
     if (valorActual) printAlias.value = valorActual;
   }
 
+  // Jose Angel: comprobar alertas geo no leídas
+  if(currentUser === "Jose Angel"){
+    checkAlertasGeo();
+  }
+
   try {
     const sn = await getDoc(doc(db, "fichajes", fichajeKey(currentUser, fecha)));
     fichajeHoy = sn.exists() ? sn.data() : { alias: currentUser, fecha, ini_m: null, fin_m: null, ini_t: null, fin_t: null, firma_ini_m: null, firma_fin_m: null, firma_ini_t: null, firma_fin_t: null };
   } catch(e) { fichajeHoy = { alias: currentUser, fecha, ini_m:null, fin_m:null, ini_t:null, fin_t:null, firma_ini_m:null, firma_fin_m:null, firma_ini_t:null, firma_fin_t:null }; }
   renderFichajes(v);
+}
+
+async function checkAlertasGeo(){
+  try {
+    const sn = await getDocs(query(collection(db,"alertas_geo"), where("leida","==",false)));
+    if(sn.empty) return;
+    const alertas = [];
+    sn.forEach(d => alertas.push(Object.assign({_id:d.id}, d.data())));
+    // Mostrar notificación
+    const div = document.createElement("div");
+    div.style.cssText = "background:#fdecea;border:1px solid #f5b3b3;border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:13px;cursor:pointer";
+    div.innerHTML = "<strong>⚠️ "+alertas.length+" fichaje(s) fuera de zona</strong><br>"
+      + alertas.map(a => "· "+a.alias+" — "+a.turno+" "+a.hora+" en "+a.direccion).join("<br>")
+      + "<br><small style='color:#888'>Pulsa para marcar como leídas</small>";
+    div.addEventListener("click", async function(){
+      for(const a of alertas){
+        await updateDoc(doc(db,"alertas_geo",a._id),{leida:true}).catch(()=>{});
+      }
+      div.remove();
+    });
+    const cont = document.getElementById("fichajes-content");
+    if(cont) cont.insertBefore(div, cont.firstChild);
+  } catch(e){ console.error("Error alertas geo:", e); }
 }
 
 function renderFichajes(v) {

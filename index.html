@@ -160,8 +160,63 @@ canvas{border:1.5px solid #ccc;border-radius:8px;touch-action:none;display:block
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script>
-// ── FIREBASE ──────────────────────────────────────────────────────────────────
+// EmailJS config
+var EMAILJS_SERVICE  = "service_mxk8n0b";
+var EMAILJS_TEMPLATE = "template_civu0yo";
+var EMAILJS_KEY      = "bjD6946WO3_QvpQ9Q";
+emailjs.init(EMAILJS_KEY);
+
+// Zona permitida
+var ZONA_PERMITIDA = ["siero","meres","granda"];
+
+function esFueraDeZona(direccion){
+  if(!direccion) return false;
+  var dir = direccion.toLowerCase();
+  return !ZONA_PERMITIDA.some(function(z){ return dir.indexOf(z) >= 0; });
+}
+
+async function alertarFueraDeZona(empleado, turno, hora, direccion, geo){
+  var labels = {ini_m:"Entrada Mañana",fin_m:"Salida Mañana",ini_t:"Entrada Tarde",fin_t:"Salida Tarde"};
+  var {fecha} = nowMadridFull();
+  var mensaje = "⚠️ FICHAJE FUERA DE ZONA\n"
+    + "Empleado: "+empleado.alias+"\n"
+    + "Turno: "+(labels[turno]||turno)+"\n"
+    + "Hora: "+hora+"\n"
+    + "Fecha: "+fecha+"\n"
+    + "Dirección: "+direccion+"\n"
+    + "Coordenadas: "+geo.lat+", "+geo.lon+" (precisión: "+geo.acc+")";
+
+  // 1. Guardar en Firebase
+  try {
+    await db.collection("alertas_geo").add({
+      alias: empleado.alias,
+      turno: turno,
+      hora: hora,
+      fecha: fecha,
+      direccion: direccion||"",
+      lat: geo.lat,
+      lon: geo.lon,
+      acc: geo.acc,
+      leida: false,
+      ts: new Date().toISOString()
+    });
+  } catch(e){ console.error("Error guardando alerta geo:", e); }
+
+  // 2. Enviar email via EmailJS
+  try {
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+      to_email: "factoria.jose@gmail.com",
+      subject:  "⚠️ Fichaje fuera de zona: "+empleado.alias,
+      message:  mensaje,
+      from_name: "Meres Fichaje",
+      reply_to: "factoria.jose@gmail.com"
+    });
+    console.log("Email alerta enviado");
+  } catch(e){ console.error("Error enviando email alerta:", e); }
+}
+</script>
 var db, auth;
 var vendedoresData = [];
 var empleadoActual = null;
@@ -555,6 +610,11 @@ async function confirmarFirma(){
       acc: geoActual.acc,
       dir: direccionActual||""
     };
+  }
+
+  // Comprobar si está fuera de zona
+  if(geoActual && esFueraDeZona(direccionActual)){
+    alertarFueraDeZona(empleadoActual, turno, horaFichaje, direccionActual, geoActual);
   }
 
   try {
