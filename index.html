@@ -227,8 +227,14 @@ var _firmaDrawing = false;
 var _firmaLastX = 0, _firmaLastY = 0;
 
 window.addEventListener("load", function(){
+  document.getElementById("vendorGrid").innerHTML = "<p style='color:#888;font-size:12px;text-align:center'>Iniciando...</p>";
   // Inicializar EmailJS
   if(typeof emailjs !== "undefined") emailjs.init(EMAILJS_KEY);
+
+  if(typeof firebase === "undefined"){
+    document.getElementById("vendorGrid").innerHTML = "<p style='color:#c0392b;font-size:12px;text-align:center'>Error: Firebase no cargó</p>";
+    return;
+  }
 
   firebase.initializeApp({
     apiKey:"AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
