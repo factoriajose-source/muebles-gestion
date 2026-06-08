@@ -3800,6 +3800,7 @@ function renderVendedores() {
       cb.checked = !cb.checked;
       actualizarToggle();
     });
+    window._actualizarToggleFicha = actualizarToggle;
     actualizarToggle();
   }
 
@@ -3852,6 +3853,7 @@ function renderVendedores() {
       document.getElementById("vd-alias").value = v.alias||"";
       document.getElementById("vd-tipo").value = v.tipo||"Vendedor";
       document.getElementById("vd-ficha-manual").checked = v.ficha_manual||false;
+      if(window._actualizarToggleFicha) window._actualizarToggleFicha();
       document.getElementById("vd-nombre").value = v.nombre||"";
       document.getElementById("vd-apellidos").value = v.apellidos||"";
       document.getElementById("vd-dni").value = v.dni||"";
