@@ -3482,7 +3482,7 @@ async function loadVendedores() {
     sn.forEach(d => vendedoresData.push(d.data()));
     vendedoresData.sort((a,b) => a.alias.localeCompare(b.alias));
     // Update VENDORS with only active ones
-    VENDORS = vendedoresData.filter(v => v.activo !== false).map(v => v.alias);
+    VENDORS = vendedoresData.filter(v => v.activo !== false && (!v.tipo || v.tipo === "Vendedor")).map(v => v.alias);
     // Update login grid
     updateLoginGrid();
     // Update all vendor selects

@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🪑 Meres · Fichaje</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;font-family:system-ui,-apple-system,sans-serif;background:#f5f4f0;color:#1a1a18}
+
+/* ── PANTALLA SELECCIÓN ── */
+#selectScreen{display:flex;flex-direction:column;min-height:100vh;padding:1.5rem 1rem}
+.sel-logo{font-size:36px;text-align:center;margin-bottom:.25rem}
+.sel-title{font-size:20px;font-weight:700;text-align:center;margin-bottom:4px}
+.sel-sub{font-size:13px;color:#888;text-align:center;margin-bottom:1.5rem}
+.vendor-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
+.vendor-btn{padding:16px 8px;border:1.5px solid #e0dfd8;border-radius:12px;background:#fff;
+  font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation;
+  transition:background .15s,border-color .15s}
+.vendor-btn:active{background:#f0ede8;border-color:#c4571a}
+.vendor-tipo{font-size:10px;color:#aaa;display:block;font-weight:400;margin-top:2px}
+
+/* ── PANTALLA FICHAJE ── */
+#fichajeScreen{display:none;flex-direction:column;min-height:100vh}
+.fichaje-header{background:#1a1714;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between}
+.fichaje-header-name{font-size:16px;font-weight:700}
+.fichaje-header-fecha{font-size:12px;color:rgba(255,255,255,.6)}
+.btn-salir{padding:5px 12px;border:1px solid rgba(255,255,255,.2);border-radius:6px;background:transparent;color:rgba(255,255,255,.7);font-size:12px;cursor:pointer}
+
+.fichaje-body{flex:1;padding:1rem;display:flex;flex-direction:column;gap:12px}
+
+/* Geo info */
+.geo-card{background:#e8f3fd;border:1px solid #b3d4f5;border-radius:10px;padding:10px 14px;font-size:12px;color:#185fa5;display:flex;align-items:flex-start;gap:8px}
+.geo-card.error{background:#fdecea;border-color:#f5b3b3;color:#c0392b}
+.geo-card.loading{background:#f8f6f2;border-color:#e0dfd8;color:#888}
+
+/* Turnos */
+.turno-card{background:#fff;border:1px solid #e0dfd8;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.turno-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888}
+.turno-row{display:flex;gap:8px}
+.btn-fichar{flex:1;padding:14px 8px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;transition:opacity .15s}
+.btn-fichar:active{opacity:.8}
+.btn-entrada{background:#1a6b2a;color:#fff}
+.btn-salida{background:#c0392b;color:#fff}
+.btn-firmado{background:#f5f4f0;color:#aaa;border:1.5px solid #e0dfd8;font-weight:500}
+.btn-fichar .hora-txt{display:block;font-size:11px;font-weight:400;opacity:.8;margin-top:2px}
+
+/* Historial (solo Jose Angel) */
+#historialSection{background:#fff;border:1px solid #e0dfd8;border-radius:12px;padding:14px}
+.hist-title{font-size:13px;font-weight:700;margin-bottom:10px;color:#1a1714}
+.hist-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0ede8;font-size:12px}
+.hist-row:last-child{border-bottom:none}
+.hist-fecha{color:#666}
+.hist-horas{font-weight:600;color:#1a6b2a}
+
+/* Pantalla geo obligatoria */
+#geoRequiredScreen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem;text-align:center}
+.geo-icon{font-size:60px;margin-bottom:1rem}
+.geo-req-title{font-size:20px;font-weight:700;margin-bottom:8px}
+.geo-req-sub{font-size:14px;color:#666;margin-bottom:1.5rem;line-height:1.6}
+.btn-pedir-geo{width:100%;max-width:280px;padding:14px;background:#185fa5;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer}
+
+/* Modal DNI */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:none;align-items:center;justify-content:center;padding:1rem}
+.overlay.open{display:flex}
+.modal-dni{background:#fff;border-radius:14px;padding:1.5rem;width:100%;max-width:300px;text-align:center}
+.modal-dni h3{font-size:16px;font-weight:700;margin-bottom:4px}
+.modal-dni p{font-size:12px;color:#888;margin-bottom:14px}
+.modal-dni input{width:100%;padding:12px;border:1.5px solid #ccc;border-radius:8px;font-size:18px;text-align:center;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;font-family:inherit}
+.modal-dni input:focus{outline:none;border-color:#185fa5}
+.dni-error{color:#c0392b;font-size:12px;margin-bottom:10px;display:none}
+.btn-dns-ok{width:100%;padding:12px;background:#1a6b2a;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px}
+.btn-dns-cancel{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;background:#fff;font-size:13px;cursor:pointer;color:#666}
+
+/* Modal firma */
+.modal-firma{background:#fff;border-radius:14px;padding:1.5rem;width:100%;max-width:400px}
+.firma-title{font-size:16px;font-weight:700;margin-bottom:4px}
+.firma-sub{font-size:12px;color:#888;margin-bottom:12px}
+.firma-hora{font-size:28px;font-weight:800;color:#1a6b2a;text-align:center;margin:10px 0}
+.firma-geo{font-size:11px;color:#185fa5;text-align:center;margin-bottom:14px;line-height:1.5}
+canvas{border:1.5px solid #ccc;border-radius:8px;touch-action:none;display:block;margin:0 auto 12px;cursor:crosshair;background:#fff}
+.firma-btns{display:flex;gap:8px}
+.btn-confirmar{flex:1;padding:12px;background:#1a6b2a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer}
+.btn-limpiar{padding:12px 16px;border:1px solid #ccc;border-radius:8px;background:#fff;font-size:13px;cursor:pointer}
+.btn-cancelar-f{padding:12px 16px;border:1px solid #e0dfd8;border-radius:8px;background:#fff;font-size:13px;cursor:pointer;color:#888}
+
+.spinner{text-align:center;padding:2rem;color:#888;font-size:13px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1714;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:99999;display:none;white-space:nowrap;max-width:90vw}
+</style>
+</head>
+<body>
+
+<!-- PANTALLA GEO OBLIGATORIA -->
+<div id="geoRequiredScreen">
+  <div class="geo-icon">📍</div>
+  <div class="geo-req-title">Ubicación requerida</div>
+  <div class="geo-req-sub">Para fichar necesitas activar la geolocalización.<br>Tu posición queda registrada con cada fichaje.</div>
+  <button class="btn-pedir-geo" onclick="pedirGeoYContinuar()">📍 Activar ubicación y continuar</button>
+</div>
+
+<!-- PANTALLA SELECCIÓN -->
+<div id="selectScreen">
+  <div class="sel-logo">⏱️</div>
+  <div class="sel-title">Meres · Fichaje</div>
+  <div class="sel-sub">Selecciona tu nombre</div>
+  <div class="vendor-grid" id="vendorGrid">
+    <div class="spinner">Cargando...</div>
+  </div>
+</div>
+
+<!-- PANTALLA FICHAJE -->
+<div id="fichajeScreen">
+  <div class="fichaje-header">
+    <div>
+      <div class="fichaje-header-name" id="fhName"></div>
+      <div class="fichaje-header-fecha" id="fhFecha"></div>
+    </div>
+    <button class="btn-salir" onclick="cerrarSesion()">← Salir</button>
+  </div>
+  <div class="fichaje-body">
+    <div id="geoInfo" class="geo-card loading">📍 Obteniendo ubicación...</div>
+    <div id="turnosContainer"></div>
+    <div id="historialSection" style="display:none">
+      <div class="hist-title">📋 Mis fichajes del mes</div>
+      <div id="historialBody"></div>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY DNI -->
+<div class="overlay" id="dniOverlay">
+  <div class="modal-dni">
+    <h3 id="dniTitle">Verificación</h3>
+    <p>Introduce tu DNI para acceder</p>
+    <input type="password" id="dniInput" maxlength="12" placeholder="••••••••••" autocomplete="off">
+    <div class="dni-error" id="dniError">DNI incorrecto</div>
+    <button class="btn-dns-ok" onclick="verificarDNI()">Entrar</button>
+    <button class="btn-dns-cancel" onclick="cerrarDNI()">Cancelar</button>
+  </div>
+</div>
+
+<!-- OVERLAY FIRMA -->
+<div class="overlay" id="firmaOverlay">
+  <div class="modal-firma">
+    <div class="firma-title" id="firmaTitulo"></div>
+    <div class="firma-sub" id="firmaSubtitulo"></div>
+    <div class="firma-hora" id="firmaHora"></div>
+    <div class="firma-geo" id="firmaGeoText"></div>
+    <canvas id="firmaCanvas" width="320" height="140"></canvas>
+    <div class="firma-btns">
+      <button class="btn-confirmar" onclick="confirmarFirma()">✅ Confirmar</button>
+      <button class="btn-limpiar" onclick="limpiarFirma()">🗑 Borrar</button>
+      <button class="btn-cancelar-f" onclick="cerrarFirma()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── FIREBASE ──────────────────────────────────────────────────────────────────
+var db, auth;
+var vendedoresData = [];
+var empleadoActual = null;
+var fichajeHoy = null;
+var geoActual = null;
+var direccionActual = null;
+var _turnoEnFirma = null;
+var _firmaDrawing = false;
+var _firmaLastX = 0, _firmaLastY = 0;
+
+window.addEventListener("load", function(){
+  firebase.initializeApp({
+    apiKey:"AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
+    authDomain:"muebles-presupuestos.firebaseapp.com",
+    projectId:"muebles-presupuestos",
+    storageBucket:"muebles-presupuestos.firebasestorage.app",
+    messagingSenderId:"37365883872",
+    appId:"1:37365883872:web:842ca4d318c01652684185"
+  });
+  db   = firebase.firestore();
+  auth = firebase.auth();
+
+  // Login anónimo para leer Firestore
+  auth.signInAnonymously().then(function(){
+    cargarEmpleados();
+  }).catch(function(){
+    cargarEmpleados(); // intentar igualmente
+  });
+});
+
+// ── GEOLOCALIZACIÓN ───────────────────────────────────────────────────────────
+function getGeolocalizacion(){
+  return new Promise(function(resolve){
+    if(!navigator.geolocation){ resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      function(pos){
+        resolve({
+          lat: pos.coords.latitude.toFixed(6),
+          lon: pos.coords.longitude.toFixed(6),
+          acc: Math.round(pos.coords.accuracy)+"m"
+        });
+      },
+      function(){ resolve(null); },
+      {timeout:8000, maximumAge:60000, enableHighAccuracy:true}
+    );
+  });
+}
+
+async function obtenerDireccion(lat, lon){
+  try {
+    var url = "https://nominatim.openstreetmap.org/reverse?lat="+lat+"&lon="+lon+"&format=json&accept-language=es";
+    var res = await fetch(url, {headers:{"User-Agent":"MeresFichaje/1.0"}});
+    var data = await res.json();
+    var addr = data.address || {};
+    var partes = [];
+    if(addr.road) partes.push(addr.road + (addr.house_number?" "+addr.house_number:""));
+    if(addr.suburb||addr.town||addr.city||addr.village) partes.push(addr.suburb||addr.town||addr.city||addr.village);
+    return partes.join(", ") || data.display_name || "Ubicación obtenida";
+  } catch(e){
+    return "Coordenadas: "+lat+", "+lon;
+  }
+}
+
+function pedirGeoYContinuar(){
+  getGeolocalizacion().then(function(geo){
+    if(!geo){
+      alert("No se pudo obtener la ubicación. Por favor activa el GPS y vuelve a intentarlo.");
+      return;
+    }
+    geoActual = geo;
+    document.getElementById("geoRequiredScreen").style.display="none";
+    document.getElementById("selectScreen").style.display="flex";
+  });
+}
+
+// ── CARGAR EMPLEADOS ──────────────────────────────────────────────────────────
+function cargarEmpleados(){
+  db.collection("vendedores").get().then(function(sn){
+    vendedoresData = [];
+    sn.forEach(function(d){
+      var v = d.data();
+      if(v.activo !== false) vendedoresData.push(v);
+    });
+    vendedoresData.sort(function(a,b){ return (a.alias||"").localeCompare(b.alias||"","es"); });
+    renderGrid();
+  }).catch(function(){
+    document.getElementById("vendorGrid").innerHTML = "<p style='color:#c0392b;font-size:13px;text-align:center'>Error cargando empleados</p>";
+  });
+}
+
+var TIPO_ICON = {Vendedor:"🛋️", Repartidor:"🚚", Almacen:"📦", Limpieza:"🧹"};
+
+function renderGrid(){
+  var grid = document.getElementById("vendorGrid");
+  if(!vendedoresData.length){ grid.innerHTML = "<p style='color:#888;font-size:13px;text-align:center'>Sin empleados</p>"; return; }
+  grid.innerHTML = "";
+  vendedoresData.forEach(function(v){
+    var btn = document.createElement("button");
+    btn.className = "vendor-btn";
+    var tipo = v.tipo||"Vendedor";
+    var ico = TIPO_ICON[tipo]||"👤";
+    btn.innerHTML = ico+" "+v.alias+"<span class='vendor-tipo'>"+tipo+"</span>";
+    btn.addEventListener("click", function(){ seleccionarEmpleado(v); });
+    grid.appendChild(btn);
+  });
+}
+
+// ── SELECCIÓN Y DNI ───────────────────────────────────────────────────────────
+var _empleadoPendiente = null;
+
+function seleccionarEmpleado(v){
+  _empleadoPendiente = v;
+  document.getElementById("dniTitle").textContent = v.alias;
+  document.getElementById("dniInput").value = "";
+  document.getElementById("dniError").style.display = "none";
+  document.getElementById("dniOverlay").classList.add("open");
+  setTimeout(function(){ document.getElementById("dniInput").focus(); }, 100);
+}
+
+function cerrarDNI(){
+  document.getElementById("dniOverlay").classList.remove("open");
+  _empleadoPendiente = null;
+}
+
+function verificarDNI(){
+  var v = _empleadoPendiente;
+  if(!v) return;
+  var introducido = document.getElementById("dniInput").value.trim().toUpperCase().replace(/[-\s]/g,"");
+  var guardado = ((v.DNI||v.dni)||"").toUpperCase().replace(/[-\s]/g,"");
+  if(!guardado || introducido !== guardado){
+    document.getElementById("dniError").style.display = "block";
+    document.getElementById("dniInput").value = "";
+    document.getElementById("dniInput").focus();
+    return;
+  }
+  document.getElementById("dniOverlay").classList.remove("open");
+  entrarFichaje(v);
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("dniInput").addEventListener("keydown", function(e){
+    if(e.key==="Enter") verificarDNI();
+  });
+});
+
+// ── ENTRAR FICHAJE ────────────────────────────────────────────────────────────
+async function entrarFichaje(v){
+  empleadoActual = v;
+
+  // Pedir geo obligatoria
+  document.getElementById("geoInfo").className = "geo-card loading";
+  document.getElementById("geoInfo").textContent = "📍 Obteniendo ubicación...";
+
+  var geo = await getGeolocalizacion();
+  if(!geo){
+    // Mostrar pantalla geo obligatoria
+    document.getElementById("selectScreen").style.display="none";
+    document.getElementById("geoRequiredScreen").style.display="flex";
+    return;
+  }
+  geoActual = geo;
+
+  // Obtener dirección en paralelo
+  obtenerDireccion(geo.lat, geo.lon).then(function(dir){
+    direccionActual = dir;
+    actualizarGeoInfo();
+  });
+
+  // Mostrar pantalla fichaje
+  document.getElementById("selectScreen").style.display="none";
+  document.getElementById("fichajeScreen").style.display="flex";
+  document.getElementById("fhName").textContent = v.alias;
+
+  var {fecha} = nowMadridFull();
+  var meses = ["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  var d = new Date(fecha+"T12:00:00");
+  document.getElementById("fhFecha").textContent = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"][d.getDay()]+" "+d.getDate()+" "+meses[d.getMonth()+1];
+
+  // Cargar fichaje del día
+  var key = fichajeKey(v.alias, fecha);
+  var snap = await db.collection("fichajes").doc(key).get().catch(function(){return null;});
+  fichajeHoy = snap && snap.exists ? snap.data() : {
+    alias:v.alias, fecha,
+    ini_m:null, fin_m:null, ini_t:null, fin_t:null,
+    firma_ini_m:null, firma_fin_m:null, firma_ini_t:null, firma_fin_t:null
+  };
+
+  renderTurnos();
+
+  // Historial solo para Jose Angel
+  if(v.alias === "Jose Angel"){
+    cargarHistorial(v.alias);
+  }
+
+  actualizarReloj();
+  setInterval(actualizarReloj, 30000);
+}
+
+function actualizarGeoInfo(){
+  var el = document.getElementById("geoInfo");
+  if(geoActual){
+    el.className = "geo-card";
+    el.innerHTML = "📍 "+(direccionActual||"Ubicación obtenida")
+      +"<br><small style='opacity:.7'>Precisión: "+geoActual.acc+"</small>";
+  } else {
+    el.className = "geo-card error";
+    el.textContent = "⚠️ Sin ubicación";
+  }
+}
+
+function actualizarReloj(){
+  var h = document.getElementById("fhFecha");
+  if(h && empleadoActual){
+    var {horaCorta} = nowMadridFull();
+    var {fecha} = nowMadridFull();
+    var meses=["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+    var d=new Date(fecha+"T12:00:00");
+    h.textContent = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"][d.getDay()]+" "+d.getDate()+" "+meses[d.getMonth()+1]+" · "+horaCorta;
+  }
+}
+
+// ── RENDER TURNOS ─────────────────────────────────────────────────────────────
+function renderTurnos(){
+  var v = empleadoActual;
+  var hor = v.horario || {};
+  var {fecha} = nowMadridFull();
+  var esSab = new Date(fecha+"T12:00:00").getDay()===6;
+  var f = fichajeHoy;
+  var cont = document.getElementById("turnosContainer");
+
+  var tieneMañana = esSab ? !!(hor.sab_ini_m||hor.ini_m_sab) : !!hor.ini_m;
+  var tieneTarde  = esSab ? !!(hor.sab_ini_t||hor.ini_t_sab) : !!hor.ini_t;
+
+  var ini_m  = esSab ? (hor.sab_ini_m||hor.ini_m_sab||hor.ini_m) : hor.ini_m;
+  var fin_m  = esSab ? (hor.sab_fin_m||hor.fin_m_sab||hor.fin_m) : hor.fin_m;
+  var ini_t  = esSab ? (hor.sab_ini_t||hor.ini_t_sab||hor.ini_t) : hor.ini_t;
+  var fin_t  = esSab ? (hor.sab_fin_t||hor.fin_t_sab||hor.fin_t) : hor.fin_t;
+
+  var html = "";
+
+  if(tieneMañana || f.ini_m || f.fin_m){
+    html += "<div class='turno-card'>"
+      +"<div class='turno-title'>☀️ Turno Mañana"+(ini_m?" · "+ini_m+(fin_m?" – "+fin_m:""):"")+"</div>"
+      +"<div class='turno-row'>"
+      +btnFichar("ini_m","Entrada mañana",f.ini_m,f.firma_ini_m,true)
+      +btnFichar("fin_m","Salida mañana",f.fin_m,f.firma_fin_m,false)
+      +"</div></div>";
+  }
+
+  if(tieneTarde || f.ini_t || f.fin_t){
+    html += "<div class='turno-card'>"
+      +"<div class='turno-title'>🌆 Turno Tarde"+(ini_t?" · "+ini_t+(fin_t?" – "+fin_t:""):"")+"</div>"
+      +"<div class='turno-row'>"
+      +btnFichar("ini_t","Entrada tarde",f.ini_t,f.firma_ini_t,true)
+      +btnFichar("fin_t","Salida tarde",f.fin_t,f.firma_fin_t,false)
+      +"</div></div>";
+  }
+
+  if(!html){
+    html = "<div class='turno-card'>"
+      +"<div class='turno-title'>📋 Sin horario asignado</div>"
+      +"<div class='turno-row'>"
+      +btnFichar("ini_m","Entrada",f.ini_m,f.firma_ini_m,true)
+      +btnFichar("fin_m","Salida",f.fin_m,f.firma_fin_m,false)
+      +"</div></div>";
+  }
+
+  cont.innerHTML = html;
+
+  // Eventos
+  cont.querySelectorAll(".btn-fichar:not(.btn-firmado)").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var turno = btn.getAttribute("data-turno");
+      abrirFirma(turno);
+    });
+  });
+}
+
+function btnFichar(turno, label, hora, firma, esEntrada){
+  if(hora || firma){
+    return "<button class='btn-fichar btn-firmado'>"
+      +label+"<span class='hora-txt'>✅ "+( hora||"firmado")+"</span></button>";
+  }
+  var cls = esEntrada ? "btn-entrada" : "btn-salida";
+  return "<button class='btn-fichar "+cls+"' data-turno='"+turno+"'>"
+    +label+"<span class='hora-txt'>Pulsa para fichar</span></button>";
+}
+
+// ── FIRMA ─────────────────────────────────────────────────────────────────────
+function abrirFirma(turno){
+  _turnoEnFirma = turno;
+  var labels = {ini_m:"Entrada Mañana",fin_m:"Salida Mañana",ini_t:"Entrada Tarde",fin_t:"Salida Tarde"};
+  document.getElementById("firmaTitulo").textContent = "✍️ "+labels[turno];
+  document.getElementById("firmaSubtitulo").textContent = empleadoActual.alias+" · "+nowMadridFull().fecha;
+  document.getElementById("firmaHora").textContent = calcularHoraFichaje(turno);
+
+  // Geo info
+  var geoTxt = "";
+  if(geoActual){
+    geoTxt = "📍 "+(direccionActual||geoActual.lat+", "+geoActual.lon);
+    if(!direccionActual) obtenerDireccion(geoActual.lat,geoActual.lon).then(function(d){
+      direccionActual=d; document.getElementById("firmaGeoText").textContent="📍 "+d;
+    });
+  }
+  document.getElementById("firmaGeoText").textContent = geoTxt;
+
+  limpiarFirma();
+  document.getElementById("firmaOverlay").classList.add("open");
+  iniciarCanvas();
+}
+
+function calcularHoraFichaje(turno){
+  var hor = empleadoActual.horario||{};
+  var {fecha, horaCorta} = nowMadridFull();
+  var esSab = new Date(fecha+"T12:00:00").getDay()===6;
+  var ENTRADA_FIJA = ["Angel","Javi"];
+  var isEntrada = turno.startsWith("ini");
+
+  var mapaHor = {
+    ini_m: esSab?(hor.sab_ini_m||hor.ini_m_sab||hor.ini_m):hor.ini_m,
+    fin_m: esSab?(hor.sab_fin_m||hor.fin_m_sab||hor.fin_m):hor.fin_m,
+    ini_t: esSab?(hor.sab_ini_t||hor.ini_t_sab||hor.ini_t):hor.ini_t,
+    fin_t: esSab?(hor.sab_fin_t||hor.fin_t_sab||hor.fin_t):hor.fin_t
+  };
+  var horaContrato = mapaHor[turno];
+
+  function toMins(t){ if(!t) return null; var p=t.split(":"); return parseInt(p[0])*60+parseInt(p[1]); }
+  var minActual = toMins(horaCorta);
+  var minContrato = toMins(horaContrato);
+
+  if(isEntrada){
+    if(ENTRADA_FIJA.includes(empleadoActual.alias)) return horaContrato||horaCorta;
+    if(minContrato!==null && minActual<minContrato) return horaContrato;
+    return horaCorta;
+  } else {
+    return horaCorta;
+  }
+}
+
+function limpiarFirma(){
+  var canvas = document.getElementById("firmaCanvas");
+  var ctx = canvas.getContext("2d");
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+}
+
+function cerrarFirma(){
+  document.getElementById("firmaOverlay").classList.remove("open");
+  _turnoEnFirma = null;
+}
+
+function iniciarCanvas(){
+  var canvas = document.getElementById("firmaCanvas");
+  var ctx = canvas.getContext("2d");
+  ctx.strokeStyle = "#1a1714";
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  function getPos(e){
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return {x:(src.clientX-r.left)*(canvas.width/r.width), y:(src.clientY-r.top)*(canvas.height/r.height)};
+  }
+  function start(e){ e.preventDefault(); _firmaDrawing=true; var p=getPos(e); _firmaLastX=p.x; _firmaLastY=p.y; }
+  function move(e){ e.preventDefault(); if(!_firmaDrawing) return; var p=getPos(e); ctx.beginPath(); ctx.moveTo(_firmaLastX,_firmaLastY); ctx.lineTo(p.x,p.y); ctx.stroke(); _firmaLastX=p.x; _firmaLastY=p.y; }
+  function end(){ _firmaDrawing=false; }
+
+  canvas.onmousedown=start; canvas.onmousemove=move; canvas.onmouseup=end;
+  canvas.ontouchstart=start; canvas.ontouchmove=move; canvas.ontouchend=end;
+}
+
+async function confirmarFirma(){
+  var canvas = document.getElementById("firmaCanvas");
+  var ctx = canvas.getContext("2d");
+  var px = ctx.getImageData(0,0,canvas.width,canvas.height).data;
+  var tieneFirma = false;
+  for(var i=3; i<px.length; i+=4){ if(px[i]>10){ tieneFirma=true; break; } }
+  if(!tieneFirma){ showToast("Por favor firma antes de confirmar"); return; }
+
+  var firmaBase64 = canvas.toDataURL("image/png");
+  var turno = _turnoEnFirma;
+  var horaFichaje = calcularHoraFichaje(turno);
+  var {fecha} = nowMadridFull();
+
+  fichajeHoy[turno] = horaFichaje;
+  fichajeHoy["firma_"+turno] = firmaBase64;
+  if(geoActual){
+    fichajeHoy["geo_"+turno] = {
+      lat: geoActual.lat,
+      lon: geoActual.lon,
+      acc: geoActual.acc,
+      dir: direccionActual||""
+    };
+  }
+
+  try {
+    await db.collection("fichajes").doc(fichajeKey(empleadoActual.alias, fecha)).set(fichajeHoy);
+    cerrarFirma();
+    showToast("✅ Fichaje registrado: "+horaFichaje);
+    renderTurnos();
+  } catch(e){
+    showToast("Error al guardar: "+e.message);
+  }
+}
+
+// ── HISTORIAL (solo Jose Angel) ───────────────────────────────────────────────
+async function cargarHistorial(alias){
+  var sec = document.getElementById("historialSection");
+  var body = document.getElementById("historialBody");
+  sec.style.display = "block";
+  body.innerHTML = "<div class='spinner'>Cargando...</div>";
+
+  var {fecha} = nowMadridFull();
+  var mes = fecha.slice(0,7); // YYYY-MM
+  var snap = await db.collection("fichajes")
+    .where("alias","==",alias)
+    .where("fecha",">=",mes+"-01")
+    .where("fecha","<=",mes+"-31")
+    .orderBy("fecha","desc").get().catch(function(){return null;});
+
+  if(!snap||snap.empty){ body.innerHTML="<p style='color:#aaa;font-size:13px;text-align:center;padding:.5rem'>Sin fichajes este mes</p>"; return; }
+
+  var html="";
+  snap.forEach(function(d){
+    var r=d.data();
+    var mins=0;
+    function diff(a,b){ if(!a||!b) return 0; var pa=a.split(":"),pb=b.split(":"); return (parseInt(pb[0])*60+parseInt(pb[1]))-(parseInt(pa[0])*60+parseInt(pa[1])); }
+    mins+=diff(r.ini_m,r.fin_m); mins+=diff(r.ini_t,r.fin_t);
+    var horas = mins>0 ? Math.floor(mins/60)+"h "+(mins%60)+"m" : "—";
+    var dd=new Date(r.fecha+"T12:00:00");
+    var dias=["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+    html+="<div class='hist-row'>"
+      +"<span class='hist-fecha'>"+dias[dd.getDay()]+" "+dd.getDate()+"</span>"
+      +"<span style='font-size:11px;color:#888'>"+(r.ini_m||"—")+" → "+(r.fin_m||"—")+" / "+(r.ini_t||"—")+" → "+(r.fin_t||"—")+"</span>"
+      +"<span class='hist-horas'>"+horas+"</span>"
+      +"</div>";
+  });
+  body.innerHTML=html;
+}
+
+// ── CERRAR SESIÓN ─────────────────────────────────────────────────────────────
+function cerrarSesion(){
+  empleadoActual = null;
+  fichajeHoy = null;
+  geoActual = null;
+  direccionActual = null;
+  document.getElementById("fichajeScreen").style.display="none";
+  document.getElementById("selectScreen").style.display="flex";
+  document.getElementById("historialSection").style.display="none";
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function nowMadridFull(){
+  var now=new Date();
+  var madrid=new Date(now.toLocaleString("en-US",{timeZone:"Europe/Madrid"}));
+  var pad=function(n){return String(n).padStart(2,"0");};
+  return {
+    fecha: madrid.getFullYear()+"-"+pad(madrid.getMonth()+1)+"-"+pad(madrid.getDate()),
+    hora:  pad(madrid.getHours())+":"+pad(madrid.getMinutes())+":"+pad(madrid.getSeconds()),
+    horaCorta: pad(madrid.getHours())+":"+pad(madrid.getMinutes())
+  };
+}
+function fichajeKey(alias,fecha){
+  return "fichaje_"+alias.split(" ").join("_")+"_"+fecha;
+}
+function showToast(msg){
+  var t=document.getElementById("toast");
+  t.textContent=msg; t.style.display="block";
+  setTimeout(function(){t.style.display="none";},3000);
+}
+</script>
+</body>
+</html>
