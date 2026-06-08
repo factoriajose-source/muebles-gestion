@@ -157,6 +157,13 @@ canvas{border:1.5px solid #ccc;border-radius:8px;touch-action:none;display:block
 
 <div class="toast" id="toast"></div>
 
+<script>
+// Ejecutar inmediatamente sin esperar load
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("vendorGrid").innerHTML = "<p style='color:blue;font-size:12px;text-align:center'>DOM listo...</p>";
+});
+</script>
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
