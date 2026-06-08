@@ -5881,8 +5881,8 @@ async function imprimirFichasMultiples(aliasSelect, anio, mes, tipo, fechaRef) {
           + "</table>";
       });
       const totalMesStr = Math.floor(totalMesMins/60) + "h " + (totalMesMins%60) + "m";
-      fichaHtml += "<div style='margin-top:.75rem;padding:8px 12px;background:#f0f7f0;border:1px solid #1a6b2a;border-radius:6px;display:inline-block;font-size:11px'>"
-        + (currentUser === "Jose Angel" ? "<strong>Total mes: " + totalMesStr + "</strong>" : "") + "</div>"
+      fichaHtml += (!vData.ficha_manual ? "<div style='margin-top:.75rem;padding:8px 12px;background:#f0f7f0;border:1px solid #1a6b2a;border-radius:6px;display:inline-block;font-size:11px'>"
+        + (currentUser === "Jose Angel" ? "<strong>Total mes: " + totalMesStr + "</strong>" : "") + "</div>" : "")
         + cajetin;
     } else {
       // Layout mensual — una sola tabla
@@ -5891,8 +5891,8 @@ async function imprimirFichasMultiples(aliasSelect, anio, mes, tipo, fechaRef) {
       fichaHtml = cabecera
         + "<table style='width:100%;border-collapse:collapse;font-size:10px'>" + theadHtml
         + "<tbody>" + filas + "</tbody></table>"
-        + "<div style='margin-top:.75rem;padding:8px 12px;background:#f0f7f0;border:1px solid #1a6b2a;border-radius:6px;display:inline-block;font-size:11px'>"
-        + (currentUser === "Jose Angel" ? "<strong>Total horas: " + totalHoras + "</strong>" : "") + "</div>"
+        + (!vData.ficha_manual ? "<div style='margin-top:.75rem;padding:8px 12px;background:#f0f7f0;border:1px solid #1a6b2a;border-radius:6px;display:inline-block;font-size:11px'>"
+        + (currentUser === "Jose Angel" ? "<strong>Total horas: " + totalHoras + "</strong>" : "") + "</div>" : "")
         + cajetin;
     }
 
