@@ -152,7 +152,6 @@ header { background: #1a1714; color: white; padding: 0 24px; height: 54px; displ
       <input type="number" id="selYear" value="2026" min="2024" max="2035" style="width:90px" onchange="cargarVista()">
     </div>
     <button class="btn btn-green no-print" style="margin-bottom:1px" onclick="abrirModal()">+ Añadir vacaciones / baja</button>
-    <button class="btn btn-dark no-print" style="margin-bottom:1px" onclick="abrirModalTrabajador()">👤 Gestionar trabajadores</button>
     <button class="btn no-print" style="margin-bottom:1px;background:#6b4fc8;color:white" onclick="abrirCalendarioGeneral()">📆 Ver todos juntos</button>
     <button class="btn no-print" style="margin-bottom:1px;background:#c4571a;color:white" onclick="abrirGestionFiestas()">📅 Gestionar Fiestas</button>
   </div>
@@ -456,29 +455,36 @@ function doLogin(){
     document.getElementById("loginBox").style.display="none";
     document.getElementById("appBox").style.display="block";
     document.getElementById("hUser").textContent=alias;
-    // Cargar también trabajadores extra (almacén/reparto)
-    return fsGet("trabajadores_extra").then(function(extras){
-      trabajadoresExtra=extras.filter(function(t){return t.activo!==false&&t.alias;});
-      // Mezclar vendedores + extras, excluir Jose Angel, ordenar
-      var todos=vendedores.concat(trabajadoresExtra)
-        .filter(function(v){return v.alias!=="Jose Angel";})
-        .sort(function(a,b){return a.alias.localeCompare(b.alias,"es");});
-      var selTr=document.getElementById("selTr");
-      var mTr=document.getElementById("mTr");
-      selTr.innerHTML="<option value=''>-- Todos los trabajadores --</option><option value=''>─────────────</option>";
-      mTr.innerHTML="";
-      // Grupo vendedores
-      var optV="<optgroup label='🛋️ Vendedores'>";
-      var optE="<optgroup label='📦 Almacén / Reparto'>";
-      todos.forEach(function(v){
-        var esExtra=trabajadoresExtra.some(function(e){return e.alias===v.alias;});
+    // Todos los trabajadores vienen de la colección vendedores (unificada)
+    trabajadoresExtra = [];
+    var todos=vendedores
+      .filter(function(v){return v.alias!=="Jose Angel";})
+      .sort(function(a,b){return a.alias.localeCompare(b.alias,"es");});
+    var selTr=document.getElementById("selTr");
+    var mTr=document.getElementById("mTr");
+    selTr.innerHTML="<option value=''>-- Ver resumen general --</option>";
+    mTr.innerHTML="";
+    // Agrupar por tipo
+    var grupos = {"Vendedor":[], "Repartidor":[], "Almacen":[], "Limpieza":[]};
+    todos.forEach(function(v){
+      var t = v.tipo||"Vendedor";
+      if(!grupos[t]) grupos[t]=[];
+      grupos[t].push(v);
+    });
+    var iconos = {"Vendedor":"🛋️","Repartidor":"🚚","Almacen":"📦","Limpieza":"🧹"};
+    Object.keys(grupos).forEach(function(tipo){
+      if(!grupos[tipo].length) return;
+      var optG="<optgroup label='"+iconos[tipo]+" "+tipo+"'>";
+      grupos[tipo].forEach(function(v){
         var txt=v.alias+(v.nombre?" — "+v.nombre:"");
         var opt="<option value='"+v.alias+"'>"+txt+"</option>";
-        if(esExtra) optE+=opt; else optV+=opt;
+        optG+=opt;
         mTr.innerHTML+="<option value='"+v.alias+"'>"+txt+"</option>";
       });
-      optV+="</optgroup>"; optE+="</optgroup>";
-      selTr.innerHTML="<option value=''>-- Ver resumen general --</option>"+optV+optE;
+      optG+="</optgroup>";
+      selTr.innerHTML+=optG;
+    });
+    return Promise.resolve();
       document.getElementById("selYear").value=new Date().getFullYear();
       return fsGet("vacaciones_bajas");
     });
@@ -711,18 +717,16 @@ function mostrarResumenGeneral(year){
   document.getElementById("printHdr").style.display="none";
   var cont=document.getElementById("resumenGeneral");
 
-  var todos=vendedores.concat(trabajadoresExtra)
+  var todos=vendedores
     .filter(function(v){return v.alias!=="Jose Angel";})
     .sort(function(a,b){return a.alias.localeCompare(b.alias,"es");});
 
-  // Agrupar registros del año por alias
   var porAlias={};
   registros.filter(function(r){return parseInt(r.año)===year;}).forEach(function(r){
     if(!porAlias[r.alias]) porAlias[r.alias]=[];
     porAlias[r.alias].push(r);
   });
 
-  // Calcular para cada trabajador
   var filas=[];
   todos.forEach(function(v){
     var mis=porAlias[v.alias]||[];
@@ -734,7 +738,7 @@ function mostrarResumenGeneral(year){
     });
     var nV=Object.keys(dVac).length;
     var nB=Object.keys(dBaja).length;
-    var esExtra=trabajadoresExtra.some(function(e){return e.alias===v.alias;});
+    var esExtra=(v.tipo||"Vendedor")!=="Vendedor";
     filas.push({alias:v.alias,nombre:[v.nombre,v.apellidos].filter(Boolean).join(" ")||"",nV:nV,nB:nB,pend:30-nV,esExtra:esExtra,tieneRegs:nV>0||nB>0});
   });
 
@@ -864,7 +868,7 @@ function abrirCalendarioGeneral(){
   var year=parseInt(document.getElementById("selYear").value)||new Date().getFullYear();
   document.getElementById("calGenSub").textContent="Año "+year+" · Solo lectura";
 
-  var todos=vendedores.concat(trabajadoresExtra)
+  var todos=vendedores
     .filter(function(v){return v.alias!=="Jose Angel"&&v.activo!==false;})
     .sort(function(a,b){return a.alias.localeCompare(b.alias,"es");});
 
