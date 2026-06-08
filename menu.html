@@ -3777,6 +3777,12 @@ function renderVendedores() {
     cb.type = "checkbox";
     cb.id = "vd-ficha-manual";
     cb.style.cssText = "width:18px;height:18px;cursor:pointer;flex-shrink:0;pointer-events:auto";
+    cb.addEventListener("click", function(e){
+      console.log("CHECKBOX CLICK! checked=", this.checked, "event=", e);
+    });
+    cb.addEventListener("change", function(){
+      console.log("CHECKBOX CHANGE! checked=", this.checked);
+    });
     cbWrap.appendChild(cb);
     // Asociar label
     const lbl = document.getElementById("label-ficha-manual");
