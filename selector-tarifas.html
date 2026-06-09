@@ -111,6 +111,7 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
   <div class="brand">MERES &middot; <span>Selector de Tarifas</span></div>
   <button class="btn btn-gray no-print" style="padding:5px 12px;font-size:12px" onclick="window.print()">Imprimir</button>
   <button class="btn no-print" style="padding:5px 12px;font-size:12px;background:#1a1714;color:#fff;border-color:#1a1714" onclick="abrirImprimirTarifa()">🖨️ Imprimir tarifa</button>
+  <button class="btn btn-gray no-print" style="padding:5px 10px;font-size:11px;color:#888" onclick="cacheClear()" title="Forzar recarga de datos desde servidor">🔄</button>
 </header>
 <div class="tabs no-print">
   <button class="tab-btn act" id="tb-selector" onclick="showTab('selector')">Catalogo + Presupuesto</button>
@@ -555,7 +556,48 @@ function doLogin(){
 
 // INICIO — se llama tras login exitoso
 
-function cargarProveedoresFirebase(){
+// ── CACHÉ localStorage ────────────────────────────────────────────────────────
+var CACHE_TTL = 4 * 60 * 60 * 1000; // 4 horas en ms
+
+function cacheSet(key, data){
+  try {
+    localStorage.setItem(key, JSON.stringify({ts: Date.now(), data: data}));
+  } catch(e){ console.warn("Cache write error:", e); }
+}
+
+function cacheGet(key){
+  try {
+    var raw = localStorage.getItem(key);
+    if(!raw) return null;
+    var obj = JSON.parse(raw);
+    if(Date.now() - obj.ts > CACHE_TTL) { localStorage.removeItem(key); return null; }
+    return obj.data;
+  } catch(e){ return null; }
+}
+
+function cacheClear(){
+  ["meres_proveedores","meres_tarifas","meres_imagenes"].forEach(function(k){
+    localStorage.removeItem(k);
+  });
+  toast("Caché borrada — recargando datos...","info");
+  cargarProveedoresFirebase(true);
+  cargarTarifasFirestore(true);
+}
+window.cacheClear = cacheClear;
+// ─────────────────────────────────────────────────────────────────────────────
+
+function cargarProveedoresFirebase(forzar){
+  // Intentar desde caché primero
+  if(!forzar){
+    var cached = cacheGet("meres_proveedores");
+    if(cached){
+      PROVEEDORES_MAP = cached;
+      console.log("Proveedores desde caché:",Object.keys(PROVEEDORES_MAP).length);
+      renderArt();
+      return;
+    }
+  }
+  // Leer de Firebase
   db.collection("proveedores").get().then(function(sn){
     PROVEEDORES_MAP={};
     sn.forEach(function(d){
@@ -566,47 +608,77 @@ function cargarProveedoresFirebase(){
       var dto=parseFloat(String(p.MAX_DTO||"0").replace(",",".").replace("%",""))||0;
       var nom=p.Nombre||p.nombre||cod;
       PROVEEDORES_MAP[cod]={nombre:nom,precioPunto:pp,dtoMax:dto};
-      // Solo duplicar con clave numérica si el código ES puramente numérico
-      // (evita que "7022_CAMAS" machaque la entrada de "7022")
       if(/^\d+$/.test(cod)) PROVEEDORES_MAP[parseInt(cod)]={nombre:nom,precioPunto:pp,dtoMax:dto};
     });
-    console.log("Proveedores cargados:",Object.keys(PROVEEDORES_MAP).length/2);
+    console.log("Proveedores desde Firebase:",Object.keys(PROVEEDORES_MAP).length);
+    cacheSet("meres_proveedores", PROVEEDORES_MAP);
     renderArt();
   }).catch(function(e){console.error("Error:",e);renderArt();});
 }
 
-function cargarTarifasFirestore(){
+function cargarTarifasFirestore(forzar){
   ARTICULOS=[];
   renderArt();
-  var p1=db.collection("tarifas_modelos").get().then(function(sn){
-    var importadas=[];
-    sn.forEach(function(d){
-      var data=d.data();
-      if(data.articulos&&Array.isArray(data.articulos)){
-        importadas=importadas.concat(data.articulos);
-      }
-    });
-    ARTICULOS=importadas;
-    console.log("Tarifas cargadas:",importadas.length,"artículos");
+
+  // Intentar tarifas desde caché
+  var cachedTarifas = forzar ? null : cacheGet("meres_tarifas");
+  var cachedImagenes = forzar ? null : cacheGet("meres_imagenes");
+
+  if(cachedTarifas){
+    console.log("Tarifas desde caché:",cachedTarifas.length,"artículos");
+    ARTICULOS = cachedTarifas;
     renderTarifas();
     renderArt();
-  });
-  // Precargar TODAS las imágenes en cache para que estén disponibles al imprimir
-  var p2=db.collection("imagenes_modelos").get().then(function(sn){
-    sn.forEach(function(d){
-      var data=d.data();
-      IMGS_CACHE[d.id]=data.imgs||[];
-      console.log("Imgs precargadas:",d.id,"→",IMGS_CACHE[d.id].length,"fotos");
+  }
+  if(cachedImagenes){
+    console.log("Imágenes desde caché:",Object.keys(cachedImagenes).length,"modelos");
+    IMGS_CACHE = cachedImagenes;
+  }
+
+  // Si ambos están en caché, no leer Firebase
+  if(cachedTarifas && cachedImagenes) return Promise.resolve();
+
+  var promesas = [];
+
+  if(!cachedTarifas){
+    var p1 = db.collection("tarifas_modelos").get().then(function(sn){
+      var importadas=[];
+      sn.forEach(function(d){
+        var data=d.data();
+        if(data.articulos&&Array.isArray(data.articulos)){
+          importadas=importadas.concat(data.articulos);
+        }
+      });
+      ARTICULOS=importadas;
+      console.log("Tarifas desde Firebase:",importadas.length,"artículos");
+      cacheSet("meres_tarifas", importadas);
+      renderTarifas();
+      renderArt();
     });
-  });
-  return Promise.all([p1,p2]).catch(function(e){
+    promesas.push(p1);
+  }
+
+  if(!cachedImagenes){
+    var p2 = db.collection("imagenes_modelos").get().then(function(sn){
+      sn.forEach(function(d){
+        var data=d.data();
+        IMGS_CACHE[d.id]=data.imgs||[];
+      });
+      console.log("Imágenes desde Firebase:",Object.keys(IMGS_CACHE).length,"modelos");
+      cacheSet("meres_imagenes", IMGS_CACHE);
+    });
+    promesas.push(p2);
+  }
+
+  return Promise.all(promesas).catch(function(e){
     console.error("Error cargando datos:",e);
     toast("Error cargando datos: "+e.message,"err");
   });
 }
 
 function guardarTarifaFirestore(prv, mod, arts, callback){
-  // Cada proveedor+modelo es un documento separado
+  // Invalidar caché de tarifas al guardar
+  localStorage.removeItem("meres_tarifas");
   var docId="tarifa_"+String(prv)+"_"+mod.replace(/[^a-zA-Z0-9]/g,"_");
   var pd=PROVEEDORES_MAP[prv]||PROVEEDORES_MAP[parseInt(prv)]||{};
   db.collection("tarifas_modelos").doc(docId).set({
