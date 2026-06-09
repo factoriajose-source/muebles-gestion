@@ -633,8 +633,13 @@ async function confirmarFirma(){
   }
 
   // Comprobar si está fuera de zona
+  console.log("GEO CHECK — direccionActual:", direccionActual, "geoActual:", geoActual);
+  console.log("esFueraDeZona:", esFueraDeZona(direccionActual));
   if(geoActual && esFueraDeZona(direccionActual)){
+    console.log("FUERA DE ZONA — lanzando alerta");
     alertarFueraDeZona(empleadoActual, turno, horaFichaje, direccionActual, geoActual);
+  } else {
+    console.log("Zona OK o sin geo");
   }
 
   try {
