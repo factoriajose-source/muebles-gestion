@@ -313,8 +313,23 @@ function pedirGeoYContinuar(){
 }
 
 // ── CARGAR EMPLEADOS ──────────────────────────────────────────────────────────
+// ── CACHÉ localStorage index ──────────────────────────────────────────────────
+var IDX_CACHE_TTL = 8 * 60 * 60 * 1000; // 8 horas
+function idxCacheSet(key,data){ try{ localStorage.setItem(key,JSON.stringify({ts:Date.now(),data})); }catch(e){} }
+function idxCacheGet(key){ try{ var r=localStorage.getItem(key); if(!r) return null; var o=JSON.parse(r); if(Date.now()-o.ts>IDX_CACHE_TTL){localStorage.removeItem(key);return null;} return o.data; }catch(e){return null;} }
+// ─────────────────────────────────────────────────────────────────────────────
+
 function cargarEmpleados(){
   console.log("Cargando empleados... db=", !!db);
+  // Intentar desde caché primero
+  var cached = idxCacheGet("idx_vendedores");
+  if(cached){
+    console.log("Empleados desde caché:", cached.length);
+    vendedoresData = cached;
+    renderGrid();
+    return;
+  }
+  // Leer desde Firebase
   db.collection("vendedores").get().then(function(sn){
     console.log("Empleados cargados:", sn.size);
     vendedoresData = [];
@@ -323,6 +338,7 @@ function cargarEmpleados(){
       if(v.activo !== false) vendedoresData.push(v);
     });
     vendedoresData.sort(function(a,b){ return (a.alias||"").localeCompare(b.alias||"","es"); });
+    idxCacheSet("idx_vendedores", vendedoresData);
     renderGrid();
   }).catch(function(e){
     console.error("Error cargando empleados:", e.code, e.message);
