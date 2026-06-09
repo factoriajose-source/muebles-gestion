@@ -188,7 +188,7 @@ async function alertarFueraDeZona(empleado, turno, hora, direccion, geo){
   var {fecha} = nowMadridFull();
   var nombreCompleto = ((empleado.nombre||"")+" "+(empleado.apellidos||"")).trim() || empleado.alias;
   var dni = empleado.DNI || empleado.dni || "—";
-  var mensaje = "⚠️ FICHAJE FUERA DE ZONA\n"
+  var mensaje = "⚠️ FICHAJE REALIZADO FUERA DE LA EMPRESA Y FUERA DEL CONCEJO ⚠️\n\n"
     + "Empleado: "+empleado.alias+"\n"
     + "Nombre: "+nombreCompleto+"\n"
     + "DNI: "+dni+"\n"
@@ -196,7 +196,8 @@ async function alertarFueraDeZona(empleado, turno, hora, direccion, geo){
     + "Hora: "+hora+"\n"
     + "Fecha: "+fecha+"\n"
     + "Dirección: "+direccion+"\n"
-    + "Coordenadas: "+geo.lat+", "+geo.lon+" (precisión: "+geo.acc+")";
+    + "Coordenadas: "+geo.lat+", "+geo.lon+" (precisión: "+geo.acc+")\n"
+    + "Ver en mapa: https://maps.google.com/?q="+geo.lat+","+geo.lon;
 
   // 1. Email PRIMERO — funciona aunque Firebase falle
   try {
