@@ -108,10 +108,12 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
 
 <div id="appBox" style="display:none">
 <header>
-  <div class="brand">MERES &middot; <span>Selector de Tarifas</span></div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="brand">MERES &middot; <span>Selector de Tarifas</span></div>
+    <button class="btn btn-gray no-print" style="padding:5px 10px;font-size:11px;color:#666;display:flex;align-items:center;gap:4px" onclick="cacheClear()" title="Forzar recarga de datos desde servidor">🔄 <span>Cargar Tarifas Nuevas</span></button>
+  </div>
   <button class="btn btn-gray no-print" style="padding:5px 12px;font-size:12px" onclick="window.print()">Imprimir</button>
   <button class="btn no-print" style="padding:5px 12px;font-size:12px;background:#1a1714;color:#fff;border-color:#1a1714" onclick="abrirImprimirTarifa()">🖨️ Imprimir tarifa</button>
-  <button class="btn btn-gray no-print" style="padding:5px 10px;font-size:11px;color:#888" onclick="cacheClear()" title="Forzar recarga de datos desde servidor">🔄</button>
 </header>
 <div class="tabs no-print">
   <button class="tab-btn act" id="tb-selector" onclick="showTab('selector')">Catalogo + Presupuesto</button>
