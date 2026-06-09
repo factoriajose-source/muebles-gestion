@@ -336,6 +336,7 @@ tr:last-child td{border-bottom:none}
     <div class="sb-item" id="mn-editor" style="display:none" onclick="abrirEditor()"><span class="ico">✏️</span> Editor Fichajes</div>
     <div class="sb-item" id="mn-auditoria" style="display:none" onclick="abrirAuditoria()"><span class="ico">🔍</span> Auditoría Fichajes</div>
     <div class="sb-item" id="mn-vendedores" style="display:none" onclick="abrirVendedores()"><span class="ico">👤</span> Vendedores</div>
+    <div class="sb-item" id="mn-backup" style="display:none" onclick="ejecutarBackup()"><span class="ico">💾</span> Backup Firebase</div>
 
     <div class="sb-logout"><button onclick="logout()">Cerrar sesión</button></div>
   </nav>
@@ -921,6 +922,8 @@ function actualizarSidebar(name){
   // Vendedores SOLO Jose Angel
   var mnVend = document.getElementById("mn-vendedores");
   if(mnVend) mnVend.style.display = (name==="Jose Angel") ? "" : "none";
+  var mnBackup = document.getElementById("mn-backup");
+  if(mnBackup) mnBackup.style.display = (name==="Jose Angel") ? "" : "none";
 }
 
 function abrirFallos(){
@@ -3849,7 +3852,55 @@ function renderVendedores() {
 }
 
 
-// ===== INCIDENCIAS =====
+// ── BACKUP FIREBASE ───────────────────────────────────────────────────────────
+async function ejecutarBackup(){
+  cerrarSidebar();
+  showToast("⏳ Generando backup... puede tardar unos segundos");
+
+  const colecciones = [
+    "vendedores","presupuestos","fichajes","vacaciones_bajas",
+    "proveedores","tarifas_modelos","fallos","mensajes",
+    "fiestas_anuales","repartos","incidencias","alertas_geo"
+  ];
+
+  const backup = {
+    fecha: new Date().toISOString(),
+    version: "1.0",
+    proyecto: "muebles-presupuestos",
+    datos: {}
+  };
+
+  let total = 0;
+  for(const col of colecciones){
+    try {
+      const sn = await getDocs(collection(db, col));
+      backup.datos[col] = [];
+      sn.forEach(d => backup.datos[col].push({_id: d.id, ...d.data()}));
+      total += backup.datos[col].length;
+      console.log("Backup "+col+": "+backup.datos[col].length+" docs");
+    } catch(e){
+      console.warn("Error backup "+col+":", e.message);
+      backup.datos[col] = [];
+    }
+  }
+
+  // Descargar como JSON
+  const json = JSON.stringify(backup, null, 2);
+  const blob = new Blob([json], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const fecha = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = "meres-backup-"+fecha+".json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showToast("✅ Backup descargado: "+total+" registros de "+colecciones.length+" colecciones");
+}
+window.ejecutarBackup = ejecutarBackup;
+// ─────────────────────────────────────────────────────────────────────────────
 
 const ESTADOS_PRODUCTO = [
   { label:"Correcto / dentro de tolerancias normales de uso", icon:"✅", bg:"#eaf3de", col:"#3b6d11" },
