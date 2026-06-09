@@ -186,8 +186,12 @@ function esFueraDeZona(direccion){
 async function alertarFueraDeZona(empleado, turno, hora, direccion, geo){
   var labels = {ini_m:"Entrada Mañana",fin_m:"Salida Mañana",ini_t:"Entrada Tarde",fin_t:"Salida Tarde"};
   var {fecha} = nowMadridFull();
+  var nombreCompleto = ((empleado.nombre||"")+" "+(empleado.apellidos||"")).trim() || empleado.alias;
+  var dni = empleado.DNI || empleado.dni || "—";
   var mensaje = "⚠️ FICHAJE FUERA DE ZONA\n"
     + "Empleado: "+empleado.alias+"\n"
+    + "Nombre: "+nombreCompleto+"\n"
+    + "DNI: "+dni+"\n"
     + "Turno: "+(labels[turno]||turno)+"\n"
     + "Hora: "+hora+"\n"
     + "Fecha: "+fecha+"\n"
