@@ -198,11 +198,9 @@ async function alertarFueraDeZona(empleado, turno, hora, direccion, geo){
   try {
     if(typeof emailjs !== "undefined"){
       await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
-        to_email: "factoria.jose@gmail.com",
-        subject:  "⚠️ Fichaje fuera de zona: "+empleado.alias,
+        to_name: "Jose Angel",
         message:  mensaje,
-        from_name: "Meres Fichaje",
-        reply_to: "factoria.jose@gmail.com"
+        from_name: "Meres Fichaje"
       });
       console.log("Email alerta enviado OK");
     }
