@@ -640,6 +640,8 @@
       <option value="INACTIVO">Inactivo</option>
     </select>
     <div class="stats-bar" id="statsBar">Cargando…</div>
+    <div id="cacheIndicator" style="font-size:11px;color:#aaa;white-space:nowrap"></div>
+    <button onclick="prvCacheClear();loadProveedores(true)" style="padding:5px 10px;border:1px solid #ccc;border-radius:6px;background:#fff;font-size:11px;cursor:pointer;white-space:nowrap" title="Forzar recarga desde servidor">🔄 Actualizar</button>
   </div>
 
   <!-- TABLA -->
@@ -900,6 +902,12 @@ function loadProveedores(forzar=false) {
       populateFamiliaFilter();
       renderTable();
       loading(false);
+      const el = document.getElementById("cacheIndicator");
+      if(el){
+        const mins = Math.round((Date.now() - JSON.parse(localStorage.getItem(PRV_CACHE_KEY)||'{}').ts||0) / 60000);
+        el.textContent = "📦 Caché (hace "+mins+"min)";
+        el.style.color = "#2d7a4f";
+      }
       return;
     }
   }
@@ -909,6 +917,8 @@ function loadProveedores(forzar=false) {
     populateFamiliaFilter();
     renderTable();
     loading(false);
+    const el = document.getElementById("cacheIndicator");
+    if(el){ el.textContent = "🔥 Firebase"; el.style.color = "#c4571a"; }
   }).catch(e => {
     console.error("Error cargando proveedores:", e);
     loading(false);
