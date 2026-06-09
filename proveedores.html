@@ -695,7 +695,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, getDocs, doc, setDoc, addDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, setDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ══════════════════════════════════════════
 //  ⚠️  CONFIGURA AQUÍ TU FIREBASE
@@ -826,7 +826,9 @@ window.saveProveedor = async () => {
       await setDoc(doc(db, 'proveedores', currentDoc._id), data, { merge: true });
       showToast('Cambios guardados ✓', 'ok');
     }
+    prvCacheClear(); // invalidar caché
     closePanel();
+    loadProveedores(true); // recargar desde Firebase
   } catch(e) {
     showToast('Error al guardar: ' + e.message, 'err');
   }
@@ -840,7 +842,9 @@ window.deleteProveedor = async () => {
   try {
     await deleteDoc(doc(db, 'proveedores', currentDoc._id));
     showToast('Proveedor eliminado', 'ok');
+    prvCacheClear(); // invalidar caché
     closePanel();
+    loadProveedores(true); // recargar desde Firebase
   } catch(e) {
     showToast('Error al eliminar', 'err');
   }
@@ -877,13 +881,36 @@ onAuthStateChanged(auth, (user) => {
   loadProveedores();
 });
 
-// ── Cargar proveedores en tiempo real
-function loadProveedores() {
+// ── CACHÉ localStorage proveedores ───────────────────────────────────────────
+const PRV_CACHE_KEY = "meres_proveedores_lista";
+const PRV_CACHE_TTL = 4 * 60 * 60 * 1000; // 4 horas
+
+function prvCacheSet(data){ try { localStorage.setItem(PRV_CACHE_KEY, JSON.stringify({ts:Date.now(),data})); } catch(e){} }
+function prvCacheGet(){ try { const r=localStorage.getItem(PRV_CACHE_KEY); if(!r) return null; const o=JSON.parse(r); if(Date.now()-o.ts>PRV_CACHE_TTL){localStorage.removeItem(PRV_CACHE_KEY);return null;} return o.data; } catch(e){return null;} }
+function prvCacheClear(){ localStorage.removeItem(PRV_CACHE_KEY); }
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Cargar proveedores con caché
+function loadProveedores(forzar=false) {
   loading(true);
-  onSnapshot(collection(db, 'proveedores'), (snap) => {
+  if(!forzar){
+    const cached = prvCacheGet();
+    if(cached){
+      allProveedores = cached;
+      populateFamiliaFilter();
+      renderTable();
+      loading(false);
+      return;
+    }
+  }
+  getDocs(collection(db, 'proveedores')).then(snap => {
     allProveedores = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+    prvCacheSet(allProveedores);
     populateFamiliaFilter();
     renderTable();
+    loading(false);
+  }).catch(e => {
+    console.error("Error cargando proveedores:", e);
     loading(false);
   });
 }
