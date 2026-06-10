@@ -709,7 +709,7 @@ tr:last-child td{border-bottom:none}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, getDocs, onSnapshot, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, getDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -764,7 +764,7 @@ let lines = [];
 let lineCounter = 0;
 let editingId = null;
 let visCurrentData = {};
-let unsubPresupuestos = null;
+let unsubPresupuestos = null; // mantenido por compatibilidad
 let currentStatsTab = "presup";
 
 function today() { return new Date().toISOString().split("T")[0]; }
@@ -1517,6 +1517,7 @@ async function savePresupuesto() {
   try {
     showToast("Guardando...");
     await setDoc(doc(db, "presupuestos", data.id), data);
+    _presCache = null; // invalidar caché para ver el nuevo presupuesto
     showToast("Presupuesto guardado - N " + data.num);
     clearForm();
   } catch(e) { showToast("Error: " + e.message); }
@@ -1601,14 +1602,7 @@ async function deletePresupuesto(pid) {
 
 async function cargarYMostrarLista() {
   document.getElementById("lista-content").innerHTML = "<div class='spinner'>Cargando presupuestos...</div>";
-  try {
-    // Always load fresh from Firebase
-    const sn = await getDocs(collection(db, "presupuestos"));
-    presupuestos = [];
-    sn.forEach(d => presupuestos.push(d.data()));
-  } catch(e) {
-    console.log("Error cargando presupuestos:", e);
-  }
+  await cargarPresupuestos();
   renderLista();
 }
 
@@ -3485,7 +3479,26 @@ async function cargarPanelFichajes() {
 // ===== VENDEDORES =====
 let vendedoresData = [];
 
-// ── CACHÉ localStorage MENU ───────────────────────────────────────────────────
+// ── PRESUPUESTOS CON CACHÉ ────────────────────────────────────────────────────
+const PRES_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+var _presCache = null;
+var _presCacheTs = 0;
+
+async function cargarPresupuestos(forzar=false){
+  const ahora = Date.now();
+  if(!forzar && _presCache && (ahora - _presCacheTs) < PRES_CACHE_TTL){
+    presupuestos = _presCache;
+    return;
+  }
+  try {
+    const sn = await getDocs(collection(db,"presupuestos"));
+    presupuestos = [];
+    sn.forEach(d => presupuestos.push(d.data()));
+    _presCache = presupuestos;
+    _presCacheTs = Date.now();
+  } catch(e){ console.log("Error cargando presupuestos:", e); }
+}
+// ─────────────────────────────────────────────────────────────────────────────
 const MENU_CACHE_TTL_VEND = 24 * 60 * 60 * 1000; // 24h para vendedores
 function menuCacheSet(key, data){ try { localStorage.setItem(key, JSON.stringify({ts:Date.now(), data})); } catch(e){} }
 function menuCacheGet(key, ttl){
@@ -5408,14 +5421,10 @@ function initApp() {
     return;
   }
   window._appInitialized = true;
-  if (unsubPresupuestos) unsubPresupuestos();
-  unsubPresupuestos = onSnapshot(collection(db,"presupuestos"), sn=>{
-    presupuestos=[]; sn.forEach(d=>presupuestos.push(d.data()));
-    const activeTab = document.querySelector(".tab.active");
-    if(activeTab&&activeTab.id==="tab-btn-lista") renderLista();
-  }, err => {
-    console.log("onSnapshot error:", err);
-  });
+
+  // Cargar presupuestos con caché 5 minutos — evita onSnapshot continuo
+  await cargarPresupuestos();
+
   document.getElementById("btn-addline").addEventListener("click", addLine);
   document.getElementById("btn-save").addEventListener("click", savePresupuesto);
   document.getElementById("btn-print").addEventListener("click", ()=>{ const data=getFormData(); if(!data.cliente.nombre){showToast("Introduce el nombre del cliente");return;} generatePrint(data); });
