@@ -4488,14 +4488,37 @@ function generarInformeIncidencia(inc) {
 // ===== REPARTOS =====
 let REPARTIDORES_FIJOS = ["ALEX","ANTONIO_CONFO","CLEO","DARWIN","EDISON","JAVIER MIKAMA","JA_CUBANO","ROBERTO","X-CHUS"];
 
+var _repartosCache = null;
+var _repartosCacheTs = 0;
+const REPARTOS_TTL = 5 * 60 * 1000; // 5 minutos
+
 async function initRepartos() {
   const cont = document.getElementById("repartos-content");
   if(!cont) return;
+
+  // Usar caché si tiene menos de 5 minutos
+  if(_repartosCache && (Date.now()-_repartosCacheTs) < REPARTOS_TTL){
+    renderRepartos(_repartosCache, cont);
+    return;
+  }
+
   cont.innerHTML = "<div class='spinner'>Cargando repartos...</div>";
   try {
-    const sn = await getDocs(collection(db, "repartos"));
+    // Solo repartos de los últimos 30 días — no leer todo el histórico
+    const hoy = new Date();
+    const hace30 = new Date(hoy);
+    hace30.setDate(hoy.getDate() - 30);
+    const pad = n => String(n).padStart(2,"0");
+    const fechaMin = hace30.getFullYear()+"-"+pad(hace30.getMonth()+1)+"-"+pad(hace30.getDate());
+
+    const sn = await getDocs(query(
+      collection(db, "repartos"),
+      where("fecha_entrega",">=",fechaMin)
+    ));
     const repartos = [];
     sn.forEach(d => repartos.push(d.data()));
+    _repartosCache = repartos;
+    _repartosCacheTs = Date.now();
     renderRepartos(repartos, cont);
   } catch(e) {
     cont.innerHTML = "<div class='card'><p class='empty'>Error: " + e.message + "</p></div>";
@@ -4721,6 +4744,7 @@ function renderListaRepartos(lista, listaDiv, allRepartos, cont) {
       btnEnt.textContent = r.entregado ? "↩" : "✓";
       btnEnt.addEventListener("click", async () => {
         await setDoc(doc(db,"repartos",r.id), {...r, entregado:!r.entregado}, {merge:true});
+        _repartosCache = null; // invalidar caché
         showToast(r.entregado ? "Pendiente" : "Entregado ✓");
         initRepartos();
       });
@@ -4895,6 +4919,7 @@ function mostrarFormReparto(reparto, allRepartos, cont) {
 
     try {
       await setDoc(doc(db, "repartos", data.id), data);
+      _repartosCache = null; // invalidar caché
       showToast("Reparto guardado");
       overlay.remove();
       initRepartos();
