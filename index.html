@@ -186,26 +186,23 @@ function esFueraDeZona(direccion){
 async function alertarFueraDeZona(empleado, turno, hora, direccion, geo){
   var labels = {ini_m:"Entrada Mañana",fin_m:"Salida Mañana",ini_t:"Entrada Tarde",fin_t:"Salida Tarde"};
   var {fecha} = nowMadridFull();
-  var nombreCompleto = ((empleado.nombre||"")+" "+(empleado.apellidos||"")).trim() || empleado.alias;
-  var dni = empleado.DNI || empleado.dni || "—";
-  var mensaje = "⚠️ FICHAJE REALIZADO FUERA DE LA EMPRESA Y FUERA DEL CONCEJO ⚠️\n\n"
+  var mensaje = "⚠️ FICHAJE FUERA DE ZONA\n"
     + "Empleado: "+empleado.alias+"\n"
-    + "Nombre: "+nombreCompleto+"\n"
-    + "DNI: "+dni+"\n"
     + "Turno: "+(labels[turno]||turno)+"\n"
     + "Hora: "+hora+"\n"
     + "Fecha: "+fecha+"\n"
     + "Dirección: "+direccion+"\n"
-    + "Coordenadas: "+geo.lat+", "+geo.lon+" (precisión: "+geo.acc+")\n"
-    + "Ver en mapa: https://maps.google.com/?q="+geo.lat+","+geo.lon;
+    + "Coordenadas: "+geo.lat+", "+geo.lon+" (precisión: "+geo.acc+")";
 
   // 1. Email PRIMERO — funciona aunque Firebase falle
   try {
     if(typeof emailjs !== "undefined"){
       await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
-        to_name: "Jose Angel",
+        to_email: "factoria.jose@gmail.com",
+        subject:  "⚠️ Fichaje fuera de zona: "+empleado.alias,
         message:  mensaje,
-        from_name: "Meres Fichaje"
+        from_name: "Meres Fichaje",
+        reply_to: "factoria.jose@gmail.com"
       });
       console.log("Email alerta enviado OK");
     }
@@ -242,6 +239,18 @@ var _firmaLastX = 0, _firmaLastY = 0;
 window.addEventListener("load", function(){
   document.getElementById("vendorGrid").innerHTML = "<p style='color:#888;font-size:12px;text-align:center'>Iniciando...</p>";
   if(typeof emailjs !== "undefined") emailjs.init(EMAILJS_KEY);
+
+  // ── CONTROL DE HORARIO ────────────────────────────────────────────────────
+  var ahora = new Date(new Date().toLocaleString("en-US",{timeZone:"Europe/Madrid"}));
+  var diaSemana = ahora.getDay();
+  var totalMins = ahora.getHours()*60 + ahora.getMinutes();
+  var fueraHorario = diaSemana===0 || totalMins < 510 || totalMins > 1290;
+  if(fueraHorario){
+    document.getElementById("selectScreen").style.display="flex";
+    document.getElementById("vendorGrid").innerHTML="<div style='grid-column:1/-1;text-align:center;padding:1.5rem'><div style='font-size:48px;margin-bottom:12px'>🔒</div><div style='font-size:16px;font-weight:700;margin-bottom:8px'>Fuera de horario</div><div style='font-size:13px;color:#666;line-height:1.7'>Sistema disponible<br><strong>Lunes a Sábado · 8:30 a 21:30</strong><br><br><span style='font-size:11px;color:#aaa'>Contacta con tu responsable si necesitas fichar.</span></div></div>";
+    return;
+  }
+  // ─────────────────────────────────────────────────────────────────────────
   if(typeof firebase === "undefined"){
     document.getElementById("vendorGrid").innerHTML = "<p style='color:#c0392b;font-size:12px;text-align:center'>Error: Firebase no cargó</p>";
     return;
@@ -313,23 +322,8 @@ function pedirGeoYContinuar(){
 }
 
 // ── CARGAR EMPLEADOS ──────────────────────────────────────────────────────────
-// ── CACHÉ localStorage index ──────────────────────────────────────────────────
-var IDX_CACHE_TTL = 8 * 60 * 60 * 1000; // 8 horas
-function idxCacheSet(key,data){ try{ localStorage.setItem(key,JSON.stringify({ts:Date.now(),data})); }catch(e){} }
-function idxCacheGet(key){ try{ var r=localStorage.getItem(key); if(!r) return null; var o=JSON.parse(r); if(Date.now()-o.ts>IDX_CACHE_TTL){localStorage.removeItem(key);return null;} return o.data; }catch(e){return null;} }
-// ─────────────────────────────────────────────────────────────────────────────
-
 function cargarEmpleados(){
   console.log("Cargando empleados... db=", !!db);
-  // Intentar desde caché primero
-  var cached = idxCacheGet("idx_vendedores");
-  if(cached){
-    console.log("Empleados desde caché:", cached.length);
-    vendedoresData = cached;
-    renderGrid();
-    return;
-  }
-  // Leer desde Firebase
   db.collection("vendedores").get().then(function(sn){
     console.log("Empleados cargados:", sn.size);
     vendedoresData = [];
@@ -338,7 +332,6 @@ function cargarEmpleados(){
       if(v.activo !== false) vendedoresData.push(v);
     });
     vendedoresData.sort(function(a,b){ return (a.alias||"").localeCompare(b.alias||"","es"); });
-    idxCacheSet("idx_vendedores", vendedoresData);
     renderGrid();
   }).catch(function(e){
     console.error("Error cargando empleados:", e.code, e.message);
@@ -500,8 +493,8 @@ function renderTurnos(){
     html += "<div class='turno-card'>"
       +"<div class='turno-title'>☀️ Turno Mañana"+(ini_m?" · "+ini_m+(fin_m?" – "+fin_m:""):"")+"</div>"
       +"<div class='turno-row'>"
-      +btnFichar("ini_m","Entrada mañana",f.ini_m,f.firma_ini_m,true,ini_m)
-      +btnFichar("fin_m","Salida mañana",f.fin_m,f.firma_fin_m,false,fin_m)
+      +btnFichar("ini_m","Entrada mañana",f.ini_m,f.firma_ini_m,true)
+      +btnFichar("fin_m","Salida mañana",f.fin_m,f.firma_fin_m,false)
       +"</div></div>";
   }
 
@@ -509,8 +502,8 @@ function renderTurnos(){
     html += "<div class='turno-card'>"
       +"<div class='turno-title'>🌆 Turno Tarde"+(ini_t?" · "+ini_t+(fin_t?" – "+fin_t:""):"")+"</div>"
       +"<div class='turno-row'>"
-      +btnFichar("ini_t","Entrada tarde",f.ini_t,f.firma_ini_t,true,ini_t)
-      +btnFichar("fin_t","Salida tarde",f.fin_t,f.firma_fin_t,false,fin_t)
+      +btnFichar("ini_t","Entrada tarde",f.ini_t,f.firma_ini_t,true)
+      +btnFichar("fin_t","Salida tarde",f.fin_t,f.firma_fin_t,false)
       +"</div></div>";
   }
 
@@ -518,8 +511,8 @@ function renderTurnos(){
     html = "<div class='turno-card'>"
       +"<div class='turno-title'>📋 Sin horario asignado</div>"
       +"<div class='turno-row'>"
-      +btnFichar("ini_m","Entrada",f.ini_m,f.firma_ini_m,true,null)
-      +btnFichar("fin_m","Salida",f.fin_m,f.firma_fin_m,false,null)
+      +btnFichar("ini_m","Entrada",f.ini_m,f.firma_ini_m,true)
+      +btnFichar("fin_m","Salida",f.fin_m,f.firma_fin_m,false)
       +"</div></div>";
   }
 
@@ -534,28 +527,12 @@ function renderTurnos(){
   });
 }
 
-function btnFichar(turno, label, hora, firma, esEntrada, horaContrato){
+function btnFichar(turno, label, hora, firma, esEntrada){
   if(hora || firma){
     return "<button class='btn-fichar btn-firmado'>"
-      +label+"<span class='hora-txt'>✅ "+(hora||"firmado")+"</span></button>";
-  }
-  // Comprobar si está en horario permitido
-  var {horaCorta} = nowMadridFull();
-  function toMins(t){ if(!t) return null; var p=t.split(":"); return parseInt(p[0])*60+parseInt(p[1]); }
-  var minActual   = toMins(horaCorta);
-  var minContrato = toMins(horaContrato);
-  var bloqueado = false;
-  var motivo = "";
-  if(esEntrada && minContrato !== null && minActual < minContrato - 30){
-    // Bloquear entrada si falta más de 30 minutos para empezar
-    bloqueado = true;
-    motivo = "Disponible a las "+horaContrato;
+      +label+"<span class='hora-txt'>✅ "+( hora||"firmado")+"</span></button>";
   }
   var cls = esEntrada ? "btn-entrada" : "btn-salida";
-  if(bloqueado){
-    return "<button class='btn-fichar btn-firmado' disabled style='opacity:.5;cursor:not-allowed'>"
-      +label+"<span class='hora-txt'>⏳ "+motivo+"</span></button>";
-  }
   return "<button class='btn-fichar "+cls+"' data-turno='"+turno+"'>"
     +label+"<span class='hora-txt'>Pulsa para fichar</span></button>";
 }
@@ -599,21 +576,15 @@ function calcularHoraFichaje(turno){
   var horaContrato = mapaHor[turno];
 
   function toMins(t){ if(!t) return null; var p=t.split(":"); return parseInt(p[0])*60+parseInt(p[1]); }
-  var minActual   = toMins(horaCorta);
+  var minActual = toMins(horaCorta);
   var minContrato = toMins(horaContrato);
 
   if(isEntrada){
-    // Nunca antes de la hora de inicio contractual
-    if(minContrato !== null && minActual < minContrato){
-      return horaContrato; // demasiado pronto — poner hora contractual
-    }
-    return horaCorta; // tarde o puntual — hora real
+    if(ENTRADA_FIJA.includes(empleadoActual.alias)) return horaContrato||horaCorta;
+    if(minContrato!==null && minActual<minContrato) return horaContrato;
+    return horaCorta;
   } else {
-    // Nunca después de la hora de fin contractual
-    if(minContrato !== null && minActual > minContrato){
-      return horaContrato; // demasiado tarde — poner hora contractual
-    }
-    return horaCorta; // antes o puntual — hora real
+    return horaCorta;
   }
 }
 
@@ -674,13 +645,8 @@ async function confirmarFirma(){
   }
 
   // Comprobar si está fuera de zona
-  console.log("GEO CHECK — direccionActual:", direccionActual, "geoActual:", geoActual);
-  console.log("esFueraDeZona:", esFueraDeZona(direccionActual));
   if(geoActual && esFueraDeZona(direccionActual)){
-    console.log("FUERA DE ZONA — lanzando alerta");
     alertarFueraDeZona(empleadoActual, turno, horaFichaje, direccionActual, geoActual);
-  } else {
-    console.log("Zona OK o sin geo");
   }
 
   try {
