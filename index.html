@@ -493,8 +493,8 @@ function renderTurnos(){
     html += "<div class='turno-card'>"
       +"<div class='turno-title'>☀️ Turno Mañana"+(ini_m?" · "+ini_m+(fin_m?" – "+fin_m:""):"")+"</div>"
       +"<div class='turno-row'>"
-      +btnFichar("ini_m","Entrada mañana",f.ini_m,f.firma_ini_m,true)
-      +btnFichar("fin_m","Salida mañana",f.fin_m,f.firma_fin_m,false)
+      +btnFichar("ini_m","Entrada mañana",f.ini_m,f.firma_ini_m,true,ini_m)
+      +btnFichar("fin_m","Salida mañana",f.fin_m,f.firma_fin_m,false,fin_m)
       +"</div></div>";
   }
 
@@ -502,8 +502,8 @@ function renderTurnos(){
     html += "<div class='turno-card'>"
       +"<div class='turno-title'>🌆 Turno Tarde"+(ini_t?" · "+ini_t+(fin_t?" – "+fin_t:""):"")+"</div>"
       +"<div class='turno-row'>"
-      +btnFichar("ini_t","Entrada tarde",f.ini_t,f.firma_ini_t,true)
-      +btnFichar("fin_t","Salida tarde",f.fin_t,f.firma_fin_t,false)
+      +btnFichar("ini_t","Entrada tarde",f.ini_t,f.firma_ini_t,true,ini_t)
+      +btnFichar("fin_t","Salida tarde",f.fin_t,f.firma_fin_t,false,fin_t)
       +"</div></div>";
   }
 
@@ -511,15 +511,15 @@ function renderTurnos(){
     html = "<div class='turno-card'>"
       +"<div class='turno-title'>📋 Sin horario asignado</div>"
       +"<div class='turno-row'>"
-      +btnFichar("ini_m","Entrada",f.ini_m,f.firma_ini_m,true)
-      +btnFichar("fin_m","Salida",f.fin_m,f.firma_fin_m,false)
+      +btnFichar("ini_m","Entrada",f.ini_m,f.firma_ini_m,true,null)
+      +btnFichar("fin_m","Salida",f.fin_m,f.firma_fin_m,false,null)
       +"</div></div>";
   }
 
   cont.innerHTML = html;
 
   // Eventos
-  cont.querySelectorAll(".btn-fichar:not(.btn-firmado)").forEach(function(btn){
+  cont.querySelectorAll(".btn-fichar:not(.btn-firmado):not([disabled])").forEach(function(btn){
     btn.addEventListener("click", function(){
       var turno = btn.getAttribute("data-turno");
       abrirFirma(turno);
@@ -527,11 +527,24 @@ function renderTurnos(){
   });
 }
 
-function btnFichar(turno, label, hora, firma, esEntrada){
+function btnFichar(turno, label, hora, firma, esEntrada, horaContrato){
   if(hora || firma){
     return "<button class='btn-fichar btn-firmado'>"
-      +label+"<span class='hora-txt'>✅ "+( hora||"firmado")+"</span></button>";
+      +label+"<span class='hora-txt'>✅ "+(hora||"firmado")+"</span></button>";
   }
+  // Comprobar si está en horario permitido
+  var {horaCorta} = nowMadridFull();
+  function toMins(t){ if(!t) return null; var p=t.split(":"); return parseInt(p[0])*60+parseInt(p[1]); }
+  var minActual   = toMins(horaCorta);
+  var minContrato = toMins(horaContrato);
+
+  // Bloquear ENTRADA si faltan más de 30 min para empezar
+  if(esEntrada && minContrato !== null && minActual < minContrato - 30){
+    return "<button class='btn-fichar btn-firmado' disabled style='opacity:.5;cursor:not-allowed'>"
+      +label+"<span class='hora-txt'>⏳ Disponible a las "+horaContrato+"</span></button>";
+  }
+
+  // La salida SIEMPRE se puede pulsar — la hora registrada se limita en calcularHoraFichaje
   var cls = esEntrada ? "btn-entrada" : "btn-salida";
   return "<button class='btn-fichar "+cls+"' data-turno='"+turno+"'>"
     +label+"<span class='hora-txt'>Pulsa para fichar</span></button>";
@@ -564,7 +577,6 @@ function calcularHoraFichaje(turno){
   var hor = empleadoActual.horario||{};
   var {fecha, horaCorta} = nowMadridFull();
   var esSab = new Date(fecha+"T12:00:00").getDay()===6;
-  var ENTRADA_FIJA = ["Angel","Javi"];
   var isEntrada = turno.startsWith("ini");
 
   var mapaHor = {
@@ -576,14 +588,20 @@ function calcularHoraFichaje(turno){
   var horaContrato = mapaHor[turno];
 
   function toMins(t){ if(!t) return null; var p=t.split(":"); return parseInt(p[0])*60+parseInt(p[1]); }
-  var minActual = toMins(horaCorta);
+  var minActual   = toMins(horaCorta);
   var minContrato = toMins(horaContrato);
 
   if(isEntrada){
-    if(ENTRADA_FIJA.includes(empleadoActual.alias)) return horaContrato||horaCorta;
-    if(minContrato!==null && minActual<minContrato) return horaContrato;
+    // Nunca antes de la hora de inicio contractual — pueden llegar tarde
+    if(minContrato !== null && minActual < minContrato){
+      return horaContrato;
+    }
     return horaCorta;
   } else {
+    // Nunca después de la hora de fin contractual — salida exacta obligatoria
+    if(minContrato !== null && minActual > minContrato){
+      return horaContrato;
+    }
     return horaCorta;
   }
 }
