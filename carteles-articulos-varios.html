@@ -158,9 +158,9 @@ const COLORES = {
 
 const LOGOS = {
   negro: '',
-  verde: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 30"><text x="5" y="20" font-size="16" fill="%231a6b2a" font-family="Arial" font-weight="bold">La Factoría</text></svg>',
-  azul: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 30"><text x="5" y="20" font-size="16" fill="%23003580" font-family="Arial" font-weight="bold">Merkamueble</text></svg>',
-  naranja: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 30"><text x="5" y="20" font-size="16" fill="%23E8470A" font-family="Arial" font-weight="bold">ExpoSofá</text></svg>'
+  verde: 'La Factoría',
+  azul: 'Merkamueble',
+  naranja: 'ExpoSofá'
 };
 
 let colorActual = 'negro';
@@ -304,7 +304,7 @@ function generarCartelHTML(tipo) {
     <!-- PIE -->
     <div style="border-top:2px solid ${col.bg};padding:${footPad};display:flex;justify-content:space-between;align-items:center">
       <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:${footerFS}px;color:#444">${d.textoInf}</div>
-      ${logoUrl ? `<img src="${logoUrl}" style="height:${logoH};max-width:${esA4?'80px':'50px'};object-fit:contain;opacity:.9" onerror="this.style.display='none'">` : ''}
+      ${logoUrl ? `<div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:${esA4?'12px':'9px'};color:${col.bg};opacity:.8">${logoUrl}</div>` : ''}
     </div>
   </div>`;
 }
@@ -393,7 +393,7 @@ body{width:100vw;height:100vh;overflow:hidden;}
   ${d.extra?`<div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:${footerFS};color:${col.bg};padding:${esA4?'1.5mm 7mm':'1mm 5mm'};border-top:.3mm solid ${col.bg}44">${d.extra}</div>`:''}
   <div style="border-top:.5mm solid ${col.bg};padding:${esA4?'2mm 7mm 3mm':'1.5mm 5mm 2mm'};display:flex;justify-content:space-between;align-items:center">
     <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:${footerFS};color:#444">${d.textoInf}</div>
-    ${logoUrl?`<img src="${logoUrl}" style="height:${logoH};max-width:${esA4?'40mm':'25mm'};object-fit:contain;opacity:.9" onerror="this.style.display='none'">`:''}
+    ${logoUrl?`<div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:${footerFS};color:${col.bg};opacity:.8">${logoUrl}</div>`:''}
   </div>
 </div>
 <script>window.onload=function(){window.print();};<\/script>
