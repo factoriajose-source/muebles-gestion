@@ -5946,5 +5946,23 @@ window._abrirFichajeRapido = function() {
   setTimeout(() => dniInput.focus(), 100);
 };
 </script>
+
+<!-- LIMPIAR RECURSOS AL ABANDONAR LA PÁGINA -->
+<script>
+window.addEventListener('visibilitychange', function() {
+  if (document.hidden) {
+    // La pestaña perdió el foco — pausar intervals
+    if (window._relojInterval) {
+      clearInterval(window._relojInterval);
+      window._relojInterval = null;
+    }
+  }
+});
+
+window.addEventListener('beforeunload', function() {
+  // Se cierra/abandona la página — limpiar todo
+  if (window._relojInterval) clearInterval(window._relojInterval);
+});
+</script>
 </body>
 </html>

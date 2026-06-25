@@ -207,7 +207,7 @@ function getArticulos() {
 function actualizarTotal() {
   const filas = getArticulos();
   const total = filas.reduce((sum, f) => sum + f.ahora, 0);
-  document.getElementById('inp-total').value = total.toFixed(2);
+  document.getElementById('inp-total').value = Math.round(total);
 }
 
 function getDatos() {
@@ -220,7 +220,7 @@ function getDatos() {
 }
 
 function fmtP(n) {
-  return (n || 0).toFixed(2) + '€';
+  return Math.round(n || 0) + '€';
 }
 
 // ===== VISTA PREVIA =====
@@ -272,11 +272,11 @@ function generarCartelHTML(tipo) {
   const sumHtml = total > 0 ? `
     <div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;
                 padding:${esA4?'12px 0 0':'8px 0 0'};border-top:2px solid ${col.bg};margin-top:${esA4?'8px':'4px'};">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:${esA4?'7mm':'4.5mm'};color:#1a1a18">TOTAL</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:${esA4?'6mm':'3.5mm'};color:#1a1a18">TOTAL</div>
       <div style="padding-right:${esA4?'20px':'12px'}"></div>
       <div style="text-align:right;background:${col.bg};color:${col.text};
                   padding:${esA4?'8px 14px':'4px 8px'};border-radius:6px;min-width:${esA4?'140px':'88px'}">
-        <div style="font-family:'Anton',sans-serif;font-size:${ahoraFS}px;line-height:1">${fmtP(total)}</div>
+        <div style="font-family:'Anton',sans-serif;font-size:${esA4?'11mm':'7mm'};line-height:1">${fmtP(total)}</div>
       </div>
     </div>` : '';
 
@@ -363,10 +363,10 @@ function imprimir(tipo) {
   const sumHtmlPrint = total > 0 ? `
     <div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;
                 padding:${esA4?'3mm 0 0':'2mm 0 0'};border-top:0.5mm solid ${col.bg};margin-top:${esA4?'2mm':'1.2mm'}">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:${esA4?'8.5mm':'5.5mm'};color:#1a1a18">TOTAL</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:${esA4?'7mm':'4.5mm'};color:#1a1a18">TOTAL</div>
       <div style="padding-right:${esA4?'5mm':'3mm'}"></div>
       <div style="text-align:right;background:${col.bg};color:${col.text};padding:${esA4?'2mm 4mm':'1.2mm 2.5mm'};border-radius:1.5mm;min-width:${esA4?'38mm':'24mm'}">
-        <div style="font-family:'Anton',sans-serif;font-size:${ahoraFS};line-height:1">${fmtP(total)}</div>
+        <div style="font-family:'Anton',sans-serif;font-size:${esA4?'11mm':'7mm'};line-height:1">${fmtP(total)}</div>
       </div>
     </div>` : '';
 
