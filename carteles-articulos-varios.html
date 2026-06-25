@@ -235,7 +235,7 @@ function generarCartelHTML(tipo) {
   const antesFS = esA4 ? '6.5mm' : '4mm';
   const ahoraFS = esA4 ? '13mm' : '8mm';
   const footerFS = esA4 ? '5mm' : '3.5mm';
-  const logoH = esA4 ? '20mm' : '13mm';
+  const logoH = esA4 ? '24px' : '16px';
   const hdrPad = esA4 ? '12px 28px' : '8px 18px';
   const bodyPad = esA4 ? '20px 28px' : '12px 18px';
   const footPad = esA4 ? '12px 28px 16px' : '8px 18px 10px';
@@ -304,7 +304,7 @@ function generarCartelHTML(tipo) {
     <!-- PIE -->
     <div style="border-top:2px solid ${col.bg};padding:${footPad};display:flex;justify-content:space-between;align-items:center">
       <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:${footerFS}px;color:#444">${d.textoInf}</div>
-      ${logoUrl ? `<img src="${logoUrl}" style="height:${logoH}px;max-width:${logoH*2}px;object-fit:contain;opacity:.9" onerror="this.style.display='none'">` : ''}
+      ${logoUrl ? `<img src="${logoUrl}" style="height:${logoH};max-width:${esA4?'80px':'50px'};object-fit:contain;opacity:.9" onerror="this.style.display='none'">` : ''}
     </div>
   </div>`;
 }
