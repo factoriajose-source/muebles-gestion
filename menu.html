@@ -288,18 +288,18 @@ tr:last-child td{border-bottom:none}
                 cursor:pointer;transition:background .2s;touch-action:manipulation;margin-bottom:8px">
         🛏️ Carteles Colchones y Canapés
       </a>
-      <a href="carteles-articulos-varios.html" target="_blank"
+      <a href="carteles-colchones-bd.html" target="_blank"
          style="display:flex;align-items:center;justify-content:center;gap:10px;
                 width:100%;padding:14px 20px;background:#fff;color:#1a1a18;
                 border:2px solid #e0dfd8;border-radius:10px;font-size:15px;
                 font-weight:600;text-decoration:none;font-family:inherit;
                 cursor:pointer;transition:background .2s;touch-action:manipulation">
-        📰 Carteles Artículos Varios
+        🛏️ Carteles desde Tarifas+Packs
       </a>
     </div>
 
   </div>
-  <div style="position:fixed;bottom:10px;left:12px;font-size:11px;color:#888;font-family:monospace;pointer-events:none;font-weight:700">v3.1 — 13/06/2026</div>
+  <div style="position:fixed;bottom:10px;left:12px;font-size:11px;color:#888;font-family:monospace;pointer-events:none;font-weight:700">v3.2 — 14/06/2026</div>
   <!-- BOTÓN FLOTANTE FICHAJE en pantalla de selección -->
   <button onclick="window._abrirFichajeRapido&&window._abrirFichajeRapido()" style="position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:#1a6b2a;color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(26,107,42,.4);z-index:500;display:flex;align-items:center;justify-content:center;touch-action:manipulation" title="Fichar">⏱️</button>
 </div>
@@ -344,7 +344,6 @@ tr:last-child td{border-bottom:none}
     <div class="sb-item" id="mn-editor" style="display:none" onclick="abrirEditor()"><span class="ico">✏️</span> Editor Fichajes</div>
     <div class="sb-item" id="mn-auditoria" style="display:none" onclick="abrirAuditoria()"><span class="ico">🔍</span> Auditoría Fichajes</div>
     <div class="sb-item" id="mn-vendedores" style="display:none" onclick="abrirVendedores()"><span class="ico">👤</span> Vendedores</div>
-    <div class="sb-item" id="mn-backup" style="display:none" onclick="ejecutarBackup()"><span class="ico">💾</span> Backup Firebase</div>
 
     <div class="sb-logout"><button onclick="logout()">Cerrar sesión</button></div>
   </nav>
@@ -717,7 +716,7 @@ tr:last-child td{border-bottom:none}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, getDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, getDocs, onSnapshot, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -772,7 +771,7 @@ let lines = [];
 let lineCounter = 0;
 let editingId = null;
 let visCurrentData = {};
-let unsubPresupuestos = null; // mantenido por compatibilidad
+let unsubPresupuestos = null;
 let currentStatsTab = "presup";
 
 function today() { return new Date().toISOString().split("T")[0]; }
@@ -930,8 +929,6 @@ function actualizarSidebar(name){
   // Vendedores SOLO Jose Angel
   var mnVend = document.getElementById("mn-vendedores");
   if(mnVend) mnVend.style.display = (name==="Jose Angel") ? "" : "none";
-  var mnBackup = document.getElementById("mn-backup");
-  if(mnBackup) mnBackup.style.display = (name==="Jose Angel") ? "" : "none";
 }
 
 function abrirFallos(){
@@ -1178,8 +1175,8 @@ window.cargarFirmaAnterior = async function() {
   _firmaGuardada = {};
 
   try {
-    // Buscar fichajes del trabajador — filtrar por alias directamente
-    const sn = await getDocs(query(collection(db, "fichajes"), where("alias","==",alias)));
+    // Buscar todos los fichajes de este trabajador y coger el más reciente
+    const sn = await getDocs(collection(db, "fichajes"));
     let mejorFecha = "";
     let mejorDoc   = null;
     sn.forEach(d => {
@@ -1525,7 +1522,6 @@ async function savePresupuesto() {
   try {
     showToast("Guardando...");
     await setDoc(doc(db, "presupuestos", data.id), data);
-    _presCache = null; // invalidar caché para ver el nuevo presupuesto
     showToast("Presupuesto guardado - N " + data.num);
     clearForm();
   } catch(e) { showToast("Error: " + e.message); }
@@ -1610,7 +1606,14 @@ async function deletePresupuesto(pid) {
 
 async function cargarYMostrarLista() {
   document.getElementById("lista-content").innerHTML = "<div class='spinner'>Cargando presupuestos...</div>";
-  await cargarPresupuestos();
+  try {
+    // Always load fresh from Firebase
+    const sn = await getDocs(collection(db, "presupuestos"));
+    presupuestos = [];
+    sn.forEach(d => presupuestos.push(d.data()));
+  } catch(e) {
+    console.log("Error cargando presupuestos:", e);
+  }
   renderLista();
 }
 
@@ -1626,7 +1629,7 @@ function renderLista() {
     if (ft !== "all" && p.tienda !== ft) return false;
     if (fv !== "all" && p.vendedor !== fv) return false;
     return true;
-  }).sort((a,b) => (b.fecha||"").localeCompare(a.fecha||""));
+  }).sort((a,b) => b.fecha.localeCompare(a.fecha));
   if (!list.length && !presupuestos.length) {
     document.getElementById("lista-content").innerHTML = "<div class='spinner'>Cargando presupuestos...</div>";
     return;
@@ -1642,14 +1645,13 @@ function renderLista() {
   const tbody = document.createElement("tbody");
   list.forEach(p => {
     const tr = document.createElement("tr");
-    const cliente = p.cliente || {};
-    tr.innerHTML = "<td style='font-weight:500'>#" + (p.num||"?") + "</td>"
-      + "<td style='color:#888'>" + fmtDate(p.fecha||"") + "</td>"
-      + "<td><div style='font-weight:500'>" + (cliente.nombre||"-") + "</div><div style='font-size:11px;color:#888'>" + (cliente.tel||"") + "</div></td>"
-      + "<td style='font-size:12px'>" + (p.tienda||"-") + "</td>"
-      + "<td style='font-size:12px'>" + (p.vendedor||"-") + "</td>"
+    tr.innerHTML = "<td style='font-weight:500'>#" + p.num + "</td>"
+      + "<td style='color:#888'>" + fmtDate(p.fecha) + "</td>"
+      + "<td><div style='font-weight:500'>" + (p.cliente.nombre||"-") + "</div><div style='font-size:11px;color:#888'>" + (p.cliente.tel||"") + "</div></td>"
+      + "<td style='font-size:12px'>" + p.tienda + "</td>"
+      + "<td style='font-size:12px'>" + p.vendedor + "</td>"
       + "<td style='font-weight:500'>" + fmt(calcTotal(p)) + "</td>"
-      + "<td><span class='badge " + (badges[p.estado]||"badge-pendiente") + "'>" + (labels[p.estado]||p.estado||"-") + "</span></td>"
+      + "<td><span class='badge " + (badges[p.estado]||"badge-pendiente") + "'>" + (labels[p.estado]||p.estado) + "</span></td>"
       + "<td></td>";
     const actTd = tr.querySelector("td:last-child");
     const actDiv = document.createElement("div"); actDiv.style.cssText = "display:flex;gap:4px;flex-wrap:wrap";
@@ -3032,18 +3034,14 @@ async function imprimirFichaRango(alias, anio, mes, tipo, fechaRef) {
   const v = vendedoresData.find(x => x.alias === alias);
   showToast("Generando ficha...");
   try {
-    // Filtrar por mes y alias directamente en Firebase — mucho menos lecturas
-    const prefijo = anio + "-" + mes;
     const [snF, vacDocs] = await Promise.all([
-      alias === "all"
-        ? getDocs(query(collection(db,"fichajes"), where("fecha",">=",prefijo+"-01"), where("fecha","<=",prefijo+"-31")))
-        : getDocs(query(collection(db,"fichajes"), where("alias","==",alias), where("fecha",">=",prefijo+"-01"), where("fecha","<=",prefijo+"-31"))),
+      getDocs(collection(db, "fichajes")),
       getVacacionesBajasREST()
     ]);
     let registros = [];
     snF.forEach(d => {
       const r = d.data();
-      if (r.alias === alias || alias === "all") {
+      if (r.alias === alias) {
         if (tipo === "mes" && r.fecha.startsWith(anio + "-" + mes)) registros.push(r);
         else if (tipo === "semana") {
           const d0 = new Date(fechaRef + "T12:00:00");
@@ -3105,7 +3103,7 @@ async function imprimirFichaDia(fecha) {
   showToast("Generando listado del dia...");
   try {
     const [snF, vacDocs] = await Promise.all([
-      getDocs(query(collection(db, "fichajes"), where("fecha","==",fecha))),
+      getDocs(collection(db, "fichajes")),
       getVacacionesBajasREST()
     ]);
     let registros = [];
@@ -3329,11 +3327,8 @@ async function cargarPanelFichajes() {
       }
     }
 
-    // Load fichajes solo del rango de fechas necesario
-    const fechaMin = fechas[0];
-    const fechaMax = fechas[fechas.length-1];
-    const sn = await getDocs(query(collection(db, "fichajes"),
-      where("fecha",">=",fechaMin), where("fecha","<=",fechaMax)));
+    // Load all fichajes for date range
+    const sn = await getDocs(collection(db, "fichajes"));
     const allFichajes = {};
     let debugInfo = [];
     sn.forEach(d => {
@@ -3488,58 +3483,17 @@ async function cargarPanelFichajes() {
 // ===== VENDEDORES =====
 let vendedoresData = [];
 
-// ── PRESUPUESTOS CON CACHÉ ────────────────────────────────────────────────────
-const PRES_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
-var _presCache = null;
-var _presCacheTs = 0;
-
-async function cargarPresupuestos(forzar=false){
-  const ahora = Date.now();
-  if(!forzar && _presCache && (ahora - _presCacheTs) < PRES_CACHE_TTL){
-    presupuestos = _presCache;
-    return;
-  }
+async function loadVendedores() {
   try {
-    const sn = await getDocs(collection(db,"presupuestos"));
-    presupuestos = [];
-    sn.forEach(d => presupuestos.push(d.data()));
-    _presCache = presupuestos;
-    _presCacheTs = Date.now();
-  } catch(e){ console.log("Error cargando presupuestos:", e); }
-}
-// ─────────────────────────────────────────────────────────────────────────────
-const MENU_CACHE_TTL_VEND = 24 * 60 * 60 * 1000; // 24h para vendedores
-function menuCacheSet(key, data){ try { localStorage.setItem(key, JSON.stringify({ts:Date.now(), data})); } catch(e){} }
-function menuCacheGet(key, ttl){
-  try {
-    const raw = localStorage.getItem(key); if(!raw) return null;
-    const obj = JSON.parse(raw);
-    if(Date.now()-obj.ts > ttl){ localStorage.removeItem(key); return null; }
-    return obj.data;
-  } catch(e){ return null; }
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
-async function loadVendedores(forzar=false) {
-  try {
-    // Caché 24h — los vendedores cambian muy raramente
-    if(!forzar){
-      const cached = menuCacheGet("menu_vendedores", MENU_CACHE_TTL_VEND);
-      if(cached){
-        vendedoresData = cached;
-        VENDORS = vendedoresData.filter(v => v.activo !== false && (!v.tipo||v.tipo==="Vendedor")).map(v => v.alias);
-        updateLoginGrid();
-        updateVendorSelects();
-        return;
-      }
-    }
     const sn = await getDocs(collection(db, "vendedores"));
     vendedoresData = [];
     sn.forEach(d => vendedoresData.push(d.data()));
     vendedoresData.sort((a,b) => a.alias.localeCompare(b.alias));
-    menuCacheSet("menu_vendedores", vendedoresData);
-    VENDORS = vendedoresData.filter(v => v.activo !== false && (!v.tipo||v.tipo==="Vendedor")).map(v => v.alias);
+    // Update VENDORS with only active ones
+    VENDORS = vendedoresData.filter(v => v.activo !== false).map(v => v.alias);
+    // Update login grid
     updateLoginGrid();
+    // Update all vendor selects
     updateVendorSelects();
   } catch(e) {
     console.log("Error loading vendedores:", e);
@@ -3684,13 +3638,14 @@ function updateVendorSelects() {
 
 async function saveVendedor(data) {
   try {
+    // Añadir fotoDNI solo si hay imagen nueva
     if (_fotoDNIBase64) data.fotoDNI = _fotoDNIBase64;
+    // Eliminar campos undefined que Firebase no acepta
     Object.keys(data).forEach(k => { if (data[k] === undefined) delete data[k]; });
     await setDoc(doc(db, "vendedores", data.alias), data);
-    localStorage.removeItem("menu_vendedores"); // invalidar caché
     showToast("Vendedor guardado: " + data.alias);
     _fotoDNIBase64 = null;
-    await loadVendedores(true);
+    await loadVendedores();
     renderVendedores();
   } catch(e) { showToast("Error: " + e.message); }
 }
@@ -3874,55 +3829,7 @@ function renderVendedores() {
 }
 
 
-// ── BACKUP FIREBASE ───────────────────────────────────────────────────────────
-async function ejecutarBackup(){
-  cerrarSidebar();
-  showToast("⏳ Generando backup... puede tardar unos segundos");
-
-  const colecciones = [
-    "vendedores","presupuestos","fichajes","vacaciones_bajas",
-    "proveedores","tarifas_modelos","fallos","mensajes",
-    "fiestas_anuales","repartos","incidencias","alertas_geo"
-  ];
-
-  const backup = {
-    fecha: new Date().toISOString(),
-    version: "1.0",
-    proyecto: "muebles-presupuestos",
-    datos: {}
-  };
-
-  let total = 0;
-  for(const col of colecciones){
-    try {
-      const sn = await getDocs(collection(db, col));
-      backup.datos[col] = [];
-      sn.forEach(d => backup.datos[col].push({_id: d.id, ...d.data()}));
-      total += backup.datos[col].length;
-      console.log("Backup "+col+": "+backup.datos[col].length+" docs");
-    } catch(e){
-      console.warn("Error backup "+col+":", e.message);
-      backup.datos[col] = [];
-    }
-  }
-
-  // Descargar como JSON
-  const json = JSON.stringify(backup, null, 2);
-  const blob = new Blob([json], {type:"application/json"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  const fecha = new Date().toISOString().slice(0,10);
-  a.href = url;
-  a.download = "meres-backup-"+fecha+".json";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-
-  showToast("✅ Backup descargado: "+total+" registros de "+colecciones.length+" colecciones");
-}
-window.ejecutarBackup = ejecutarBackup;
-// ─────────────────────────────────────────────────────────────────────────────
+// ===== INCIDENCIAS =====
 
 const ESTADOS_PRODUCTO = [
   { label:"Correcto / dentro de tolerancias normales de uso", icon:"✅", bg:"#eaf3de", col:"#3b6d11" },
@@ -4496,37 +4403,14 @@ function generarInformeIncidencia(inc) {
 // ===== REPARTOS =====
 let REPARTIDORES_FIJOS = ["ALEX","ANTONIO_CONFO","CLEO","DARWIN","EDISON","JAVIER MIKAMA","JA_CUBANO","ROBERTO","X-CHUS"];
 
-var _repartosCache = null;
-var _repartosCacheTs = 0;
-const REPARTOS_TTL = 5 * 60 * 1000; // 5 minutos
-
 async function initRepartos() {
   const cont = document.getElementById("repartos-content");
   if(!cont) return;
-
-  // Usar caché si tiene menos de 5 minutos
-  if(_repartosCache && (Date.now()-_repartosCacheTs) < REPARTOS_TTL){
-    renderRepartos(_repartosCache, cont);
-    return;
-  }
-
   cont.innerHTML = "<div class='spinner'>Cargando repartos...</div>";
   try {
-    // Solo repartos de los últimos 30 días — no leer todo el histórico
-    const hoy = new Date();
-    const hace30 = new Date(hoy);
-    hace30.setDate(hoy.getDate() - 30);
-    const pad = n => String(n).padStart(2,"0");
-    const fechaMin = hace30.getFullYear()+"-"+pad(hace30.getMonth()+1)+"-"+pad(hace30.getDate());
-
-    const sn = await getDocs(query(
-      collection(db, "repartos"),
-      where("fecha_entrega",">=",fechaMin)
-    ));
+    const sn = await getDocs(collection(db, "repartos"));
     const repartos = [];
     sn.forEach(d => repartos.push(d.data()));
-    _repartosCache = repartos;
-    _repartosCacheTs = Date.now();
     renderRepartos(repartos, cont);
   } catch(e) {
     cont.innerHTML = "<div class='card'><p class='empty'>Error: " + e.message + "</p></div>";
@@ -4752,7 +4636,6 @@ function renderListaRepartos(lista, listaDiv, allRepartos, cont) {
       btnEnt.textContent = r.entregado ? "↩" : "✓";
       btnEnt.addEventListener("click", async () => {
         await setDoc(doc(db,"repartos",r.id), {...r, entregado:!r.entregado}, {merge:true});
-        _repartosCache = null; // invalidar caché
         showToast(r.entregado ? "Pendiente" : "Entregado ✓");
         initRepartos();
       });
@@ -4927,7 +4810,6 @@ function mostrarFormReparto(reparto, allRepartos, cont) {
 
     try {
       await setDoc(doc(db, "repartos", data.id), data);
-      _repartosCache = null; // invalidar caché
       showToast("Reparto guardado");
       overlay.remove();
       initRepartos();
@@ -5445,7 +5327,7 @@ async function enviarResumenJefe() {
 }
 
 // ===== INIT =====
-async function initApp() {
+function initApp() {
   // Only run once
   if (window._appInitialized) {
     // Just update user display
@@ -5455,10 +5337,14 @@ async function initApp() {
     return;
   }
   window._appInitialized = true;
-
-  // Cargar presupuestos con caché 5 minutos — evita onSnapshot continuo
-  await cargarPresupuestos();
-
+  if (unsubPresupuestos) unsubPresupuestos();
+  unsubPresupuestos = onSnapshot(collection(db,"presupuestos"), sn=>{
+    presupuestos=[]; sn.forEach(d=>presupuestos.push(d.data()));
+    const activeTab = document.querySelector(".tab.active");
+    if(activeTab&&activeTab.id==="tab-btn-lista") renderLista();
+  }, err => {
+    console.log("onSnapshot error:", err);
+  });
   document.getElementById("btn-addline").addEventListener("click", addLine);
   document.getElementById("btn-save").addEventListener("click", savePresupuesto);
   document.getElementById("btn-print").addEventListener("click", ()=>{ const data=getFormData(); if(!data.cliente.nombre){showToast("Introduce el nombre del cliente");return;} generatePrint(data); });
@@ -5650,12 +5536,9 @@ window._btnPrintDia = function() {
 };
 
 async function imprimirFichasMultiples(aliasSelect, anio, mes, tipo, fechaRef) {
-  // Cargar solo fichajes del mes seleccionado — mucho menos lecturas
-  const prefijo = anio + "-" + mes;
+  // Cargar fichajes Y vacaciones en paralelo
   const [sn, vacDocs] = await Promise.all([
-    getDocs(query(collection(db, "fichajes"),
-      where("fecha",">=",prefijo+"-01"),
-      where("fecha","<=",prefijo+"-31"))),
+    getDocs(collection(db, "fichajes")),
     getVacacionesBajasREST()
   ]);
   const allRecs = [];
@@ -5945,24 +5828,6 @@ window._abrirFichajeRapido = function() {
   overlay.addEventListener("click", e => { if (e.target === overlay) overlay.remove(); });
   setTimeout(() => dniInput.focus(), 100);
 };
-</script>
-
-<!-- LIMPIAR RECURSOS AL ABANDONAR LA PÁGINA -->
-<script>
-window.addEventListener('visibilitychange', function() {
-  if (document.hidden) {
-    // La pestaña perdió el foco — pausar intervals
-    if (window._relojInterval) {
-      clearInterval(window._relojInterval);
-      window._relojInterval = null;
-    }
-  }
-});
-
-window.addEventListener('beforeunload', function() {
-  // Se cierra/abandona la página — limpiar todo
-  if (window._relojInterval) clearInterval(window._relojInterval);
-});
 </script>
 </body>
 </html>
