@@ -5345,14 +5345,10 @@ function initApp() {
     return;
   }
   window._appInitialized = true;
-  if (unsubPresupuestos) unsubPresupuestos();
-  unsubPresupuestos = onSnapshot(collection(db,"presupuestos"), sn=>{
-    presupuestos=[]; sn.forEach(d=>presupuestos.push(d.data()));
-    const activeTab = document.querySelector(".tab.active");
-    if(activeTab&&activeTab.id==="tab-btn-lista") renderLista();
-  }, err => {
-    console.log("onSnapshot error:", err);
-  });
+
+  // Cargar presupuestos con caché 5 minutos — evita onSnapshot continuo
+  await cargarPresupuestos();
+
   document.getElementById("btn-addline").addEventListener("click", addLine);
   document.getElementById("btn-save").addEventListener("click", savePresupuesto);
   document.getElementById("btn-print").addEventListener("click", ()=>{ const data=getFormData(); if(!data.cliente.nombre){showToast("Introduce el nombre del cliente");return;} generatePrint(data); });
