@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<!-- vacaciones.html — v2.1 — 24/07/2026
+     CAMBIO: las fiestas ya NO están grabadas en el código.
+     Los calendarios (individual y general) y los chips de festivos
+     leen SIEMPRE de Firebase (colección fiestas_anuales), lo mismo
+     que gestionas en "Gestionar Fiestas". Caché localStorage 30 días.
+     Corregido también: "Copiar de otro año" no refrescaba la caché. -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏖️ Vacaciones y Bajas · Meres</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: #f4f1ec; color: #1a1714; font-size: 14px; }
+.app { max-width: 1100px; margin: 0 auto; padding: 20px; }
+.login-wrap { background: #f4f1ec; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.login-card { background: white; border-radius: 14px; padding: 32px; max-width: 380px; width: 100%; box-shadow: 0 4px 24px rgba(0,0,0,.1); text-align: center; }
+.login-card h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+.login-card p  { color: #888; font-size: 13px; margin-bottom: 24px; }
+.fg { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; text-align: left; }
+.fg label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #888; }
+.fg input, .fg select, .fg textarea { padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 14px; width: 100%; }
+.fg input:focus, .fg select:focus { outline: none; border-color: #2d7a4f; }
+.fg textarea { resize: vertical; min-height: 70px; }
+.btn { padding: 10px 20px; border: none; border-radius: 8px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity .2s; }
+.btn:hover { opacity: .85; } .btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-green  { background: #2d7a4f; color: white; }
+.btn-dark   { background: #1a1714; color: white; }
+.btn-red    { background: #c0392b; color: white; }
+.btn-gray   { background: #f0ece6; color: #555; }
+.btn-full   { width: 100%; padding: 13px; }
+header { background: #1a1714; color: white; padding: 0 24px; height: 54px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.header-brand { font-weight: 800; font-size: 15px; letter-spacing: .04em; }
+.header-brand span { color: #e8793e; }
+.toolbar { background: white; border-bottom: 1px solid #e8e4de; padding: 14px 24px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.toolbar select, .toolbar input[type=number] { padding: 9px 12px; border: 1.5px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 14px; background: white; }
+.card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+.card-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+.res-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+.res-item { border-radius: 10px; padding: 16px; text-align: center; }
+.res-item .num { font-size: 36px; font-weight: 800; line-height: 1; }
+.res-item .lbl { font-size: 12px; margin-top: 5px; }
+.res-vac  { background: #e8f5ee; } .res-vac  .num { color: #2d7a4f; }
+.res-pend { background: #fff0e8; } .res-pend .num { color: #c4571a; }
+.res-baja { background: #fdecea; } .res-baja .num { color: #c0392b; }
+.cal-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+@media(max-width:700px){ .cal-grid{grid-template-columns:repeat(2,1fr);} }
+.mes-nombre { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#888; margin-bottom:5px; text-align:center; }
+.dias-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+.dia-cab { font-size:9px; font-weight:700; text-align:center; color:#bbb; padding:2px 0; }
+.dia { font-size:11px; text-align:center; padding:3px 1px; border-radius:4px; line-height:1.5; }
+.dia.vacio { visibility:hidden; }
+.dia.normal { color:#1a1714; }
+.dia.finde  { color:#ccc; }
+.dia.festivo{ background:#f0f0f0; color:#999; font-weight:600; }
+.dia.vac    { background:#2d7a4f; color:white; font-weight:700; }
+.dia.baja   { background:#c0392b; color:white; font-weight:700; }
+.dia.hoy    { box-shadow:0 0 0 2px #c4571a; }
+.leyenda { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; align-items:center; margin-top:12px; }
+.ley-item { display:flex; align-items:center; gap:5px; }
+.ley-dot  { width:14px; height:14px; border-radius:3px; flex-shrink:0; }
+.reg-item { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-radius:8px; border:1px solid #eee; margin-bottom:8px; }
+.reg-item.rv { border-left:4px solid #2d7a4f; background:#f8fdf9; }
+.reg-item.rb { border-left:4px solid #c0392b; background:#fdf8f8; }
+.reg-info .rf { font-weight:700; font-size:13px; }
+.reg-info .rd { font-size:12px; color:#888; margin-top:2px; }
+.reg-info .rn { font-size:12px; color:#666; font-style:italic; margin-top:2px; }
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:200; display:none; align-items:center; justify-content:center; padding:16px; }
+.overlay.open { display:flex; }
+.modal { background:white; border-radius:14px; padding:24px; width:100%; max-width:420px; max-height:90vh; overflow-y:auto; }
+.modal h3 { font-size:17px; font-weight:800; margin-bottom:16px; }
+.tipo-btn { flex:1; padding:12px; border:2px solid #ddd; border-radius:8px; background:white; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; transition:all .2s; }
+.tipo-btn.sv { border-color:#2d7a4f; background:#e8f5ee; color:#2d7a4f; }
+.tipo-btn.sb { border-color:#c0392b; background:#fdecea; color:#c0392b; }
+.toast { position:fixed; bottom:24px; right:24px; background:#1a1714; color:white; padding:12px 20px; border-radius:8px; font-size:14px; z-index:9999; display:none; max-width:300px; }
+.toast.ok  { border-left:4px solid #2d7a4f; }
+.toast.err { border-left:4px solid #c0392b; }
+.fest-chip { display:inline-block; background:#f0f0f0; border-radius:20px; padding:2px 8px; font-size:11px; color:#666; margin:2px; }
+/* CALENDARIO GENERAL */
+.cal-gen-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:300; display:none; align-items:flex-start; justify-content:center; overflow-y:auto; padding:20px; }
+.cal-gen-overlay.open { display:flex; }
+.cal-gen-modal { background:white; border-radius:14px; width:100%; max-width:1400px; margin:auto; overflow:hidden; }
+.cal-gen-header { background:#1a1714; color:white; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; }
+.cal-gen-header h3 { font-size:16px; font-weight:800; }
+.cal-gen-body { padding:20px; overflow-x:auto; }
+/* Leyenda colores */
+.leyenda-gen { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+.ley-gen { display:flex; align-items:center; gap:5px; font-size:12px; font-weight:600; }
+.ley-gen-dot { width:16px; height:16px; border-radius:3px; flex-shrink:0; }
+/* Tabla general */
+.tabla-gen { border-collapse:collapse; min-width:900px; width:100%; }
+.tabla-gen th { font-size:9px; text-transform:uppercase; letter-spacing:.05em; padding:6px 3px; text-align:center; color:#888; font-weight:700; border-bottom:2px solid #eee; white-space:nowrap; }
+.tabla-gen td { padding:0; border-right:1px solid #e8e8e8; border-bottom:1px solid #e8e8e8; height:52px; min-width:24px; }
+.tabla-gen .col-alias { font-size:13px; font-weight:700; padding:6px 12px; white-space:nowrap; text-align:left; border-right:2px solid #ddd; position:sticky; left:0; background:white; z-index:1; min-width:120px; }
+.tabla-gen .col-mes { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; padding:6px 8px; text-align:center; border-right:2px solid #ddd; color:#1a1714; }
+.cel-dia { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; cursor:default; }
+.cel-vac  { } /* color por trabajador */
+.cel-baja { background: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,.15) 3px, rgba(0,0,0,.15) 4px); }
+.cel-fest { background:#f0f0f0 !important; }
+.cel-finde { background:#fafafa; }
+.cel-hoy  { outline:2px solid #c4571a; outline-offset:-1px; }
+/* Solapamiento — múltiples trabajadores en un día */
+.cel-multi { background:repeating-linear-gradient(90deg,var(--c1) 0,var(--c1) 50%,var(--c2) 50%,var(--c2) 100%) !important; }
+@media print {
+  .cal-gen-overlay { display:block!important; position:static!important; background:none!important; padding:0!important; }
+  .cal-gen-modal { box-shadow:none; border-radius:0; }
+  .cal-gen-header .no-print { display:none!important; }
+}
+@media print {
+  header,.toolbar,.no-print { display:none!important; }
+  body { background:white; }
+  .app { padding:0; max-width:100%; }
+  .card { box-shadow:none; border:1px solid #ddd; page-break-inside:avoid; margin-bottom:10px; }
+  .cal-grid { grid-template-columns:repeat(4,1fr); gap:10px; }
+  .print-header { display:block!important; }
+}
+</style>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<!-- LOGIN -->
+<div id="loginBox" class="login-wrap">
+  <div class="login-card">
+    <div style="font-size:48px;margin-bottom:10px">🏖️</div>
+    <h2>Vacaciones y Bajas</h2>
+    <p>Meres Central de Compras · Acceso restringido</p>
+    <div class="fg"><label>Email</label><input type="email" id="lEmail" placeholder="tu@email.com" autocomplete="email"></div>
+    <div class="fg"><label>Contraseña</label><input type="password" id="lPass" placeholder="••••••••" autocomplete="current-password"></div>
+    <button class="btn btn-green btn-full" onclick="doLogin()">Entrar</button>
+    <div id="lErr" style="color:#c0392b;font-size:13px;margin-top:10px;display:none"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appBox" style="display:none">
+  <header>
+    <div class="header-brand">MERES · <span>Vacaciones & Bajas</span></div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="font-size:12px;color:#aaa" id="hUser"></span>
+      <button class="btn btn-gray no-print" style="padding:6px 14px;font-size:12px" onclick="window.print()">🖨️ Imprimir</button>
+    </div>
+  </header>
+
+  <div class="toolbar no-print">
+    <div>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:4px">Trabajador</label>
+      <select id="selTr" onchange="cargarVista()">
+        <option value="">-- Selecciona --</option>
+      </select>
+    </div>
+    <div>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:4px">Año</label>
+      <input type="number" id="selYear" value="2026" min="2024" max="2035" style="width:90px" onchange="cargarVista()">
+    </div>
+    <button class="btn btn-green no-print" style="margin-bottom:1px" onclick="abrirModal()">+ Añadir vacaciones / baja</button>
+    <button class="btn no-print" style="margin-bottom:1px;background:#6b4fc8;color:white" onclick="abrirCalendarioGeneral()">📆 Ver todos juntos</button>
+    <button class="btn no-print" style="margin-bottom:1px;background:#c4571a;color:white" onclick="abrirGestionFiestas()">📅 Gestionar Fiestas</button>
+  </div>
+
+  <div class="app">
+    <!-- PRINT HEADER -->
+    <div id="printHdr" style="display:none;margin-bottom:16px">
+      <div style="font-size:20px;font-weight:800" id="printTitle"></div>
+      <div style="color:#888;font-size:13px" id="printSub"></div>
+    </div>
+
+    <div id="vVacia">
+      <div id="resumenGeneral"></div>
+    </div>
+
+    <div id="vPrincipal" style="display:none">
+      <!-- RESUMEN -->
+      <div class="card">
+        <div class="res-grid">
+          <div class="res-item res-vac">
+            <div class="num" id="nVac">0</div>
+            <div class="lbl">Días de vacaciones<br>disfrutados</div>
+          </div>
+          <div class="res-item res-pend">
+            <div class="num" id="nPend">30</div>
+            <div class="lbl">Vacaciones pendientes<br>(30 − disfrutados)</div>
+          </div>
+          <div class="res-item res-baja">
+            <div class="num" id="nBaja">0</div>
+            <div class="lbl">Días de baja<br>laboral</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CALENDARIO -->
+      <div class="card">
+        <div class="card-title" id="calTit">Calendario</div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="leyenda">
+          <div class="ley-item"><div class="ley-dot" style="background:#2d7a4f"></div>Vacaciones</div>
+          <div class="ley-item"><div class="ley-dot" style="background:#c0392b"></div>Baja laboral</div>
+          <div class="ley-item"><div class="ley-dot" style="background:#f0f0f0;border:1px solid #ddd"></div>Festivo Asturias</div>
+          <div class="ley-item"><div class="ley-dot" style="background:#e8e8e8"></div>Fin de semana</div>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:#888;line-height:1.8" id="festInfo"></div>
+      </div>
+
+      <!-- REGISTROS -->
+      <div class="card">
+        <div class="card-title">Registros del año</div>
+        <div id="regList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="mOverlay">
+  <div class="modal">
+    <h3 id="mTitulo">➕ Nuevo registro</h3>
+    <div class="fg" style="margin-bottom:14px">
+      <label>Tipo</label>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="tipo-btn sv" id="btnV" onclick="selTipo('vacacion')">🏖️ Vacaciones</button>
+        <button class="tipo-btn"   id="btnB" onclick="selTipo('baja')">🤒 Baja laboral</button>
+      </div>
+    </div>
+    <div class="fg"><label>Trabajador</label><select id="mTr"></select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="fg"><label>Fecha inicio</label><input type="date" id="mIni" onchange="calcDias()"></div>
+      <div class="fg"><label>Fecha fin</label><input type="date" id="mFin" onchange="calcDias()"></div>
+    </div>
+    <div id="mDias" style="background:#f4f1ec;border-radius:8px;padding:10px;font-size:13px;margin:10px 0;display:none"></div>
+    <div class="fg"><label>Nota (opcional)</label><textarea id="mNota" placeholder="Ej: Semana de Semana Santa"></textarea></div>
+    <div id="mErr" style="background:#fdecea;color:#c0392b;border-radius:8px;padding:10px;font-size:13px;margin-bottom:10px;display:none"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-green" id="mBtnGuardar" style="flex:1" onclick="guardar()">💾 Guardar</button>
+      <button class="btn btn-gray" onclick="cerrarModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TRABAJADORES EXTRA -->
+<div class="overlay" id="mTrabOverlay">
+  <div class="modal" style="max-width:480px">
+    <h3>👤 Trabajadores Almacén / Reparto</h3>
+    <p style="font-size:13px;color:#888;margin-bottom:16px">Trabajadores que no son vendedores pero tienen vacaciones registradas</p>
+    <div id="listaExtra" style="margin-bottom:16px"></div>
+    <div style="border-top:1px solid #eee;padding-top:14px;margin-top:6px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px">Añadir nuevo trabajador</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div class="fg" style="margin-bottom:0"><label>Alias</label><input type="text" id="teAlias" placeholder="Ej: Alex"></div>
+        <div class="fg" style="margin-bottom:0"><label>Nombre completo</label><input type="text" id="teNombre" placeholder="Ej: Alejandro García"></div>
+      </div>
+      <div class="fg"><label>Tipo</label>
+        <select id="teTipo">
+          <option value="almacen">📦 Almacén</option>
+          <option value="reparto">🚚 Reparto</option>
+          <option value="limpieza">🧹 Limpieza</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div id="teErr" style="color:#c0392b;font-size:13px;margin-bottom:8px;display:none"></div>
+      <button class="btn btn-green" style="width:100%" onclick="guardarTrabajadorExtra()">+ Añadir trabajador</button>
+    </div>
+    <button class="btn btn-gray" style="width:100%;margin-top:10px" onclick="cerrarModalTrabajador()">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL CALENDARIO GENERAL -->
+<div class="cal-gen-overlay" id="calGenOverlay">
+  <div class="cal-gen-modal">
+    <div class="cal-gen-header">
+      <div>
+        <h3>📆 Calendario general de vacaciones</h3>
+        <div style="font-size:12px;color:#aaa;margin-top:2px" id="calGenSub"></div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="btn btn-gray no-print" style="padding:6px 14px;font-size:12px" onclick="window.print()">🖨️ Imprimir</button>
+        <button onclick="cerrarCalendarioGeneral()" style="background:none;border:none;color:white;font-size:26px;cursor:pointer;line-height:1">×</button>
+      </div>
+    </div>
+    <div class="cal-gen-body">
+      <div class="leyenda-gen" id="calGenLeyenda"></div>
+      <div style="overflow-x:auto">
+        <table class="tabla-gen" id="calGenTabla"></table>
+      </div>
+      <div style="margin-top:12px;font-size:11px;color:#888;display:flex;gap:16px;flex-wrap:wrap">
+        <span>⬛ Color sólido = Vacaciones del trabajador</span>
+        <span>Gris claro = Festivo Asturias/Siero</span>
+        <span>💡 Pasa el ratón sobre un día para ver quién coincide</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GESTIÓN DE FIESTAS -->
+<div id="fiestasOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:flex-start;justify-content:center;padding-top:60px;overflow-y:auto">
+  <div style="background:white;border-radius:14px;max-width:680px;width:95%;box-shadow:0 8px 40px rgba(0,0,0,.2);margin-bottom:40px">
+    <!-- Cabecera -->
+    <div style="background:#c4571a;color:white;padding:18px 22px;border-radius:14px 14px 0 0;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-weight:800;font-size:16px">📅 Fiestas <span id="fiestas-anio">2026</span></div>
+        <div style="font-size:12px;opacity:.85;margin-top:2px">Nacionales · Asturias · Siero/Local</div>
+      </div>
+      <button onclick="cerrarGestionFiestas()" style="background:rgba(255,255,255,.2);border:none;color:white;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer">✕ Cerrar</button>
+    </div>
+    <!-- Formulario nueva fiesta -->
+    <div style="padding:18px 22px;border-bottom:1px solid #f0ece6">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:10px">Nueva fiesta</div>
+      <div style="display:grid;grid-template-columns:1fr 2fr 1fr auto;gap:10px;align-items:end">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#888;display:block;margin-bottom:4px">Fecha</label>
+          <input type="date" id="fiesta-fecha" style="padding:9px 10px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px;width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#888;display:block;margin-bottom:4px">Nombre de la fiesta</label>
+          <input type="text" id="fiesta-nombre" placeholder="Ej: Día del Trabajo" style="padding:9px 10px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px;width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#888;display:block;margin-bottom:4px">Tipo</label>
+          <select id="fiesta-tipo" style="padding:9px 10px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px;width:100%">
+            <option value="Nacional">Nacional</option>
+            <option value="Asturias">Asturias</option>
+            <option value="Siero/Local">Siero/Local</option>
+          </select>
+        </div>
+        <button onclick="guardarFiesta()" style="padding:9px 16px;background:#c4571a;color:white;border:none;border-radius:7px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">+ Añadir</button>
+      </div>
+      <div id="fiesta-err" style="display:none;color:#c0392b;font-size:12px;margin-top:8px"></div>
+    </div>
+    <!-- Lista de fiestas -->
+    <div style="padding:14px 22px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888">Fiestas registradas</div>
+        <button onclick="copiarFiestasAnio()" style="padding:5px 12px;background:#f0ece6;border:none;border-radius:7px;font-family:inherit;font-size:12px;cursor:pointer;color:#555" title="Copiar fiestas Nacionales y de Asturias de otro año">📋 Copiar de otro año</button>
+      </div>
+      <div id="fiestas-lista" style="border:1px solid #f0ece6;border-radius:8px;overflow:hidden;max-height:380px;overflow-y:auto">
+        <div style="color:#aaa;text-align:center;padding:20px;font-size:13px">Cargando...</div>
+      </div>
+    </div>
+    <!-- Leyenda -->
+    <div style="padding:12px 22px;background:#f8f6f2;border-radius:0 0 14px 14px;display:flex;gap:16px;font-size:11px">
+      <span style="color:#2856c8;font-weight:700">● Nacional</span>
+      <span style="color:#2d7a4f;font-weight:700">● Asturias</span>
+      <span style="color:#c4571a;font-weight:700">● Siero/Local</span>
+    </div>
+  </div>
+</div>
+
+
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
+  authDomain:"muebles-presupuestos.firebaseapp.com",
+  projectId:"muebles-presupuestos",
+  storageBucket:"muebles-presupuestos.firebasestorage.app",
+  messagingSenderId:"37365883872",
+  appId:"1:37365883872:web:842ca4d318c01652684185"
+});
+var db = firebase.firestore();
+var auth = firebase.auth();
+var PERMITIDOS = ["jose angel","marisa","javi"];
+var currentAlias = null, vendedores = [], trabajadoresExtra = [], registros = [], tipoSel = "vacacion";
+
+// FESTIVOS ASTURIAS + SIERO
+// ── FESTIVOS ──────────────────────────────────────────────────────────────
+// Ahora se leen SIEMPRE de Firebase (colección fiestas_anuales), que es lo
+// que gestionas en "📅 Gestionar Fiestas". Ya no hay fechas grabadas en el
+// código. _fiestasAnio guarda en memoria un mapa {fecha: nombre} por año.
+var _fiestasAnio = {};
+
+function festivos(year){
+  return _fiestasAnio[year] || {};
+}
+
+function _fiestasAMapa(lista){
+  var map = {};
+  (lista||[]).forEach(function(f){ if(f && f.fecha) map[f.fecha] = f.nombre || "Festivo"; });
+  return map;
+}
+
+// Carga las fiestas de un año: memoria → caché localStorage (30 días) → Firebase.
+// Al terminar llama a callback (los calendarios se dibujan después de esto).
+function cargarFestivosAnio(anio, callback){
+  if(_fiestasAnio[anio] !== undefined){ if(callback) callback(); return; }
+  var cacheKey = "vac_fiestas_"+anio;
+  try {
+    var raw = localStorage.getItem(cacheKey);
+    if(raw){
+      var obj = JSON.parse(raw);
+      if(Date.now()-obj.ts < 30*24*60*60*1000){
+        _fiestasAnio[anio] = _fiestasAMapa(obj.data);
+        if(callback) callback();
+        return;
+      }
+    }
+  } catch(e){}
+  db.collection("fiestas_anuales")
+    .where("anio","==",anio)
+    .get()
+    .then(function(sn){
+      var lista = [];
+      sn.forEach(function(d){ lista.push(Object.assign({_id:d.id}, d.data())); });
+      lista.sort(function(a,b){ return a.fecha.localeCompare(b.fecha); });
+      try{ localStorage.setItem(cacheKey, JSON.stringify({ts:Date.now(),data:lista})); }catch(e){}
+      _fiestasAnio[anio] = _fiestasAMapa(lista);
+      if(callback) callback();
+    }).catch(function(e){
+      console.error("Error cargando fiestas:",e);
+      _fiestasAnio[anio] = {};
+      if(callback) callback();
+    });
+}
+
+// Borra de la memoria las fiestas de un año (se llama al añadir/borrar/copiar
+// fiestas, para que los calendarios se redibujen con los datos nuevos)
+function invalidarFestivosAnio(anio){ delete _fiestasAnio[anio]; }
+
+function p2(n){ return ("0"+n).slice(-2); }
+function fStr(d){ return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()); }
+function diasRango(ini,fin){
+  var d1=new Date(ini+"T12:00:00"), d2=new Date(fin+"T12:00:00"), out=[], cur=new Date(d1);
+  while(cur<=d2){ out.push(fStr(cur)); cur.setDate(cur.getDate()+1); }
+  return out;
+}
+function toast(msg,tipo){ var t=document.getElementById("toast"); t.textContent=msg; t.className="toast "+(tipo||"ok"); t.style.display="block"; setTimeout(function(){t.style.display="none";},3000); }
+
+// Firebase SDK helpers
+function fsGet(col){
+  return db.collection(col).get().then(function(sn){
+    var docs=[];
+    sn.forEach(function(d){docs.push(Object.assign({_id:d.id},d.data()));});
+    return docs;
+  });
+}
+
+// ── CACHÉ localStorage vacaciones ─────────────────────────────────────────────
+var VAC_CACHE = {
+  vendedores:   { key:"vac_vendedores",   ttl: 24*60*60*1000 }, // 24h
+  vacaciones_bajas: { key:"vac_registros", ttl:  1*60*60*1000 }, // 1h
+  fiestas_anuales:  { key:"vac_fiestas",   ttl: 30*24*60*60*1000 } // 30 días
+};
+function vacCacheSet(col,data){ try{ var c=VAC_CACHE[col]; if(!c) return; localStorage.setItem(c.key,JSON.stringify({ts:Date.now(),data})); }catch(e){} }
+function vacCacheGet(col){ try{ var c=VAC_CACHE[col]; if(!c) return null; var r=localStorage.getItem(c.key); if(!r) return null; var o=JSON.parse(r); if(Date.now()-o.ts>c.ttl){localStorage.removeItem(c.key);return null;} return o.data; }catch(e){return null;} }
+function vacCacheClear(col){ try{ var c=VAC_CACHE[col]; if(c) localStorage.removeItem(c.key); }catch(e){} }
+
+function fsGetCached(col){
+  var cached = vacCacheGet(col);
+  if(cached) return Promise.resolve(cached);
+  return fsGet(col).then(function(data){
+    vacCacheSet(col, data);
+    return data;
+  });
+}
+// ─────────────────────────────────────────────────────────────────────────────
+function fsAdd(col,data){
+  return db.collection(col).add(data).then(function(ref){
+    return {_id:ref.id};
+  });
+}
+function fsDel(col,id){
+  return db.collection(col).doc(id).delete();
+}
+function fsUpdate(col,id,data){
+  return db.collection(col).doc(id).set(data);
+}
+
+// LOGIN
+document.getElementById("lPass").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
+function doLogin(){
+  var email=document.getElementById("lEmail").value.trim();
+  var pass=document.getElementById("lPass").value;
+  var err=document.getElementById("lErr");
+  err.style.display="none";
+  auth.signInWithEmailAndPassword(email,pass)
+  .then(function(){
+    return fsGetCached("vendedores");
+  })
+  .then(function(vends){
+    vendedores=vends.filter(function(v){return v.activo!==false&&v.alias;});
+    var emailLower=email.toLowerCase();
+    var miV=vendedores.find(function(v){return (v.email||"").toLowerCase().trim()===emailLower;});
+    var otroNoPermitido=miV && PERMITIDOS.indexOf((miV.alias||"").toLowerCase())===-1;
+    if(otroNoPermitido){
+      auth.signOut();
+      err.textContent="No tienes permiso para acceder a este módulo";
+      err.style.display="block";
+      return;
+    }
+    var alias=miV?miV.alias:"Jose Angel";
+    currentAlias=alias;
+    document.getElementById("loginBox").style.display="none";
+    document.getElementById("appBox").style.display="block";
+    document.getElementById("hUser").textContent=alias;
+    trabajadoresExtra = [];
+    var todos=vendedores
+      .filter(function(v){return v.alias!=="Jose Angel";})
+      .sort(function(a,b){return a.alias.localeCompare(b.alias,"es");});
+    var selTr=document.getElementById("selTr");
+    var mTr=document.getElementById("mTr");
+    selTr.innerHTML="<option value=''>-- Ver resumen general --</option>";
+    mTr.innerHTML="";
+    var grupos = {"Vendedor":[], "Repartidor":[], "Almacen":[], "Limpieza":[]};
+    todos.forEach(function(v){
+      var t = v.tipo||"Vendedor";
+      if(!grupos[t]) grupos[t]=[];
+      grupos[t].push(v);
+    });
+    var iconos = {"Vendedor":"🛋️","Repartidor":"🚚","Almacen":"📦","Limpieza":"🧹"};
+    Object.keys(grupos).forEach(function(tipo){
+      if(!grupos[tipo].length) return;
+      var optG="<optgroup label='"+iconos[tipo]+" "+tipo+"'>";
+      grupos[tipo].forEach(function(v){
+        var txt=v.alias+(v.nombre?" — "+v.nombre:"");
+        var opt="<option value='"+v.alias+"'>"+txt+"</option>";
+        optG+=opt;
+        mTr.innerHTML+="<option value='"+v.alias+"'>"+txt+"</option>";
+      });
+      optG+="</optgroup>";
+      selTr.innerHTML+=optG;
+    });
+    document.getElementById("selYear").value=new Date().getFullYear();
+    return fsGetCached("vacaciones_bajas");
+  })
+  .then(function(regs){
+    registros=regs||[];
+    mostrarResumenGeneral(parseInt(document.getElementById("selYear").value)||new Date().getFullYear());
+  })
+  .catch(function(){
+    err.textContent="Email o contraseña incorrectos";
+    err.style.display="block";
+  });
+}
+
+// VISTA
+function cargarVista(){
+  // Antes de dibujar nada, aseguramos que las fiestas del año están cargadas
+  var y = parseInt(document.getElementById("selYear").value) || new Date().getFullYear();
+  cargarFestivosAnio(y, _cargarVistaReal);
+}
+
+function _cargarVistaReal(){
+  var alias=document.getElementById("selTr").value;
+  var year=parseInt(document.getElementById("selYear").value);
+  if(!alias||!year){
+    document.getElementById("vPrincipal").style.display="none";
+    mostrarResumenGeneral(year||new Date().getFullYear());
+    return;
+  }
+  document.getElementById("vVacia").style.display="none";
+  document.getElementById("vPrincipal").style.display="block";
+
+  var misRegs=registros.filter(function(r){return r.alias===alias&&parseInt(r.año)===year;})
+    .sort(function(a,b){return (a.fechaIni||"").localeCompare(b.fechaIni||"");});
+
+  var dVac={}, dBaja={};
+  misRegs.forEach(function(r){
+    diasRango(r.fechaIni,r.fechaFin).forEach(function(d){
+      if(r.tipo==="vacacion") dVac[d]=true;
+      else dBaja[d]=true;
+    });
+  });
+
+  var nV=Object.keys(dVac).length;
+  var nB=Object.keys(dBaja).length;
+  document.getElementById("nVac").textContent=nV;
+  document.getElementById("nPend").textContent=30-nV;
+  document.getElementById("nBaja").textContent=nB;
+
+  var v=vendedores.find(function(x){return x.alias===alias;});
+  var nombre=v?[v.nombre,v.apellidos].filter(Boolean).join(" ")||alias:alias;
+  document.getElementById("calTit").textContent="Calendario "+year+" · "+alias;
+  document.getElementById("printTitle").textContent="Vacaciones y Bajas "+year+" · "+alias;
+  document.getElementById("printSub").textContent=nombre+" | Meres Central de Compras S.L. | CIF: B74102807";
+  document.getElementById("printHdr").style.display="block";
+
+  var fest=festivos(year);
+  // Info festivos
+  if(!Object.keys(fest).length){
+    document.getElementById("festInfo").innerHTML="<strong style='font-size:12px;color:#c0392b'>⚠️ No hay fiestas registradas para "+year+"</strong><br><span style='font-size:12px'>Ve a <strong>📅 Gestionar Fiestas</strong> y añádelas (o usa 📋 Copiar de otro año).</span>";
+  } else {
+    var chips=Object.keys(fest).sort().map(function(f){
+      var d=new Date(f+"T12:00:00");
+      var dow=["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"][d.getDay()];
+      var parts=f.split("-");
+      return "<span class='fest-chip'>"+dow+" "+parts[2]+"/"+parts[1]+" · "+fest[f]+"</span>";
+    }).join(" ");
+    document.getElementById("festInfo").innerHTML="<strong style='font-size:12px'>📅 Festivos Asturias "+year+":</strong><br>"+chips;
+  }
+
+  renderCal(year,dVac,dBaja,fest);
+  renderRegs(misRegs,alias,year);
+}
+
+function renderCal(year,dVac,dBaja,fest){
+  var grid=document.getElementById("calGrid");
+  var hoy=fStr(new Date());
+  var MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  grid.innerHTML="";
+  for(var m=0;m<12;m++){
+    var primero=new Date(year,m,1);
+    var ultimo=new Date(year,m+1,0).getDate();
+    var dow1=primero.getDay();
+    var offset=dow1===0?6:dow1-1;
+    var html="<div class='mes-nombre'>"+MESES[m]+"</div><div class='dias-grid'>";
+    ["L","M","X","J","V","S","D"].forEach(function(c){html+="<div class='dia-cab'>"+c+"</div>";});
+    for(var o=0;o<offset;o++) html+="<div class='dia vacio'></div>";
+    for(var dia=1;dia<=ultimo;dia++){
+      var fs=year+"-"+p2(m+1)+"-"+p2(dia);
+      var d=new Date(year,m,dia);
+      var dow=d.getDay();
+      var cls="dia";
+      if(dVac[fs])       cls+=" vac";
+      else if(dBaja[fs]) cls+=" baja";
+      else if(fest[fs])  cls+=" festivo";
+      else if(dow===0||dow===6) cls+=" finde";
+      else cls+=" normal";
+      if(fs===hoy) cls+=" hoy";
+      var tt=dVac[fs]?"Vacaciones":dBaja[fs]?"Baja laboral":fest[fs]?fest[fs]:"";
+      html+="<div class='"+cls+"'"+(tt?" title='"+tt+"'":"")+">"+dia+"</div>";
+    }
+    html+="</div>";
+    var b=document.createElement("div"); b.innerHTML=html;
+    grid.appendChild(b);
+  }
+}
+
+function renderRegs(regs,alias,year){
+  var cont=document.getElementById("regList");
+  if(!regs.length){
+    cont.innerHTML="<div style='color:#888;font-size:13px;text-align:center;padding:20px'>Sin registros para "+alias+" en "+year+"</div>";
+    return;
+  }
+  cont.innerHTML="";
+  regs.forEach(function(r){
+    var dias=diasRango(r.fechaIni,r.fechaFin).length;
+    var esVac=r.tipo==="vacacion";
+    var div=document.createElement("div");
+    div.className="reg-item "+(esVac?"rv":"rb");
+    div.innerHTML=
+      "<div class='reg-info'>"+
+        "<div class='rf'>"+(esVac?"🏖️ Vacaciones":"🤒 Baja laboral")+" &nbsp;·&nbsp; "+r.fechaIni+(r.fechaIni!==r.fechaFin?" → "+r.fechaFin:"")+"</div>"+
+        "<div class='rd'>"+dias+" día"+(dias!==1?"s":"")+" naturales</div>"+
+        (r.nota?"<div class='rn'>\""+r.nota+"\"</div>":"")+
+      "</div>"+
+      "<div style='display:flex;gap:6px;flex-shrink:0'>"+
+      "<button class='btn no-print' style='padding:6px 12px;font-size:12px;background:#185fa5;color:#fff;border-color:#185fa5' onclick='editarRegistro(\""+r._id+"\")'>✏️ Editar</button>"+
+      "<button class='btn btn-red no-print' style='padding:6px 12px;font-size:12px;flex-shrink:0' onclick='eliminar(\""+r._id+"\")'>Eliminar</button>"+
+      "</div>";
+    cont.appendChild(div);
+  });
+}
+
+// MODAL
+function abrirModal(){
+  editandoId = null;
+  var alias=document.getElementById("selTr").value;
+  if(alias) document.getElementById("mTr").value=alias;
+  var hoy=fStr(new Date());
+  document.getElementById("mIni").value=hoy;
+  document.getElementById("mFin").value=hoy;
+  document.getElementById("mNota").value="";
+  document.getElementById("mErr").style.display="none";
+  document.getElementById("mDias").style.display="none";
+  // Restaurar título
+  var titulo = document.getElementById("mTitulo");
+  if(titulo) titulo.textContent = "➕ Nuevo registro";
+  var btnGuardar = document.getElementById("mBtnGuardar");
+  if(btnGuardar) btnGuardar.textContent = "💾 Guardar";
+  selTipo("vacacion");
+  calcDias();
+  document.getElementById("mOverlay").classList.add("open");
+}
+function cerrarModal(){ document.getElementById("mOverlay").classList.remove("open"); }
+function selTipo(t){
+  tipoSel=t;
+  document.getElementById("btnV").className="tipo-btn"+(t==="vacacion"?" sv":"");
+  document.getElementById("btnB").className="tipo-btn"+(t==="baja"?" sb":"");
+}
+function calcDias(){
+  var ini=document.getElementById("mIni").value;
+  var fin=document.getElementById("mFin").value;
+  var el=document.getElementById("mDias");
+  if(!ini||!fin||ini>fin){el.style.display="none";return;}
+  var n=diasRango(ini,fin).length;
+  el.style.display="block";
+  el.textContent="📅 "+n+" día"+(n!==1?"s":"")+" naturales ("+ini+" → "+fin+")";
+}
+document.getElementById("mOverlay").addEventListener("click",function(e){if(e.target===this)cerrarModal();});
+
+function guardar(){
+  var alias=document.getElementById("mTr").value;
+  var ini=document.getElementById("mIni").value;
+  var fin=document.getElementById("mFin").value;
+  var nota=document.getElementById("mNota").value.trim();
+  var err=document.getElementById("mErr");
+  err.style.display="none";
+  if(!alias){err.textContent="Selecciona un trabajador";err.style.display="block";return;}
+  if(!ini){err.textContent="Selecciona fecha de inicio";err.style.display="block";return;}
+  if(!fin){err.textContent="Selecciona fecha de fin";err.style.display="block";return;}
+  if(ini>fin){err.textContent="La fecha inicio debe ser anterior al fin";err.style.display="block";return;}
+  var año=parseInt(ini.split("-")[0]);
+  var data={alias:alias,tipo:tipoSel,fechaIni:ini,fechaFin:fin,año:año,nota:nota,creadoPor:currentAlias,creadoTs:new Date().toISOString()};
+
+  if(editandoId){
+    fsUpdate("vacaciones_bajas", editandoId, data).then(function(){
+      registros = registros.map(function(r){ return r._id === editandoId ? Object.assign({},data,{_id:editandoId}) : r; });
+      vacCacheClear("vacaciones_bajas");
+      editandoId = null;
+      cerrarModal();
+      toast("✅ Registro actualizado","ok");
+      cargarVista();
+    }).catch(function(e){err.textContent="Error: "+e.message;err.style.display="block";});
+  } else {
+    fsAdd("vacaciones_bajas",data).then(function(resp){
+      if(resp.error) throw new Error(resp.error.message);
+      data._id=(resp.name||"").split("/").pop();
+      registros.push(data);
+      vacCacheClear("vacaciones_bajas");
+      cerrarModal();
+      toast("✅ Registro guardado","ok");
+      cargarVista();
+    }).catch(function(e){err.textContent="Error: "+e.message;err.style.display="block";});
+  }
+}
+
+var editandoId = null; // ID del registro que se está editando (null = nuevo)
+
+function editarRegistro(id){
+  var r = registros.find(function(x){ return x._id === id; });
+  if(!r) return;
+  editandoId = id;
+  document.getElementById("mTr").value = r.alias;
+  document.getElementById("mIni").value = r.fechaIni;
+  document.getElementById("mFin").value = r.fechaFin;
+  document.getElementById("mNota").value = r.nota || "";
+  document.getElementById("mErr").style.display = "none";
+  selTipo(r.tipo);
+  calcDias();
+  // Cambiar título del modal
+  var titulo = document.getElementById("mTitulo");
+  if(titulo) titulo.textContent = "✏️ Editar registro";
+  var btnGuardar = document.getElementById("mBtnGuardar");
+  if(btnGuardar) btnGuardar.textContent = "💾 Guardar cambios";
+  document.getElementById("mOverlay").classList.add("open");
+}
+
+function eliminar(id){
+  if(!confirm("¿Eliminar este registro? No se puede deshacer.")) return;
+  fsDel("vacaciones_bajas",id).then(function(){
+    registros=registros.filter(function(r){return r._id!==id;});
+    vacCacheClear("vacaciones_bajas");
+    toast("Registro eliminado","ok");
+    cargarVista();
+  }).catch(function(e){toast("Error: "+e.message,"err");});
+}
+
+// RESUMEN GENERAL (cuando no hay trabajador seleccionado)
+function mostrarResumenGeneral(year){
+  document.getElementById("vVacia").style.display="block";
+  document.getElementById("printHdr").style.display="none";
+  var cont=document.getElementById("resumenGeneral");
+
+  var todos=vendedores
+    .filter(function(v){return v.alias!=="Jose Angel";})
+    .sort(function(a,b){return a.alias.localeCompare(b.alias,"es");});
+
+  var porAlias={};
+  registros.filter(function(r){return parseInt(r.año)===year;}).forEach(function(r){
+    if(!porAlias[r.alias]) porAlias[r.alias]=[];
+    porAlias[r.alias].push(r);
+  });
+
+  var filas=[];
+  todos.forEach(function(v){
+    var mis=porAlias[v.alias]||[];
+    var dVac={}, dBaja={};
+    mis.forEach(function(r){
+      diasRango(r.fechaIni,r.fechaFin).forEach(function(d){
+        if(r.tipo==="vacacion") dVac[d]=true; else dBaja[d]=true;
+      });
+    });
+    var nV=Object.keys(dVac).length;
+    var nB=Object.keys(dBaja).length;
+    var esExtra=(v.tipo||"Vendedor")!=="Vendedor";
+    filas.push({alias:v.alias,nombre:[v.nombre,v.apellidos].filter(Boolean).join(" ")||"",nV:nV,nB:nB,pend:30-nV,esExtra:esExtra,tieneRegs:nV>0||nB>0});
+  });
+
+  var conRegs=filas.filter(function(f){return f.tieneRegs;});
+  var sinRegs=filas.filter(function(f){return !f.tieneRegs;});
+
+  var html="<div class='card'>";
+  html+="<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px'>";
+  html+="<div class='card-title' style='margin-bottom:0'>📊 Resumen vacaciones y bajas "+year+"</div>";
+  html+="<div style='font-size:12px;color:#888'>"+filas.length+" trabajadores</div></div>";
+
+  if(!conRegs.length){
+    html+="<div style='text-align:center;padding:30px;color:#888'><div style='font-size:40px'>🏖️</div><p style='margin-top:10px'>Sin registros en "+year+"</p></div>";
+  } else {
+    html+="<table style='width:100%;border-collapse:collapse;font-size:13px'>";
+    html+="<thead><tr style='background:#1a1714;color:white'>";
+    html+="<th style='padding:10px;text-align:left;font-size:11px;letter-spacing:.06em'>TRABAJADOR</th>";
+    html+="<th style='padding:10px;text-align:left;font-size:11px;letter-spacing:.06em'>TIPO</th>";
+    html+="<th style='padding:10px;text-align:center;font-size:11px;letter-spacing:.06em'>VAC. DISFRUTADAS</th>";
+    html+="<th style='padding:10px;text-align:center;font-size:11px;letter-spacing:.06em'>VAC. PENDIENTES</th>";
+    html+="<th style='padding:10px;text-align:center;font-size:11px;letter-spacing:.06em'>DÍAS BAJA</th>";
+    html+="<th style='padding:10px;text-align:center;font-size:11px;letter-spacing:.06em'>ESTADO</th>";
+    html+="</tr></thead><tbody>";
+
+    conRegs.forEach(function(f){
+      var estadoCls=f.pend<=0?"color:#c0392b;font-weight:700":f.pend<10?"color:#c4571a;font-weight:700":"color:#2d7a4f";
+      var estadoTxt=f.pend<=0?"✓ Agotadas":f.pend<5?"⚠️ Casi sin pendientes":f.nV===0?"Sin vacaciones":"✓ Con pendientes";
+      html+="<tr style='border-bottom:1px solid #f0ece6;cursor:pointer' onclick='seleccionarTrabajador(\""+f.alias+"\")'>";
+      html+="<td style='padding:10px'><strong>"+f.alias+"</strong>"+(f.nombre?"<br><span style='font-size:11px;color:#888'>"+f.nombre+"</span>":"")+"</td>";
+      html+="<td style='padding:10px;font-size:12px;color:#888'>"+(f.esExtra?"📦 Almacén/Reparto":"🛋️ Vendedor")+"</td>";
+      html+="<td style='padding:10px;text-align:center'><strong style='font-size:18px;color:#2d7a4f'>"+f.nV+"</strong> <span style='font-size:11px;color:#888'>días</span></td>";
+      html+="<td style='padding:10px;text-align:center'><strong style='font-size:18px;color:#c4571a'>"+f.pend+"</strong> <span style='font-size:11px;color:#888'>días</span></td>";
+      html+="<td style='padding:10px;text-align:center'>"+(f.nB>0?"<strong style='font-size:18px;color:#c0392b'>"+f.nB+"</strong> <span style='font-size:11px;color:#888'>días</span>":"<span style='color:#ccc'>—</span>")+"</td>";
+      html+="<td style='padding:10px;text-align:center'><span style='"+estadoCls+"'>"+estadoTxt+"</span></td>";
+      html+="</tr>";
+    });
+    html+="</tbody></table>";
+
+    if(sinRegs.length){
+      html+="<div style='margin-top:12px;padding:10px;background:#f4f1ec;border-radius:8px;font-size:12px;color:#888'>";
+      html+="Sin registros en "+year+": "+sinRegs.map(function(f){return f.alias;}).join(", ");
+      html+="</div>";
+    }
+  }
+  html+="</div>";
+  cont.innerHTML=html;
+}
+
+function seleccionarTrabajador(alias){
+  document.getElementById("selTr").value=alias;
+  cargarVista();
+}
+
+// MODAL TRABAJADORES EXTRA
+function abrirModalTrabajador(){
+  renderListaExtra();
+  document.getElementById("teAlias").value="";
+  document.getElementById("teNombre").value="";
+  document.getElementById("teErr").style.display="none";
+  document.getElementById("mTrabOverlay").classList.add("open");
+}
+function cerrarModalTrabajador(){ document.getElementById("mTrabOverlay").classList.remove("open"); }
+document.getElementById("mTrabOverlay").addEventListener("click",function(e){if(e.target===this)cerrarModalTrabajador();});
+
+function renderListaExtra(){
+  var cont=document.getElementById("listaExtra");
+  if(!trabajadoresExtra.length){
+    cont.innerHTML="<div style='color:#888;font-size:13px;text-align:center;padding:10px'>Sin trabajadores extra registrados</div>";
+    return;
+  }
+  var tipoLabel={almacen:"📦 Almacén",reparto:"🚚 Reparto",limpieza:"🧹 Limpieza",otro:"Otro"};
+  cont.innerHTML="";
+  trabajadoresExtra.filter(function(t){return t.activo!==false;}).forEach(function(t){
+    var div=document.createElement("div");
+    div.style.cssText="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;background:#f4f1ec;margin-bottom:6px";
+    div.innerHTML="<div><strong>"+t.alias+"</strong>"+(t.nombre?" — "+t.nombre:"")+"<br><span style='font-size:11px;color:#888'>"+(tipoLabel[t.tipo]||t.tipo||"")+"</span></div>"+
+      "<button class='btn btn-red' style='padding:4px 10px;font-size:12px' onclick='eliminarTrabajadorExtra(\""+t._id+"\")'>Eliminar</button>";
+    cont.appendChild(div);
+  });
+}
+
+function guardarTrabajadorExtra(){
+  var alias=document.getElementById("teAlias").value.trim();
+  var nombre=document.getElementById("teNombre").value.trim();
+  var tipo=document.getElementById("teTipo").value;
+  var err=document.getElementById("teErr");
+  err.style.display="none";
+  if(!alias){err.textContent="El alias es obligatorio";err.style.display="block";return;}
+  // Verificar que no existe ya
+  var existe=vendedores.concat(trabajadoresExtra).some(function(v){return (v.alias||"").toLowerCase()===alias.toLowerCase();});
+  if(existe){err.textContent="Ya existe un trabajador con ese alias";err.style.display="block";return;}
+  var data={alias:alias,nombre:nombre,tipo:tipo,activo:true,creadoPor:currentAlias,creadoTs:new Date().toISOString()};
+  fsAdd("trabajadores_extra",data).then(function(resp){
+    if(resp.error) throw new Error(resp.error.message);
+    data._id=(resp.name||"").split("/").pop();
+    trabajadoresExtra.push(data);
+    // Actualizar selectores
+    var txt=alias+(nombre?" — "+nombre:"");
+    document.getElementById("selTr").innerHTML+="<option value='"+alias+"'>"+txt+"</option>";
+    document.getElementById("mTr").innerHTML+="<option value='"+alias+"'>"+txt+"</option>";
+    renderListaExtra();
+    document.getElementById("teAlias").value="";
+    document.getElementById("teNombre").value="";
+    toast("✅ Trabajador añadido","ok");
+  }).catch(function(e){err.textContent="Error: "+e.message;err.style.display="block";});
+}
+
+function eliminarTrabajadorExtra(id){
+  if(!confirm("¿Eliminar este trabajador? Sus registros de vacaciones se mantendrán.")) return;
+  fsDel("trabajadores_extra",id).then(function(){
+    trabajadoresExtra=trabajadoresExtra.filter(function(t){return t._id!==id;});
+    renderListaExtra();
+    toast("Trabajador eliminado","ok");
+  }).catch(function(e){toast("Error: "+e.message,"err");});
+}
+
+// ── CALENDARIO GENERAL ────────────────────────────────────────────────────────
+// Paleta de colores para trabajadores
+var COLORES = [
+  "#2d7a4f","#c4571a","#2856c8","#8e44ad","#d4ac0d",
+  "#16a085","#c0392b","#1a5276","#6e2fa0","#b7950b",
+  "#1abc9c","#e67e22","#2980b9","#9b59b6","#f39c12",
+  "#27ae60","#e74c3c","#3498db","#8e44ad","#f1c40f"
+];
+
+function abrirCalendarioGeneral(){
+  // El calendario general muestra 13 meses (hasta enero del año siguiente),
+  // así que cargamos las fiestas de los dos años antes de dibujar
+  var y = parseInt(document.getElementById("selYear").value) || new Date().getFullYear();
+  cargarFestivosAnio(y, function(){
+    cargarFestivosAnio(y+1, function(){
+      if(!Object.keys(festivos(y)).length){
+        toast("⚠️ No hay fiestas registradas para "+y+" — ve a 📅 Gestionar Fiestas","err");
+      }
+      _abrirCalendarioGeneralReal();
+    });
+  });
+}
+
+function _abrirCalendarioGeneralReal(){
+  var year=parseInt(document.getElementById("selYear").value)||new Date().getFullYear();
+  document.getElementById("calGenSub").textContent="Año "+year+" · Solo lectura";
+
+  var todos=vendedores
+    .filter(function(v){return v.alias!=="Jose Angel"&&v.activo!==false;})
+    .sort(function(a,b){return a.alias.localeCompare(b.alias,"es");});
+
+  var conRegs=todos.filter(function(v){
+    return registros.some(function(r){return r.alias===v.alias&&parseInt(r.año)===year;});
+  });
+  if(!conRegs.length) conRegs=todos;
+
+  var colorMap={};
+  conRegs.forEach(function(v,i){ colorMap[v.alias]=COLORES[i%COLORES.length]; });
+
+  // Solo vacaciones (no bajas) — incluir año y año+1 para cubrir enero siguiente
+  var diasMap={};
+  registros.filter(function(r){
+    return (parseInt(r.año)===year||parseInt(r.año)===year+1)&&r.tipo==="vacacion";
+  }).forEach(function(r){
+    if(!colorMap[r.alias]) return;
+    diasRango(r.fechaIni,r.fechaFin).forEach(function(d){
+      if(!diasMap[d]) diasMap[d]={};
+      diasMap[d][r.alias]=true;
+    });
+  });
+
+  var fest=festivos(year);
+  var hoy=fStr(new Date());
+  var MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  var FONDO="#f0f0f0";
+  // Generar lista de 13 meses: enero año hasta enero año+1
+  var mesesLista=[];
+  for(var i=0;i<13;i++){
+    var y=year+(i>=12?1:0);
+    var m=i%12;
+    mesesLista.push({y:y,m:m,nombre:MESES[m]});
+  }
+
+  // Leyenda
+  var leyDiv=document.getElementById("calGenLeyenda");
+  leyDiv.innerHTML="";
+  conRegs.forEach(function(v){
+    var el=document.createElement("div");
+    el.className="ley-gen";
+    el.innerHTML="<div class='ley-gen-dot' style='background:"+colorMap[v.alias]+"'></div>"+v.alias;
+    leyDiv.appendChild(el);
+  });
+
+  var tabla=document.getElementById("calGenTabla");
+  tabla.innerHTML="";
+  tabla.style.borderCollapse="collapse";
+
+  // ── FILA 1: nombres de meses ──
+  var trMes=document.createElement("tr");
+  var thAlias=document.createElement("th");
+  thAlias.className="col-alias";
+  thAlias.style.background="white";
+  thAlias.textContent="";
+  trMes.appendChild(thAlias);
+  mesesLista.forEach(function(ml){
+    var dm=new Date(ml.y,ml.m+1,0).getDate();
+    var th=document.createElement("th");
+    th.colSpan=dm;
+    th.textContent=ml.nombre+(ml.m===0?" "+ml.y:"");
+    th.style.cssText="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;padding:6px 4px;text-align:center;background:#1a1714;color:white;border-left:3px solid white;";
+    trMes.appendChild(th);
+  });
+  tabla.appendChild(trMes);
+
+  // ── FILA 2: letras + números ──
+  var trDias=document.createElement("tr");
+  var thEmp=document.createElement("th");
+  thEmp.className="col-alias";
+  thEmp.style.cssText="background:white;border-right:2px solid #ddd";
+  trDias.appendChild(thEmp);
+
+  mesesLista.forEach(function(ml){
+    var dm=new Date(ml.y,ml.m+1,0).getDate();
+    for(var d=1;d<=dm;d++){
+      var fs=ml.y+"-"+p2(ml.m+1)+"-"+p2(d);
+      var dow=new Date(fs+"T12:00:00").getDay();
+      var esFin=(dow===0||dow===6);
+      var esFest=!!(festivos(ml.y)[fs]);
+      var letra=(dow===0?"D":dow===1?"L":dow===3?"M":dow===4?"J":dow===5?"V":dow===6?"S":"");
+      var letraCol=dow===0?"#c0392b":letra?"#bbb":"transparent";
+      var numCol=esFest?"#c4571a":"#ccc";
+      var th=document.createElement("th");
+      th.innerHTML=
+        "<div style='font-size:7px;color:"+letraCol+";font-weight:800;line-height:1;height:8px;text-align:center'>"+letra+"</div>"+
+        "<div style='font-size:9px;color:"+numCol+";font-weight:"+(esFest?"900":"600")+";text-align:center'>"+d+"</div>";
+      th.style.cssText="background:white;padding:2px 0 3px 0;min-width:24px;"+(d===1?"border-left:3px solid #ddd;":"");
+      trDias.appendChild(th);
+    }
+  });
+  tabla.appendChild(trDias);
+
+  // ── FILAS DE TRABAJADORES ──
+  conRegs.forEach(function(v){
+    var color=colorMap[v.alias];
+    var tr=document.createElement("tr");
+
+    // Celda nombre
+    var tdNom=document.createElement("td");
+    tdNom.className="col-alias";
+    tdNom.style.cssText="color:"+color+";border-right:2px solid #ddd;background:white";
+    tdNom.innerHTML="<div style='display:flex;align-items:center;gap:6px'><div style='width:10px;height:10px;border-radius:2px;background:"+color+";flex-shrink:0'></div>"+v.alias+"</div>";
+    tr.appendChild(tdNom);
+
+    mesesLista.forEach(function(ml){
+      var dm=new Date(ml.y,ml.m+1,0).getDate();
+      for(var d=1;d<=dm;d++){
+        var fs=ml.y+"-"+p2(ml.m+1)+"-"+p2(d);
+        var dow=new Date(fs+"T12:00:00").getDay();
+        var tieneVac=!!(diasMap[fs]&&diasMap[fs][v.alias]);
+        var coinc=diasMap[fs]?Object.keys(diasMap[fs]).join(", "):"";
+        var esFin=(dow===0||dow===6);
+        var bgSinVac=esFin?"#e0e0e0":FONDO;
+        var td=document.createElement("td");
+        td.style.cssText=
+          "background:"+(tieneVac?color:bgSinVac)+";"+
+          "height:52px;"+
+          (d===1?"border-left:3px solid #ccc;":"");
+        if(coinc||festivos(ml.y)[fs]){
+          td.title=(coinc?coinc:"")+( festivos(ml.y)[fs]?(coinc?" | ":"")+festivos(ml.y)[fs]:"");
+        }
+        tr.appendChild(td);
+      }
+    });
+    tabla.appendChild(tr);
+  });
+
+  // ── FILA COINCIDENCIAS ──
+  var trSol=document.createElement("tr");
+  var tdSolNom=document.createElement("td");
+  tdSolNom.className="col-alias";
+  tdSolNom.style.cssText="font-size:10px;color:#888;font-style:italic;border-right:2px solid #ddd;background:white";
+  tdSolNom.textContent="Coincidencias";
+  trSol.appendChild(tdSolNom);
+
+  mesesLista.forEach(function(ml){
+    var dm=new Date(ml.y,ml.m+1,0).getDate();
+    for(var d=1;d<=dm;d++){
+      var fs=ml.y+"-"+p2(ml.m+1)+"-"+p2(d);
+      var coinc=diasMap[fs]?Object.keys(diasMap[fs]):[];
+      var td=document.createElement("td");
+      var dowS=new Date(fs+"T12:00:00").getDay();
+      var bg=(dowS===0||dowS===6)?"#e0e0e0":FONDO;
+      if(coinc.length>=2){
+        var grad="linear-gradient(to bottom";
+        coinc.slice(0,4).forEach(function(a){grad+=","+colorMap[a];});
+        grad+=")";
+        bg=grad;
+        td.title=coinc.join(", ");
+      } else if(coinc.length===1){
+        bg=colorMap[coinc[0]]||FONDO;
+        td.title=coinc[0];
+      }
+      td.style.cssText="border:none;background:"+bg+";height:14px;"+(d===1?"border-left:3px solid #ddd;":"");
+      trSol.appendChild(td);
+    }
+  });
+  tabla.appendChild(trSol);
+
+  document.getElementById("calGenOverlay").classList.add("open");
+}
+
+function cerrarCalendarioGeneral(){
+  document.getElementById("calGenOverlay").classList.remove("open");
+}
+document.getElementById("calGenOverlay").addEventListener("click",function(e){
+  if(e.target===this) cerrarCalendarioGeneral();
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// GESTIÓN DE FIESTAS
+// ══════════════════════════════════════════════════════════════════════════════
+var FIESTAS_CARGADAS = []; // cache de fiestas del año actual
+
+function abrirGestionFiestas(){
+  var anio = parseInt(document.getElementById("selYear").value) || new Date().getFullYear();
+  document.getElementById("fiestas-anio").textContent = anio;
+  document.getElementById("fiesta-fecha").value = "";
+  document.getElementById("fiesta-nombre").value = "";
+  document.getElementById("fiesta-tipo").value = "Nacional";
+  cargarFiestas(anio, function(){
+    renderFiestas();
+    document.getElementById("fiestasOverlay").style.display = "flex";
+  });
+}
+
+function cerrarGestionFiestas(){
+  document.getElementById("fiestasOverlay").style.display = "none";
+}
+
+function cargarFiestas(anio, callback){
+  // Caché 30 días — las fiestas cambian rarísimas veces
+  var cacheKey = "vac_fiestas_"+anio;
+  try {
+    var raw = localStorage.getItem(cacheKey);
+    if(raw){
+      var obj = JSON.parse(raw);
+      if(Date.now()-obj.ts < 30*24*60*60*1000){
+        FIESTAS_CARGADAS = obj.data;
+        if(callback) callback();
+        return;
+      }
+    }
+  } catch(e){}
+  db.collection("fiestas_anuales")
+    .where("anio","==",anio)
+    .get()
+    .then(function(sn){
+      FIESTAS_CARGADAS = [];
+      sn.forEach(function(d){
+        FIESTAS_CARGADAS.push(Object.assign({_id: d.id}, d.data()));
+      });
+      FIESTAS_CARGADAS.sort(function(a,b){ return a.fecha.localeCompare(b.fecha); });
+      try{ localStorage.setItem(cacheKey, JSON.stringify({ts:Date.now(),data:FIESTAS_CARGADAS})); }catch(e){}
+      if(callback) callback();
+    }).catch(function(e){
+      console.error("Error cargando fiestas:",e);
+      if(callback) callback();
+    });
+}
+
+function renderFiestas(){
+  var anio = parseInt(document.getElementById("selYear").value) || new Date().getFullYear();
+  var cont = document.getElementById("fiestas-lista");
+  if(!FIESTAS_CARGADAS.length){
+    cont.innerHTML = "<div style='color:#aaa;text-align:center;padding:20px;font-size:13px'>No hay fiestas registradas para "+anio+"</div>";
+    return;
+  }
+  var TIPOS_COLOR = { "Nacional":"#2856c8", "Asturias":"#2d7a4f", "Siero/Local":"#c4571a" };
+  var html = "";
+  FIESTAS_CARGADAS.forEach(function(f){
+    var d = new Date(f.fecha+"T00:00:00");
+    var dias = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+    var nomDia = dias[d.getDay()];
+    var color = TIPOS_COLOR[f.tipo] || "#888";
+    html += "<div style='display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #f4f1ec;font-size:13px'>"
+      +"<div style='width:48px;text-align:center;font-weight:700;color:#1a1714'>"+f.fecha.slice(8)+"/"+f.fecha.slice(5,7)+"</div>"
+      +"<div style='width:30px;text-align:center;color:#888;font-size:11px'>"+nomDia+"</div>"
+      +"<div style='flex:1;font-weight:600'>"+f.nombre+"</div>"
+      +"<div style='padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;background:"+color+"20;color:"+color+"'>"+f.tipo+"</div>"
+      +"<button onclick='borrarFiesta(\""+f._id+"\")' style='background:none;border:none;cursor:pointer;color:#bbb;font-size:16px;padding:2px 6px' title='Eliminar'>✕</button>"
+      +"</div>";
+  });
+  cont.innerHTML = html;
+}
+
+function guardarFiesta(){
+  var anio = parseInt(document.getElementById("selYear").value) || new Date().getFullYear();
+  var fecha  = document.getElementById("fiesta-fecha").value;
+  var nombre = document.getElementById("fiesta-nombre").value.trim();
+  var tipo   = document.getElementById("fiesta-tipo").value;
+  var err    = document.getElementById("fiesta-err");
+  err.style.display = "none";
+  if(!fecha){ err.textContent = "Indica la fecha"; err.style.display="block"; return; }
+  if(!nombre){ err.textContent = "Indica el nombre de la fiesta"; err.style.display="block"; return; }
+  if(fecha.slice(0,4) != anio){ err.textContent = "La fecha debe ser del año "+anio; err.style.display="block"; return; }
+  // Comprobar si ya existe esa fecha
+  var existe = FIESTAS_CARGADAS.find(function(f){ return f.fecha===fecha; });
+  if(existe){ err.textContent = "Ya existe una fiesta en esa fecha ("+existe.nombre+")"; err.style.display="block"; return; }
+  var doc = { anio:anio, fecha:fecha, nombre:nombre, tipo:tipo, creadoPor:currentAlias, creadoTs:new Date().toISOString() };
+  db.collection("fiestas_anuales").add(doc).then(function(ref){
+    FIESTAS_CARGADAS.push(Object.assign({_id:ref.id}, doc));
+    FIESTAS_CARGADAS.sort(function(a,b){ return a.fecha.localeCompare(b.fecha); });
+    try{ localStorage.setItem("vac_fiestas_"+anio, JSON.stringify({ts:Date.now(),data:FIESTAS_CARGADAS})); }catch(e){}
+    invalidarFestivosAnio(anio);
+    cargarVista(); // redibuja el calendario con la fiesta nueva
+    renderFiestas();
+    document.getElementById("fiesta-fecha").value = "";
+    document.getElementById("fiesta-nombre").value = "";
+    toast("Fiesta añadida: "+nombre, "ok");
+  }).catch(function(e){
+    err.textContent = "Error: "+e.message; err.style.display="block";
+  });
+}
+
+function borrarFiesta(id){
+  if(!confirm("¿Eliminar esta fiesta?")) return;
+  db.collection("fiestas_anuales").doc(id).delete().then(function(){
+    FIESTAS_CARGADAS = FIESTAS_CARGADAS.filter(function(f){ return f._id!==id; });
+    var anio = parseInt(document.getElementById("selYear").value) || new Date().getFullYear();
+    try{ localStorage.setItem("vac_fiestas_"+anio, JSON.stringify({ts:Date.now(),data:FIESTAS_CARGADAS})); }catch(e){}
+    invalidarFestivosAnio(anio);
+    cargarVista(); // redibuja el calendario sin la fiesta borrada
+    renderFiestas();
+    toast("Fiesta eliminada","ok");
+  }).catch(function(e){ toast("Error: "+e.message,"err"); });
+}
+
+function copiarFiestasAnio(){
+  var anioOrigen = parseInt(prompt("¿De qué año quieres copiar las fiestas?\n(Solo copia las Nacionales y de Asturias, no las locales)"));
+  if(!anioOrigen || isNaN(anioOrigen)) return;
+  var anioDestino = parseInt(document.getElementById("selYear").value) || new Date().getFullYear();
+  if(anioOrigen === anioDestino){ toast("El año origen y destino son iguales","err"); return; }
+  db.collection("fiestas_anuales").where("anio","==",anioOrigen).get().then(function(sn){
+    var fiestas = [];
+    sn.forEach(function(d){ var f=d.data(); if(f.tipo!=="Siero/Local") fiestas.push(f); });
+    if(!fiestas.length){ toast("No hay fiestas en "+anioOrigen,"err"); return; }
+    var promesas = fiestas.map(function(f){
+      // Ajustar año en la fecha
+      var nuevaFecha = anioDestino+f.fecha.slice(4);
+      return db.collection("fiestas_anuales").add(Object.assign({},f,{anio:anioDestino,fecha:nuevaFecha,creadoTs:new Date().toISOString()}));
+    });
+    return Promise.all(promesas);
+  }).then(function(){
+    toast("Fiestas copiadas de "+anioOrigen+" a "+anioDestino,"ok");
+    // Borramos la caché vieja para que se lean las fiestas recién copiadas
+    try{ localStorage.removeItem("vac_fiestas_"+anioDestino); }catch(e){}
+    invalidarFestivosAnio(anioDestino);
+    cargarFiestas(anioDestino, renderFiestas);
+    cargarVista(); // redibuja el calendario con las fiestas nuevas
+  }).catch(function(e){ toast("Error: "+e.message,"err"); });
+}
+</script>
+</body>
+</html>
