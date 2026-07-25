@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carteles Artículos Varios</title>
+<!-- v1.3 — 25/07/2026 — 12 líneas + autoajuste 1 página A4 + guardado BD + cajetines condicionales + total editable -->
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:ital,wght@0,700;0,900;1,700;1,900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Firebase (Compat 9.23.0) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+:root{--gris:#f5f4f0;--borde:#e0dfd8;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--gris);min-height:100vh;}
+header{background:#1a1a18;color:#fff;padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.htitle{font-family:'Anton',sans-serif;font-size:20px;letter-spacing:.05em;}
+.hsub{font-size:11px;opacity:.5;margin-top:1px;}
+.app{display:grid;grid-template-columns:340px 1fr;min-height:calc(100vh - 52px);}
+@media(max-width:860px){.app{grid-template-columns:1fr;}}
+.panel{background:#fff;border-right:1px solid var(--borde);padding:1.25rem;overflow-y:auto;max-height:calc(100vh - 52px);position:sticky;top:0;}
+.plbl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#888;font-weight:600;margin-bottom:5px;display:block;}
+.psec{margin-bottom:1rem;}
+input[type=text],input[type=number],select{width:100%;padding:9px 11px;border:1.5px solid var(--borde);border-radius:7px;font-size:14px;font-family:'DM Sans',sans-serif;background:#fff;color:#1a1a18;-webkit-appearance:none;transition:border-color .2s;}
+input:focus,select:focus{outline:none;border-color:#1a1a18;}
+.color-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
+.cbtn{padding:7px 3px;border-radius:7px;border:2px solid transparent;cursor:pointer;font-size:11px;font-weight:700;text-align:center;transition:all .15s;touch-action:manipulation;}
+.cbtn.active{border-color:#fff;box-shadow:0 0 0 3px #1a1a18;}
+.etiqueta-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.ebtn{padding:7px 5px;border-radius:7px;border:1.5px solid var(--borde);cursor:pointer;font-size:12px;font-weight:700;text-align:center;touch-action:manipulation;background:#f5f4f0;color:#1a1a18;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.ebtn.active{background:#1a1a18;color:#fff;border-color:#1a1a18;}
+hr{border:none;border-top:1px solid var(--borde);margin:.85rem 0;}
+.btn-group{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:1.25rem;}
+.btn{padding:11px;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;touch-action:manipulation;}
+.btn-a4{background:#1a1a18;color:#fff;}
+.btn-a5{background:#555;color:#fff;}
+.btn-prev{background:var(--gris);color:#1a1a18;border:1.5px solid var(--borde);grid-column:1/-1;}
+.btn-full{width:100%;background:var(--gris);color:#1a1a18;border:1.5px solid var(--borde);margin-top:6px;}
+
+/* TABLA ARTICULOS */
+.articulos-table{width:100%;border-collapse:collapse;margin-top:4px;}
+.articulos-table th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;font-weight:600;padding:5px 8px;text-align:left;border-bottom:2px solid var(--borde);}
+.articulos-table td{padding:6px 8px;border-bottom:1px solid var(--borde);font-size:13px;vertical-align:middle;}
+.articulos-table td input{border:none;border-bottom:1.5px solid var(--borde);border-radius:0;padding:4px 6px;font-size:13px;background:transparent;}
+.articulos-table td input:focus{border-bottom-color:#1a1a18;outline:none;}
+.col-articulo{width:35%;}
+.col-medida{width:25%;}
+.col-antes{width:20%;text-align:right;}
+.col-ahora{width:20%;text-align:right;}
+
+/* TOTAL */
+.chk-row{display:flex;align-items:center;gap:8px;font-size:13px;color:#1a1a18;cursor:pointer;margin-top:4px;}
+.chk-row input[type=checkbox]{width:18px;height:18px;flex-shrink:0;accent-color:#1a1a18;cursor:pointer;}
+.nota-calc{font-size:11px;color:#888;margin-top:5px;font-style:italic;}
+
+/* GUARDAR / MODAL */
+.estado-guardado{font-size:11px;margin-top:5px;font-weight:600;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);align-items:center;justify-content:center;z-index:999;padding:20px;}
+.modal-box{background:#fff;border-radius:12px;max-width:480px;width:100%;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--borde);font-weight:700;color:#1a1a18;}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:#888;line-height:1;touch-action:manipulation;}
+.modal-body{padding:6px 18px 14px;overflow-y:auto;}
+.cartel-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--borde);}
+.cartel-nombre{font-weight:600;font-size:14px;color:#1a1a18;}
+.cartel-fecha{font-size:11px;color:#888;margin-top:2px;}
+.cartel-acciones{display:flex;gap:6px;flex-shrink:0;}
+.cartel-acciones .btn{padding:7px 10px;font-size:12px;border-radius:6px;}
+
+.preview-area{display:flex;align-items:center;justify-content:center;padding:2rem;background:#d8d7d3;min-height:calc(100vh - 52px);}
+.preview-wrap{box-shadow:0 8px 40px rgba(0,0,0,.3);transform-origin:top center;}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="htitle">📰 Carteles Artículos Varios</div><div class="hsub">Muebles La Factoría · Merkamueble · ExpoSofá</div></div>
+  <a href="carteles.html" style="color:rgba(255,255,255,.6);font-size:12px;text-decoration:none">← Carteles generales</a>
+</header>
+
+<div class="app">
+  <div class="panel">
+
+    <!-- TIENDA -->
+    <div class="psec">
+      <span class="plbl">Tienda / Color</span>
+      <div class="color-grid">
+        <button class="cbtn active" data-color="negro" style="background:#000;color:#fff">Negro</button>
+        <button class="cbtn" data-color="verde" style="background:#1a6b2a;color:#fff">Factoría</button>
+        <button class="cbtn" data-color="azul" style="background:#003580;color:#fff">Merka</button>
+        <button class="cbtn" data-color="naranja" style="background:#E8470A;color:#fff">ExpoSofá</button>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- TITULO DEL CARTEL -->
+    <div class="psec">
+      <span class="plbl">Título del cartel</span>
+      <input type="text" id="inp-titulo" value="Artículos Varios" placeholder="Ej: Artículos Varios">
+    </div>
+
+    <hr>
+
+    <!-- ETIQUETA -->
+    <div class="psec">
+      <span class="plbl">Etiqueta promocional</span>
+      <div class="etiqueta-grid">
+        <button class="ebtn active" data-etiq="¡¡ SALDO !!">¡¡ SALDO !!</button>
+        <button class="ebtn" data-etiq="¡¡ OFERTA !!">¡¡ OFERTA !!</button>
+        <button class="ebtn" data-etiq="¡¡ ULTIMO !!">¡¡ ULTIMO !!</button>
+        <button class="ebtn" data-etiq="¡ PROMOCION !">¡ PROMOCION !</button>
+        <button class="ebtn" data-etiq="¡ LIQUIDACION !">¡ LIQUIDACION !</button>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- TABLA ARTICULOS (8 LINEAS) -->
+    <div class="psec">
+      <span class="plbl">Artículos — hasta 12 líneas</span>
+      <table class="articulos-table">
+        <thead>
+          <tr>
+            <th class="col-articulo">Artículo</th>
+            <th class="col-medida">Medida/Desc</th>
+            <th class="col-antes">Antes</th>
+            <th class="col-ahora">Ahora</th>
+          </tr>
+        </thead>
+        <tbody id="articulos-tbody">
+          <!-- generado por JS -->
+        </tbody>
+      </table>
+      <div style="margin-top:8px;font-size:11px;color:#888">Si dejas "Ahora" en blanco, esa línea sale como texto (sin cajetines). Útil para separadores o subtítulos.</div>
+    </div>
+
+    <hr>
+
+    <!-- SUMA TOTAL -->
+    <div class="psec">
+      <span class="plbl">Total del cartel</span>
+      <label class="chk-row">
+        <input type="checkbox" id="chk-total" checked>
+        <span>Mostrar el total en el cartel</span>
+      </label>
+      <div style="margin-top:8px">
+        <input type="number" step="0.01" id="inp-total" value="0" placeholder="0">
+        <button class="btn btn-full" id="btn-recalc-total">🔄 Recalcular suma automática</button>
+        <div class="nota-calc">Puedes escribir la cifra a mano o pulsar el botón para volver a sumar la columna "Ahora".</div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- TEXTO INFERIOR -->
+    <div class="psec">
+      <span class="plbl">Texto inferior</span>
+      <input type="text" id="inp-texto-inf" value="* Precio por unidad. Stock limitado *">
+    </div>
+
+    <!-- DESCRIPCION EXTRA -->
+    <div class="psec">
+      <span class="plbl">Descripción adicional (aparece bajo los precios)</span>
+      <input type="text" id="inp-extra" placeholder="Ej: Incluye transporte y montaje gratis">
+    </div>
+
+    <hr>
+
+    <!-- GUARDAR / CARGAR -->
+    <div class="psec">
+      <span class="plbl">Guardar / Cargar carteles</span>
+      <input type="text" id="inp-nombre-cartel" placeholder="Nombre para guardar este cartel">
+      <div class="btn-group" style="margin-top:8px">
+        <button class="btn btn-a4" id="btn-guardar-cartel">💾 Guardar cartel</button>
+        <button class="btn btn-a5" id="btn-ver-carteles">📋 Ver guardados</button>
+      </div>
+      <div class="estado-guardado" id="guardar-estado"></div>
+    </div>
+
+    <!-- ACCIONES -->
+    <div class="btn-group">
+      <button class="btn btn-a4" style="grid-column:1/-1" onclick="imprimir()">🖨️ Imprimir A4</button>
+      <button class="btn btn-prev" onclick="actualizarPreview()">🔄 Actualizar vista previa</button>
+    </div>
+
+  </div>
+
+  <!-- PREVIEW AREA -->
+  <div class="preview-area" id="preview-area">
+    <div class="preview-wrap" id="preview-wrap"></div>
+  </div>
+</div>
+
+<!-- MODAL: LISTA DE CARTELES GUARDADOS -->
+<div class="modal-overlay" id="modal-carteles">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span>📋 Carteles guardados</span>
+      <button class="modal-close" id="btn-cerrar-modal">✕</button>
+    </div>
+    <div class="modal-body" id="lista-carteles-body"></div>
+  </div>
+</div>
+
+<script>
+// ===== FIREBASE (acceso anónimo, sin login) =====
+const firebaseConfig = {
+  apiKey: "AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
+  authDomain: "muebles-presupuestos.firebaseapp.com",
+  projectId: "muebles-presupuestos",
+  storageBucket: "muebles-presupuestos.firebasestorage.app",
+  messagingSenderId: "37365883872",
+  appId: "1:37365883872:web:842ca4d318c01652684185"
+};
+firebase.initializeApp(firebaseConfig);
+firebase.auth().signInAnonymously().catch(function(e){ console.error('Error de acceso a la base de datos:', e); });
+const db = firebase.firestore();
+const COLECCION_CARTELES = 'carteles_articulos_varios'; // "tabla" propia de este generador
+
+// ===== CONSTANTES =====
+const COLORES = {
+  negro: { bg: '#000', text: '#fff' },
+  verde: { bg: '#1a6b2a', text: '#fff' },
+  azul: { bg: '#003580', text: '#fff' },
+  naranja: { bg: '#E8470A', text: '#fff' }
+};
+
+const LOGOS = {
+  negro: '',
+  verde: 'La Factoría',
+  azul: 'Merkamueble',
+  naranja: 'ExpoSofá'
+};
+
+let colorActual = 'negro';
+let etiquetaActual = '¡¡ SALDO !!';
+let totalEditadoManual = false;
+const NUM_LINEAS = 12;
+
+// ===== INICIALIZACION =====
+function inicializarArticulos() {
+  const tbody = document.getElementById('articulos-tbody');
+  tbody.innerHTML = '';
+
+  for (let i = 0; i < NUM_LINEAS; i++) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="col-articulo"><input type="text" placeholder="Ej: Sillón" oninput="actualizarPreview()"></td>
+      <td class="col-medida"><input type="text" placeholder="Ej: Cuero" oninput="actualizarPreview()"></td>
+      <td class="col-antes"><input type="number" step="0.01" placeholder="0.00" oninput="actualizarPreview()"></td>
+      <td class="col-ahora"><input type="number" step="0.01" placeholder="0.00" oninput="actualizarTotal(); actualizarPreview()"></td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+// Filas ya interpretadas (números) y solo las que tienen algo
+function getArticulos() {
+  const filas = [];
+  const inputs = document.querySelectorAll('#articulos-tbody tr');
+
+  inputs.forEach(row => {
+    const cells = row.querySelectorAll('input');
+    const art = cells[0].value.trim();
+    const med = cells[1].value.trim();
+    const antes = parseFloat(cells[2].value) || 0;
+    const ahora = parseFloat(cells[3].value) || 0;
+
+    if (art || med || antes || ahora) {
+      filas.push({ articulo: art, medida: med, antes, ahora });
+    }
+  });
+
+  return filas;
+}
+
+// Filas en crudo (texto tal cual) de las 8 líneas — para guardar/restaurar exacto
+function getFilasRaw() {
+  const filas = [];
+  document.querySelectorAll('#articulos-tbody tr').forEach(row => {
+    const c = row.querySelectorAll('input');
+    filas.push({ art: c[0].value, med: c[1].value, antes: c[2].value, ahora: c[3].value });
+  });
+  return filas;
+}
+
+function actualizarTotal() {
+  // Si el usuario ha escrito el total a mano, no lo machacamos
+  if (totalEditadoManual) return;
+  const filas = getArticulos();
+  const total = filas.reduce((sum, f) => sum + f.ahora, 0);
+  document.getElementById('inp-total').value = Math.round(total);
+}
+
+function getDatos() {
+  return {
+    titulo: document.getElementById('inp-titulo').value || 'Artículos Varios',
+    filas: getArticulos(),
+    textoInf: document.getElementById('inp-texto-inf').value,
+    extra: document.getElementById('inp-extra').value,
+    mostrarTotal: document.getElementById('chk-total').checked,
+    total: parseFloat(document.getElementById('inp-total').value) || 0
+  };
+}
+
+function fmtP(n) {
+  return Math.round(n || 0) + '€';
+}
+
+// ===== VISTA PREVIA =====
+// ===== CARTEL A4 (tamaño fijo, se autoajusta para caber en 1 página) =====
+// k = escala de las filas: 1 = tamaño normal; menor = más comprimido
+function construirFilasHTML(d, k) {
+  const col = COLORES[colorActual];
+  const s = n => (n * k).toFixed(2) + 'px';
+  let html = '';
+  d.filas.forEach(f => {
+    const nombre = `<div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:${s(32)};color:#1a1a18;letter-spacing:.02em">${f.articulo}${f.medida ? ' · ' + f.medida : ''}</div>`;
+    if (f.ahora > 0) {
+      const antesBox = (f.antes > 0) ? `
+        <div style="text-align:right;padding-right:${s(20)}">
+          <div style="font-size:${s(13)};color:#888;text-transform:uppercase;letter-spacing:.05em">Antes</div>
+          <div style="font-family:'Anton',sans-serif;font-size:${s(30)};color:#555;text-decoration:line-through;text-decoration-color:#cc0000;text-decoration-thickness:${s(2)}">${fmtP(f.antes)}</div>
+        </div>` : `<div></div>`;
+      html += `
+      <div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;border-bottom:${s(1.5)} solid ${col.bg}22;padding:${s(8)} 0">
+        <div>${nombre}</div>
+        ${antesBox}
+        <div style="text-align:right;background:${col.bg};color:${col.text};padding:${s(6)} ${s(16)};border-radius:${s(6)};min-width:${s(150)}">
+          <div style="font-size:${s(12)};opacity:.75;text-transform:uppercase;letter-spacing:.05em">Ahora</div>
+          <div style="font-family:'Anton',sans-serif;font-size:${s(60)};line-height:1">${fmtP(f.ahora)}</div>
+        </div>
+      </div>`;
+    } else {
+      // Línea sin precio: solo texto (separador / subtítulo)
+      html += `
+      <div style="border-bottom:${s(1.5)} solid ${col.bg}22;padding:${s(8)} 0">${nombre}</div>`;
+    }
+  });
+  if (d.mostrarTotal) {
+    html += `
+    <div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;padding:${s(14)} 0 0;border-top:${s(2)} solid ${col.bg};margin-top:${s(8)}">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:${s(34)};color:#1a1a18">TOTAL</div>
+      <div style="padding-right:${s(20)}"></div>
+      <div style="text-align:right;background:${col.bg};color:${col.text};padding:${s(8)} ${s(16)};border-radius:${s(6)};min-width:${s(150)}">
+        <div style="font-family:'Anton',sans-serif;font-size:${s(52)};line-height:1">${fmtP(d.total)}</div>
+      </div>
+    </div>`;
+  }
+  return html;
+}
+
+// Estructura completa del cartel. paraImpresion => hoja en mm; si no, lienzo en px
+function construirCartelHTML(d, filasInner, paraImpresion) {
+  const col = COLORES[colorActual];
+  const logoUrl = LOGOS[colorActual];
+  const rootSize = paraImpresion ? 'width:210mm;height:297mm;' : 'width:794px;height:1123px;';
+  return `<div style="${rootSize}overflow:hidden;background:#fff;display:flex;flex-direction:column;font-family:'DM Sans',sans-serif">
+    <div style="background:${col.bg};padding:20px 28px">
+      <div style="font-family:'Anton',sans-serif;font-size:68px;color:${col.text};line-height:1;letter-spacing:.02em">${d.titulo}</div>
+    </div>
+    <div style="display:flex;align-items:center;padding:10px 28px 6px;border-bottom:2px solid ${col.bg}">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-style:italic;font-size:21px;color:${col.bg}">${etiquetaActual}</div>
+    </div>
+    <div class="cbody" style="flex:1;overflow:hidden;padding:14px 28px;display:flex;flex-direction:column;justify-content:center">
+      <div class="cfit">${filasInner}</div>
+    </div>
+    ${d.extra ? `<div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:19px;color:${col.bg};padding:8px 28px 4px;border-top:1px solid ${col.bg}44">${d.extra}</div>` : ''}
+    <div style="border-top:2px solid ${col.bg};padding:12px 28px 16px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:19px;color:#444">${d.textoInf}</div>
+      ${logoUrl ? `<div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;color:${col.bg};opacity:.8">${logoUrl}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+// Mide y reduce la escala de las filas hasta que quepan en el hueco disponible
+function ajustarEscala(rootEl, d) {
+  const body = rootEl.querySelector('.cbody');
+  const fit = rootEl.querySelector('.cfit');
+  let k = 1;
+  fit.innerHTML = construirFilasHTML(d, k);
+  let guard = 0;
+  while (fit.scrollHeight > body.clientHeight && k > 0.45 && guard < 80) {
+    k -= 0.03;
+    fit.innerHTML = construirFilasHTML(d, k);
+    guard++;
+  }
+  return k;
+}
+
+// ===== VISTA PREVIA =====
+function actualizarPreview() {
+  actualizarTotal();
+  const d = getDatos();
+  const wrap = document.getElementById('preview-wrap');
+  wrap.style.cssText = '';
+  wrap.innerHTML = construirCartelHTML(d, '', false);
+  ajustarEscala(wrap.firstElementChild, d);   // rellena .cfit ya ajustado a 1 página
+  const area = document.getElementById('preview-area');
+  const aW = area.clientWidth - 64;
+  const aH = area.clientHeight - 64;
+  const scale = Math.min(aW / 794, aH / 1123, 1);
+  wrap.style.cssText = `transform:scale(${scale});transform-origin:top center;width:794px;height:1123px;`;
+}
+
+// ===== IMPRESION (solo A4, garantiza 1 sola página) =====
+function imprimir() {
+  const d = getDatos();
+
+  // Medimos fuera de pantalla para saber cuánto hay que reducir
+  const meas = document.createElement('div');
+  meas.style.cssText = 'position:absolute;left:-10000px;top:0;width:794px;';
+  meas.innerHTML = construirCartelHTML(d, '', false);
+  document.body.appendChild(meas);
+  const k = ajustarEscala(meas.firstElementChild, d);
+  document.body.removeChild(meas);
+
+  const cartel = construirCartelHTML(d, construirFilasHTML(d, k), true);
+
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>Artículos Varios — ${d.titulo}</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:ital,wght@0,700;0,900;1,700;1,900&display=swap" rel="stylesheet">
+<style>
+@page{size:A4;margin:0;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+html,body{width:210mm;height:297mm;overflow:hidden;}
+</style></head><body>
+${cartel}
+<script>window.onload=function(){var go=function(){setTimeout(function(){window.print();},150);};if(document.fonts&&document.fonts.ready){document.fonts.ready.then(go);}else{setTimeout(go,500);}};<\/script>
+</body></html>`;
+
+  const blob = new Blob([html],{type:'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.target='_blank';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
+}
+
+// ===== GUARDAR / CARGAR EN LA BASE DE DATOS =====
+function getEstadoCartel() {
+  return {
+    nombre: '',
+    titulo: document.getElementById('inp-titulo').value,
+    color: colorActual,
+    etiqueta: etiquetaActual,
+    textoInf: document.getElementById('inp-texto-inf').value,
+    extra: document.getElementById('inp-extra').value,
+    mostrarTotal: document.getElementById('chk-total').checked,
+    total: document.getElementById('inp-total').value,
+    totalEditadoManual: totalEditadoManual,
+    filasRaw: getFilasRaw(),
+    fecha: new Date().toISOString()
+  };
+}
+
+async function guardarCartel() {
+  const estadoEl = document.getElementById('guardar-estado');
+  const nombreInput = document.getElementById('inp-nombre-cartel');
+  let nombre = nombreInput.value.trim();
+  if (!nombre) {
+    nombre = document.getElementById('inp-titulo').value || 'Cartel';
+    nombreInput.value = nombre;
+  }
+  estadoEl.style.color = '#888';
+  estadoEl.textContent = 'Guardando...';
+  try {
+    const data = getEstadoCartel();
+    data.nombre = nombre;
+    await db.collection(COLECCION_CARTELES).add(data);
+    estadoEl.style.color = '#1a6b2a';
+    estadoEl.textContent = '✅ Guardado correctamente';
+    setTimeout(() => { estadoEl.textContent = ''; }, 3000);
+  } catch (e) {
+    console.error(e);
+    estadoEl.style.color = '#cc0000';
+    estadoEl.textContent = '❌ Error al guardar: ' + e.message;
+  }
+}
+
+async function cargarListaCarteles() {
+  const body = document.getElementById('lista-carteles-body');
+  body.innerHTML = '';
+  const cargando = document.createElement('div');
+  cargando.className = 'nota-calc';
+  cargando.textContent = 'Cargando...';
+  body.appendChild(cargando);
+  try {
+    const snap = await db.collection(COLECCION_CARTELES).orderBy('fecha', 'desc').get();
+    body.innerHTML = '';
+    if (snap.empty) {
+      const vacio = document.createElement('div');
+      vacio.className = 'nota-calc';
+      vacio.textContent = 'Todavía no hay carteles guardados.';
+      body.appendChild(vacio);
+      return;
+    }
+    snap.forEach(doc => {
+      const data = doc.data();
+
+      const row = document.createElement('div');
+      row.className = 'cartel-row';
+
+      const info = document.createElement('div');
+      const nombreEl = document.createElement('div');
+      nombreEl.className = 'cartel-nombre';
+      nombreEl.textContent = data.nombre || '(sin nombre)';
+      const fechaEl = document.createElement('div');
+      fechaEl.className = 'cartel-fecha';
+      fechaEl.textContent = data.fecha ? new Date(data.fecha).toLocaleString('es-ES') : '';
+      info.appendChild(nombreEl);
+      info.appendChild(fechaEl);
+
+      const acciones = document.createElement('div');
+      acciones.className = 'cartel-acciones';
+
+      const btnCargar = document.createElement('button');
+      btnCargar.className = 'btn btn-a4';
+      btnCargar.textContent = 'Cargar';
+      btnCargar.addEventListener('click', function() { cargarCartelDesdeDoc(data); });
+
+      const btnBorrar = document.createElement('button');
+      btnBorrar.className = 'btn btn-a5';
+      btnBorrar.textContent = 'Eliminar';
+      btnBorrar.dataset.id = doc.id;
+      btnBorrar.addEventListener('click', function() { eliminarCartel(this.dataset.id); });
+
+      acciones.appendChild(btnCargar);
+      acciones.appendChild(btnBorrar);
+
+      row.appendChild(info);
+      row.appendChild(acciones);
+      body.appendChild(row);
+    });
+  } catch (e) {
+    console.error(e);
+    body.innerHTML = '';
+    const err = document.createElement('div');
+    err.className = 'nota-calc';
+    err.textContent = '❌ Error al cargar la lista: ' + e.message;
+    body.appendChild(err);
+  }
+}
+
+function cargarCartelDesdeDoc(data) {
+  colorActual = data.color || 'negro';
+  document.querySelectorAll('.cbtn').forEach(b => {
+    b.classList.toggle('active', b.dataset.color === colorActual);
+  });
+
+  etiquetaActual = data.etiqueta || '¡¡ SALDO !!';
+  document.querySelectorAll('.ebtn').forEach(b => {
+    b.classList.toggle('active', b.dataset.etiq === etiquetaActual);
+  });
+
+  document.getElementById('inp-titulo').value = data.titulo || 'Artículos Varios';
+  document.getElementById('inp-texto-inf').value = data.textoInf || '';
+  document.getElementById('inp-extra').value = data.extra || '';
+  document.getElementById('inp-nombre-cartel').value = data.nombre || '';
+
+  document.getElementById('chk-total').checked = (data.mostrarTotal !== undefined) ? data.mostrarTotal : true;
+  totalEditadoManual = data.totalEditadoManual || false;
+  document.getElementById('inp-total').value = (data.total !== undefined && data.total !== '') ? data.total : 0;
+
+  // Restaurar las 8 líneas exactamente como estaban
+  const rows = document.querySelectorAll('#articulos-tbody tr');
+  const filas = data.filasRaw || [];
+  rows.forEach((row, i) => {
+    const c = row.querySelectorAll('input');
+    const f = filas[i] || { art: '', med: '', antes: '', ahora: '' };
+    c[0].value = f.art || '';
+    c[1].value = f.med || '';
+    c[2].value = f.antes || '';
+    c[3].value = f.ahora || '';
+  });
+
+  cerrarModalLista();
+  actualizarPreview();
+}
+
+async function eliminarCartel(id) {
+  if (!confirm('¿Eliminar este cartel guardado? No se puede deshacer.')) return;
+  try {
+    await db.collection(COLECCION_CARTELES).doc(id).delete();
+    cargarListaCarteles();
+  } catch (e) {
+    alert('❌ Error al eliminar: ' + e.message);
+  }
+}
+
+function abrirModalLista() {
+  document.getElementById('modal-carteles').style.display = 'flex';
+  cargarListaCarteles();
+}
+function cerrarModalLista() {
+  document.getElementById('modal-carteles').style.display = 'none';
+}
+
+// ===== EVENT LISTENERS =====
+document.querySelectorAll('.cbtn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.cbtn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    colorActual = this.dataset.color;
+    actualizarPreview();
+  });
+});
+
+document.querySelectorAll('.ebtn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.ebtn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    etiquetaActual = this.dataset.etiq;
+    actualizarPreview();
+  });
+});
+
+document.getElementById('inp-titulo').addEventListener('input', actualizarPreview);
+document.getElementById('inp-texto-inf').addEventListener('input', actualizarPreview);
+document.getElementById('inp-extra').addEventListener('input', actualizarPreview);
+
+// Total: editar a mano / mostrar-ocultar / recalcular
+document.getElementById('inp-total').addEventListener('input', function() {
+  totalEditadoManual = true;
+  actualizarPreview();
+});
+document.getElementById('chk-total').addEventListener('change', actualizarPreview);
+document.getElementById('btn-recalc-total').addEventListener('click', function() {
+  totalEditadoManual = false;
+  actualizarTotal();
+  actualizarPreview();
+});
+
+// Guardar / cargar
+document.getElementById('btn-guardar-cartel').addEventListener('click', guardarCartel);
+document.getElementById('btn-ver-carteles').addEventListener('click', abrirModalLista);
+document.getElementById('btn-cerrar-modal').addEventListener('click', cerrarModalLista);
+document.getElementById('modal-carteles').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModalLista();
+});
+
+window.addEventListener('resize', actualizarPreview);
+
+// ===== INICIO =====
+inicializarArticulos();
+setTimeout(actualizarPreview, 400);
+if (document.fonts && document.fonts.ready) { document.fonts.ready.then(actualizarPreview); }
+</script>
+</body>
+</html>
