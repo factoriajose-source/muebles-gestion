@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de Reparto · La Factoría</title>
+
+<!-- SDK de Firebase (compat 9.23.0). Se conecta al mismo proyecto que tu ERP. -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<style>
+:root{
+  --oliva:#7A9A01; --oliva-osc:#5f7a00;
+  --marron:#4A2C17; --marron-claro:#6b4526;
+  --beige:#C8BA8B; --beige-claro:#E8E1CE;
+  --fondo:#F6F4EC; --blanco:#ffffff;
+  --texto:#3a2a1c; --gris:#8d8373;
+  --naranja:#E4610E; --naranja-osc:#b94d0a;
+  --linea:#e6e0d1;
+  --sombra:0 1px 2px rgba(74,44,23,.06), 0 4px 16px rgba(74,44,23,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--fondo); color:var(--texto);
+  font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased; line-height:1.4;
+}
+.num{font-variant-numeric:tabular-nums}
+.wrap{max-width:1280px; margin:0 auto; padding:20px 22px 60px}
+
+.top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:8px}
+.marca{display:flex; align-items:center; gap:12px}
+.diamante{width:44px; height:44px; background:var(--beige); transform:rotate(45deg); border-radius:8px; display:flex; align-items:center; justify-content:center; flex:0 0 auto}
+.diamante svg{transform:rotate(-45deg)}
+.marca h1{font-size:20px; color:var(--marron); font-weight:800; letter-spacing:-.3px; line-height:1.1}
+.marca h1 span{color:var(--oliva)}
+.marca .sub{font-size:12.5px; color:var(--gris); font-weight:600; letter-spacing:.3px; text-transform:uppercase}
+.reloj{margin-left:auto; font-size:12.5px; color:var(--gris); text-align:right}
+.reloj b{color:var(--marron); display:block; font-size:13.5px}
+
+.banner{display:flex; gap:10px; align-items:center; background:#fff7ee; border:1px solid #f4d9b8; color:var(--naranja-osc); padding:10px 14px; border-radius:10px; font-size:13px; margin:14px 0 4px; font-weight:600}
+.banner svg{flex:0 0 auto}
+
+.filtros{display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; background:var(--blanco); border:1px solid var(--linea); border-radius:14px; padding:14px 16px; margin:16px 0 18px; box-shadow:var(--sombra)}
+.campo{display:flex; flex-direction:column; gap:5px}
+.campo label{font-size:11px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.4px}
+.campo input, .campo select{font:inherit; font-size:14px; padding:9px 11px; border:1px solid var(--beige); border-radius:9px; background:var(--blanco); color:var(--texto); min-width:150px}
+.campo input:focus, .campo select:focus{outline:2px solid var(--oliva); outline-offset:1px; border-color:var(--oliva)}
+.btn{font:inherit; font-weight:700; font-size:14px; cursor:pointer; border:none; padding:10px 16px; border-radius:9px; display:inline-flex; align-items:center; gap:7px}
+.btn-oliva{background:var(--oliva); color:#fff}
+.btn-oliva:hover{background:var(--oliva-osc)}
+.btn-linea{background:var(--blanco); color:var(--marron); border:1px solid var(--beige)}
+.btn-linea:hover{background:var(--beige-claro)}
+.filtros .der{margin-left:auto; display:flex; gap:10px}
+
+.kpis{display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:22px}
+.kpi{background:var(--blanco); border:1px solid var(--linea); border-radius:14px; padding:15px 16px; box-shadow:var(--sombra); position:relative; overflow:hidden}
+.kpi::before{content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--beige)}
+.kpi.acento-oliva::before{background:var(--oliva)}
+.kpi.acento-naranja::before{background:var(--naranja)}
+.kpi.acento-marron::before{background:var(--marron)}
+.kpi .et{font-size:11px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px}
+.kpi .val{font-size:27px; font-weight:800; color:var(--marron); margin-top:6px; letter-spacing:-.5px}
+.kpi.acento-oliva .val{color:var(--oliva-osc)}
+.kpi.acento-naranja .val{color:var(--naranja-osc)}
+.kpi .pie{font-size:11.5px; color:var(--gris); margin-top:3px; font-weight:600}
+.kpi.alerta{background:#fff7ee; border-color:#f4d9b8}
+.kpi.alerta .val{color:var(--naranja-osc)}
+
+.seccion{margin-bottom:26px}
+.seccion h2{font-size:13px; font-weight:800; color:var(--marron); text-transform:uppercase; letter-spacing:.6px; margin-bottom:12px; display:flex; align-items:center; gap:8px}
+.seccion h2::after{content:""; flex:1; height:1px; background:var(--linea)}
+
+.rutas{display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px}
+.ruta{background:var(--blanco); border:1px solid var(--linea); border-radius:14px; box-shadow:var(--sombra); overflow:hidden}
+.ruta .cab{background:var(--naranja); color:#fff; padding:11px 15px; display:flex; align-items:center; gap:9px}
+.ruta .cab .nom{font-weight:800; font-size:15px; letter-spacing:.2px; flex:1}
+.ruta .cab .mat{font-size:11px; font-weight:600; opacity:.9; background:rgba(255,255,255,.2); padding:2px 8px; border-radius:20px}
+.ruta .cuerpo{padding:13px 15px; display:flex; flex-direction:column; gap:11px}
+.ruta .fila{display:flex; justify-content:space-between; align-items:baseline; font-size:13.5px}
+.ruta .fila .k{color:var(--gris); font-weight:600}
+.ruta .fila .v{font-weight:800; color:var(--marron)}
+.ruta .fila .v.importe{color:var(--oliva-osc)}
+.ruta .fila .v.cobrar{color:var(--naranja-osc)}
+.ruta .barra{height:7px; background:var(--beige-claro); border-radius:20px; overflow:hidden}
+.ruta .barra i{display:block; height:100%; background:var(--oliva); border-radius:20px}
+.ruta .prog{font-size:11.5px; color:var(--gris); font-weight:600; text-align:right}
+
+.tiendas{display:flex; flex-direction:column; gap:11px}
+.tienda{background:var(--blanco); border:1px solid var(--linea); border-radius:12px; padding:13px 16px; box-shadow:var(--sombra); display:grid; grid-template-columns:180px 1fr auto; gap:16px; align-items:center}
+.tienda .nom{font-weight:800; color:var(--marron); font-size:14px}
+.tienda .track{height:12px; background:var(--beige-claro); border-radius:20px; overflow:hidden}
+.tienda .track i{display:block; height:100%; background:linear-gradient(90deg,var(--oliva),var(--oliva-osc)); border-radius:20px}
+.tienda .datos{text-align:right; white-space:nowrap; font-size:13px; color:var(--gris); font-weight:600}
+.tienda .datos b{color:var(--oliva-osc); font-size:15px; font-weight:800}
+
+.tabla-caja{background:var(--blanco); border:1px solid var(--linea); border-radius:14px; box-shadow:var(--sombra); overflow:hidden}
+table{width:100%; border-collapse:collapse; font-size:13.5px}
+thead th{background:var(--beige-claro); color:var(--marron); text-align:left; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; padding:11px 14px; white-space:nowrap}
+thead th.der, td.der{text-align:right}
+tbody td{padding:11px 14px; border-top:1px solid var(--linea); vertical-align:middle}
+tbody tr:hover{background:#faf8f2}
+td .cli{font-weight:700; color:var(--marron)}
+td .dir{font-size:12px; color:var(--gris); margin-top:2px}
+td .bultos{font-size:12.5px; color:var(--texto); max-width:280px}
+.chip{display:inline-block; padding:3px 10px; border-radius:20px; font-size:11.5px; font-weight:700; white-space:nowrap}
+.chip.pendiente{background:#fff3e0; color:var(--naranja-osc)}
+.chip.entregado{background:#eaf0d4; color:var(--oliva-osc)}
+.tienda-tag{font-size:12.5px; color:var(--gris); font-weight:600}
+.importe-cel{font-weight:800; color:var(--oliva-osc)}
+.cobrar-cel{font-weight:800; color:var(--naranja-osc)}
+.vacio-cel{color:var(--beige)}
+tfoot td{padding:13px 14px; background:#faf8f2; font-weight:800; color:var(--marron); border-top:2px solid var(--beige)}
+.sin-datos{padding:40px; text-align:center; color:var(--gris); font-weight:600}
+
+/* Login (solo aparece si tu base de datos pide identificarse) */
+.login-fondo{position:fixed; inset:0; background:rgba(74,44,23,.35); display:none; align-items:center; justify-content:center; z-index:50; padding:20px}
+.login-caja{background:var(--blanco); border-radius:16px; padding:26px; width:100%; max-width:360px; box-shadow:0 20px 60px rgba(74,44,23,.3)}
+.login-caja h3{color:var(--marron); font-size:18px; margin-bottom:6px}
+.login-caja p{color:var(--gris); font-size:13px; margin-bottom:16px}
+.login-caja input{width:100%; font:inherit; font-size:15px; padding:11px 12px; border:1px solid var(--beige); border-radius:9px; margin-bottom:11px}
+.login-caja .err{color:var(--naranja-osc); font-size:12.5px; font-weight:600; margin-bottom:10px; display:none}
+
+@media(max-width:1080px){ .kpis{grid-template-columns:repeat(3,1fr)} }
+@media(max-width:720px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .tienda{grid-template-columns:1fr; gap:8px}
+  .tienda .datos{text-align:left}
+  .reloj{margin-left:0; width:100%; text-align:left}
+  .filtros .der{margin-left:0; width:100%}
+  .oculta-movil{display:none}
+}
+@media print{
+  body{background:#fff}
+  .filtros, .banner, .btn, .reloj, .login-fondo{display:none !important}
+  .kpi, .ruta, .tienda, .tabla-caja{box-shadow:none; border:1px solid #ccc}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="marca">
+      <div class="diamante">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M4 11L12 4l8 7v8a1 1 0 01-1 1h-4v-5h-6v5H5a1 1 0 01-1-1z" fill="#4A2C17"/>
+          <circle cx="18" cy="6" r="3.2" fill="#7A9A01"/>
+          <rect x="17.3" y="8" width="1.4" height="3" fill="#4A2C17"/>
+        </svg>
+      </div>
+      <div>
+        <h1>muebles <span>La Factoría</span></h1>
+        <div class="sub">Panel de reparto</div>
+      </div>
+    </div>
+    <div class="reloj">Actualizado<b id="reloj">—</b></div>
+  </header>
+
+  <div class="banner" id="banner-demo" style="display:none">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#E4610E" stroke-width="2"/><path d="M12 8v5M12 16h.01" stroke="#E4610E" stroke-width="2" stroke-linecap="round"/></svg>
+    <span>Modo demostración — datos de ejemplo. Pega tu configuración de Firebase para ver los repartos reales.</span>
+  </div>
+
+  <div class="filtros">
+    <div class="campo">
+      <label for="f-fecha">Fecha de entrega</label>
+      <input type="date" id="f-fecha">
+    </div>
+    <div class="campo">
+      <label for="f-repartidor">Repartidor</label>
+      <select id="f-repartidor"><option value="">Todos</option></select>
+    </div>
+    <div class="campo">
+      <label for="f-tienda">Tienda</label>
+      <select id="f-tienda"><option value="">Todas</option></select>
+    </div>
+    <div class="der">
+      <button class="btn btn-oliva" onclick="cargar()">Actualizar</button>
+      <button class="btn btn-linea" onclick="window.print()">Imprimir</button>
+    </div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section class="seccion">
+    <h2>Reparto por repartidor</h2>
+    <div class="rutas" id="rutas"></div>
+  </section>
+
+  <section class="seccion">
+    <h2>Reparto por tienda</h2>
+    <div class="tiendas" id="tiendas"></div>
+  </section>
+
+  <section class="seccion">
+    <h2>Detalle de notas</h2>
+    <div class="tabla-caja">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:34px">Nº</th>
+            <th>Cliente</th>
+            <th class="oculta-movil">Tienda</th>
+            <th class="oculta-movil">Bultos</th>
+            <th class="der">Importe</th>
+            <th class="der">A cobrar</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+        <tfoot id="tfoot"></tfoot>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+<!-- Login (oculto salvo que Firestore exija identificación) -->
+<div class="login-fondo" id="login">
+  <div class="login-caja">
+    <h3>Identifícate</h3>
+    <p>Usa el mismo correo y contraseña que en tu ERP para ver los repartos.</p>
+    <div class="err" id="login-err"></div>
+    <input type="email" id="login-email" placeholder="Correo" autocomplete="username">
+    <input type="password" id="login-pass" placeholder="Contraseña" autocomplete="current-password">
+    <button class="btn btn-oliva" style="width:100%; justify-content:center" onclick="entrar()">Entrar</button>
+  </div>
+</div>
+
+<script>
+/* ================================================================= */
+/*  1) CONFIGURACIÓN — ya rellenada con los datos de tu ERP           */
+/* ================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
+  authDomain: "muebles-presupuestos.firebaseapp.com",
+  projectId: "muebles-presupuestos",
+  storageBucket: "muebles-presupuestos.firebasestorage.app",
+  messagingSenderId: "37365883872",
+  appId: "1:37365883872:web:842ca4d318c01652684185"
+};
+
+const COLECCION = "repartos";
+
+/* Nombres reales de los campos en tu Firestore (ya verificados con tu ERP). */
+const CAMPOS = {
+  cliente:    "cliente",
+  direccion:  "direccion",
+  telefono:   "telefono",
+  tienda:     "tienda",
+  bultos:     "bultos",
+  importe:    "importe_reparto",
+  cobrar:     "saldo_cobrar",
+  notas:      "notas",
+  entregado:  "entregado",      // sí/no (booleano)
+  repartidor: "repartidor",
+  matricula:  "matricula",
+  fecha:      "fecha_entrega"
+};
+
+/* ================================================================= */
+/*  2) DATOS DE DEMOSTRACIÓN (solo si vaciaras la configuración)      */
+/* ================================================================= */
+const DATOS_DEMO = [
+  {cliente:"MARIA ELENA DE JESUS PARDO IGLESIAS", direccion:"PUERTO SAN ISIDRO, 14 3ºE OVIEDO", telefono:"619554787", tienda:"ExpoSofá", bultos:"BUTACA (512) REVISADO POR FÁBRICA", importe_reparto:0, saldo_cobrar:0, notas:"", entregado:false, repartidor:"ANDRY", matricula:"", fecha_entrega:"2026-07-31"},
+  {cliente:"SONIA ALVAREZ SOLIS", direccion:"PLAZA SALAMANCA, 2, 1º B, LAS VEGAS CORVERA", telefono:"639453069", tienda:"Muebles La Factoría", bultos:"ENTREGAR 2 MODULOS SOFÁ (5010)", importe_reparto:0, saldo_cobrar:0, notas:"", entregado:false, repartidor:"ANDRY", matricula:"", fecha_entrega:"2026-07-31"},
+  {cliente:"MARIN RODRIGUEZ DE LOS SANTOS", direccion:"REYES CATOLICOS, 12 1ºF AVILES", telefono:"647086664", tienda:"ExpoSofá", bultos:"2-CANAPE + COLCHONES 150X200 + BASE TAPIZADA C/PATAS (5014)", importe_reparto:1949, saldo_cobrar:0, notas:"", entregado:false, repartidor:"ANDRY", matricula:"", fecha_entrega:"2026-07-31"},
+  {cliente:"MARIN RODRIGUEZ DE LOS SANTOS", direccion:"REYES CATOLICOS, 12 1ºF AVILES", telefono:"647086664", tienda:"ExpoSofá", bultos:"SOFÁ CHAISLONGUE MOD. MELODY (5014)", importe_reparto:1152, saldo_cobrar:0, notas:"", entregado:false, repartidor:"ANDRY", matricula:"", fecha_entrega:"2026-07-31"},
+  {cliente:"ANA MARIA MARTINEZ GONZALO", direccion:"AVDA. DE OVIEDO, 18 PORTAL 1 2ºB LUGONES", telefono:"645380682", tienda:"Merkamueble", bultos:"COMPOSICIÓN SALON (985) +", importe_reparto:3219, saldo_cobrar:0, notas:"", entregado:false, repartidor:"ANDRY", matricula:"", fecha_entrega:"2026-07-31"},
+  {cliente:"TANIA RODRIGUEZ MENENDEZ", direccion:"FUERTES ACEBEDO, 62, 4ºB OVIEDO", telefono:"696303748", tienda:"ExpoSofá", bultos:"CANAPÉ + COLCHON 135X180 (5014)", importe_reparto:921, saldo_cobrar:0, notas:"", entregado:false, repartidor:"ANDRY", matricula:"", fecha_entrega:"2026-07-31"},
+  {cliente:"PATRICIA SORDO BAJO", direccion:"CESAR MAESE ALONSO, 200 3ºA GIJON", telefono:"650704670", tienda:"Merkamueble", bultos:"CAMBIO CABECERO + BARRA COLGAR ARMARIO (827)", importe_reparto:0, saldo_cobrar:0, notas:"", entregado:false, repartidor:"ANDRY", matricula:"", fecha_entrega:"2026-07-31"}
+];
+
+/* ================================================================= */
+/*  3) LÓGICA                                                         */
+/* ================================================================= */
+const MODO_DEMO = !firebaseConfig.apiKey;
+let db=null, auth=null;
+if(MODO_DEMO){
+  document.getElementById("banner-demo").style.display = "flex";
+}else{
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  auth = firebase.auth();
+}
+
+const eur = n => (Number(n)||0).toLocaleString("es-ES",{minimumFractionDigits:2, maximumFractionDigits:2}) + " €";
+const num = v => { const n = parseFloat(String(v).replace(/[^0-9,.-]/g,"").replace(",",".")); return isNaN(n)?0:n; };
+const txt = v => (v==null?"":String(v)).trim();
+const boolv = v => v===true || v===1 || /^(true|1|si|sí|entreg)/i.test(String(v));
+
+function fechaISO(v){
+  if(!v) return "";
+  if(typeof v==="object" && typeof v.toDate==="function") v = v.toDate();
+  if(v instanceof Date){ return v.toISOString().slice(0,10); }
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);   if(m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if(m) return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+  return s.slice(0,10);
+}
+
+function mapear(d){
+  const g = k => d[CAMPOS[k]];
+  return {
+    cliente:   txt(g("cliente")),
+    direccion: txt(g("direccion")),
+    telefono:  txt(g("telefono")),
+    tienda:    txt(g("tienda")) || "Sin tienda",
+    bultos:    txt(g("bultos")),
+    importe:   num(g("importe")),
+    cobrar:    num(g("cobrar")),
+    notas:     txt(g("notas")),
+    entregado: boolv(g("entregado")),
+    repartidor:txt(g("repartidor")) || "Sin asignar",
+    matricula: txt(g("matricula")),
+    fecha:     fechaISO(g("fecha"))
+  };
+}
+
+let TODO = [];
+
+async function cargar(){
+  if(MODO_DEMO){
+    TODO = DATOS_DEMO.map(mapear);
+    finalizar();
+    return;
+  }
+  try{
+    const snap = await db.collection(COLECCION).get();
+    TODO = snap.docs.map(doc => mapear(doc.data()));
+    document.getElementById("login").style.display = "none";
+    finalizar();
+  }catch(e){
+    console.error(e);
+    if(e.code === "permission-denied" || /permiss/i.test(e.message||"")){
+      document.getElementById("login").style.display = "flex";   // pide identificarse
+    }else{
+      alert("No se pudieron leer los datos de Firebase.\n\nDetalle: " + e.message);
+    }
+  }
+}
+
+async function entrar(){
+  const err = document.getElementById("login-err");
+  err.style.display = "none";
+  try{
+    await auth.signInWithEmailAndPassword(
+      document.getElementById("login-email").value.trim(),
+      document.getElementById("login-pass").value
+    );
+    cargar();
+  }catch(e){
+    err.textContent = "No se pudo entrar: revisa el correo y la contraseña.";
+    err.style.display = "block";
+  }
+}
+
+function finalizar(){
+  poblarSelectores();
+  pintar();
+  document.getElementById("reloj").textContent =
+    new Date().toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+}
+
+function poblarSelectores(){
+  const rep = document.getElementById("f-repartidor");
+  const tie = document.getElementById("f-tienda");
+  const rA = rep.value, tA = tie.value;
+  const reps = [...new Set(TODO.map(n=>n.repartidor))].sort();
+  const ties = [...new Set(TODO.map(n=>n.tienda))].sort();
+  rep.innerHTML = '<option value="">Todos</option>' + reps.map(r=>`<option>${r}</option>`).join("");
+  tie.innerHTML = '<option value="">Todas</option>'  + ties.map(t=>`<option>${t}</option>`).join("");
+  rep.value = rA; tie.value = tA;
+}
+
+function filtradas(){
+  const fF = document.getElementById("f-fecha").value;
+  const fR = document.getElementById("f-repartidor").value;
+  const fT = document.getElementById("f-tienda").value;
+  return TODO.filter(n =>
+    (!fF || n.fecha === fF) &&
+    (!fR || n.repartidor === fR) &&
+    (!fT || n.tienda === fT)
+  );
+}
+
+function pintar(){
+  const L = filtradas();
+  const total = L.length;
+  const entregados = L.filter(n=>n.entregado).length;
+  const pendientes = total - entregados;
+  const impTotal = L.reduce((s,n)=>s+n.importe,0);
+  const aCobrar  = L.reduce((s,n)=>s+n.cobrar,0);
+  const sinRep   = L.filter(n=>n.repartidor==="Sin asignar").length;
+
+  document.getElementById("kpis").innerHTML = `
+    <div class="kpi acento-marron"><div class="et">Notas del día</div><div class="val num">${total}</div><div class="pie">${entregados} entregadas · ${pendientes} pendientes</div></div>
+    <div class="kpi acento-oliva"><div class="et">Entregadas</div><div class="val num">${entregados}</div><div class="pie">de ${total}</div></div>
+    <div class="kpi"><div class="et">Pendientes</div><div class="val num">${pendientes}</div><div class="pie">por repartir</div></div>
+    <div class="kpi acento-oliva"><div class="et">Importe total</div><div class="val num">${eur(impTotal)}</div><div class="pie">en ruta hoy</div></div>
+    <div class="kpi acento-naranja"><div class="et">A cobrar</div><div class="val num">${eur(aCobrar)}</div><div class="pie">contra entrega</div></div>
+    <div class="kpi ${sinRep>0?'alerta':''}"><div class="et">Sin repartidor</div><div class="val num">${sinRep}</div><div class="pie">${sinRep>0?'requieren asignación':'todo asignado'}</div></div>
+  `;
+
+  const porRep = agrupar(L, n=>n.repartidor);
+  document.getElementById("rutas").innerHTML = Object.entries(porRep).map(([nombre,arr])=>{
+    const imp = arr.reduce((s,n)=>s+n.importe,0);
+    const cob = arr.reduce((s,n)=>s+n.cobrar,0);
+    const ent = arr.filter(n=>n.entregado).length;
+    const mat = arr.map(n=>n.matricula).find(m=>m) || "Sin matrícula";
+    const pct = arr.length ? Math.round(ent/arr.length*100) : 0;
+    return `
+      <div class="ruta">
+        <div class="cab">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M3 6h11v9H3zM14 9h4l3 3v3h-7z"/><circle cx="7" cy="17" r="1.8" fill="#4A2C17"/><circle cx="17.5" cy="17" r="1.8" fill="#4A2C17"/></svg>
+          <span class="nom">${nombre}</span>
+          <span class="mat">${mat}</span>
+        </div>
+        <div class="cuerpo">
+          <div class="fila"><span class="k">Entregas</span><span class="v">${arr.length}</span></div>
+          <div class="fila"><span class="k">Importe</span><span class="v importe">${eur(imp)}</span></div>
+          <div class="fila"><span class="k">A cobrar</span><span class="v cobrar">${eur(cob)}</span></div>
+          <div class="barra"><i style="width:${pct}%"></i></div>
+          <div class="prog">${ent} de ${arr.length} entregadas (${pct}%)</div>
+        </div>
+      </div>`;
+  }).join("") || `<div class="sin-datos" style="grid-column:1/-1">Sin repartos para los filtros seleccionados.</div>`;
+
+  const porTie = agrupar(L, n=>n.tienda);
+  const maxImp = Math.max(1, ...Object.values(porTie).map(a=>a.reduce((s,n)=>s+n.importe,0)));
+  document.getElementById("tiendas").innerHTML = Object.entries(porTie)
+    .sort((a,b)=> b[1].reduce((s,n)=>s+n.importe,0) - a[1].reduce((s,n)=>s+n.importe,0))
+    .map(([nombre,arr])=>{
+      const imp = arr.reduce((s,n)=>s+n.importe,0);
+      return `
+        <div class="tienda">
+          <div class="nom">${nombre}</div>
+          <div class="track"><i style="width:${Math.round(imp/maxImp*100)}%"></i></div>
+          <div class="datos">${arr.length} nota${arr.length!==1?'s':''} · <b>${eur(imp)}</b></div>
+        </div>`;
+    }).join("") || `<div class="sin-datos">Sin datos.</div>`;
+
+  document.getElementById("tbody").innerHTML = L.map((n,i)=>`
+    <tr>
+      <td class="num">${i+1}</td>
+      <td><div class="cli">${n.cliente}</div><div class="dir">${n.direccion}${n.telefono?' · '+n.telefono:''}</div></td>
+      <td class="oculta-movil"><span class="tienda-tag">${n.tienda}</span></td>
+      <td class="oculta-movil"><div class="bultos">${n.bultos||'—'}</div></td>
+      <td class="der ${n.importe?'importe-cel':'vacio-cel'}">${n.importe?eur(n.importe):'—'}</td>
+      <td class="der ${n.cobrar?'cobrar-cel':'vacio-cel'}">${n.cobrar?eur(n.cobrar):'—'}</td>
+      <td><span class="chip ${n.entregado?'entregado':'pendiente'}">${n.entregado?'Entregado':'Pendiente'}</span></td>
+    </tr>`).join("") || `<tr><td colspan="7" class="sin-datos">No hay notas para estos filtros.</td></tr>`;
+
+  document.getElementById("tfoot").innerHTML = L.length ? `
+    <tr>
+      <td colspan="4">TOTAL · ${L.length} nota${L.length!==1?'s':''}</td>
+      <td class="der">${eur(impTotal)}</td>
+      <td class="der">${eur(aCobrar)}</td>
+      <td></td>
+    </tr>` : "";
+}
+
+function agrupar(arr, fn){
+  return arr.reduce((o,n)=>{ const k=fn(n); (o[k]=o[k]||[]).push(n); return o; },{});
+}
+
+document.getElementById("f-repartidor").addEventListener("change", pintar);
+document.getElementById("f-tienda").addEventListener("change", pintar);
+document.getElementById("f-fecha").addEventListener("change", pintar);
+
+// Fecha inicial: hoy (o el día del pantallazo en modo demo)
+document.getElementById("f-fecha").value = MODO_DEMO ? "2026-07-31" : new Date().toISOString().slice(0,10);
+
+cargar();
+</script>
+</body>
+</html>
