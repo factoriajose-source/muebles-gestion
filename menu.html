@@ -4461,6 +4461,20 @@ function renderRepartos(repartos, cont) {
     });
   });
 
+  // ===== Botón: Estadisticas Reparto (abre el panel externo, clave 7557) =====
+  const btnStatsPanel = document.createElement("button");
+  btnStatsPanel.className = "btn";
+  btnStatsPanel.style.cssText = "padding:10px 14px;font-size:13px;background:#7A9A01;color:#fff;border-color:#7A9A01;font-weight:600";
+  btnStatsPanel.textContent = "🚚 Estadisticas Reparto";
+  btnStatsPanel.addEventListener("click", () => {
+    mostrarModalClave(function() {
+      const urlPanel = "https://factoriajose-source.github.io/muebles-gestion/panel-repartos.html";
+      const w = window.open(urlPanel, "_blank");
+      if (!w) window.location.href = urlPanel;   // por si el navegador bloquea la pestaña nueva
+    });
+  });
+
+  btnGroup.appendChild(btnStatsPanel);
   btnGroup.appendChild(btnStats);
   btnGroup.appendChild(btnGestRep);
   btnGroup.appendChild(btnAdd);
