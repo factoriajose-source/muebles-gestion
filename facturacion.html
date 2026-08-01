@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- facturacion v1.0 - 01/08/2026 - presupuestos conectados a menu.html + boton ANALISIS (cuadro de mando por vendedor/mes/tienda, estilo panel-repartos) -->
+<!-- facturacion v1.2 - 01/08/2026 - item de analisis renombrado a "Presupuestos" (icono barras) en menu lateral -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -206,8 +206,6 @@ tbody tr:hover .ra{opacity:1;}
 #anaOverlay tfoot td{padding:13px 14px;background:#faf8f2;font-weight:800;color:var(--marron);border-top:2px solid var(--beige)}
 #anaOverlay .sin-datos{padding:40px;text-align:center;color:var(--gris);font-weight:600}
 #anaOverlay .aviso-tabla{padding:10px 14px;font-size:12px;color:var(--gris);background:#faf8f2;text-align:center;font-weight:600}
-#btnAna{display:none;margin:14px auto 0;padding:11px 22px;background:#4A2C17;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;letter-spacing:.4px;cursor:pointer;box-shadow:0 4px 14px rgba(74,44,23,.18)}
-#btnAna:hover{background:#5f3a20}
 @media(max-width:1080px){#anaOverlay .kpis{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:720px){#anaOverlay .kpis{grid-template-columns:repeat(2,1fr)}#anaOverlay .tienda{grid-template-columns:1fr;gap:8px}#anaOverlay .tienda .datos{text-align:left}#anaOverlay .reloj{margin-left:0;width:100%;text-align:left}#anaOverlay .filtros .der{margin-left:0;width:100%}#anaOverlay .oculta-movil{display:none}}
 @media print{#anaOverlay .filtros,#anaOverlay .abtn,#anaOverlay .abtn-mini,#anaOverlay .reloj{display:none !important}#anaOverlay .kpi,#anaOverlay .ruta,#anaOverlay .tienda,#anaOverlay .tabla-caja,#anaOverlay .grafico{box-shadow:none;border:1px solid #ccc}}
@@ -263,6 +261,10 @@ tbody tr:hover .ra{opacity:1;}
       <svg viewBox="0 0 24 24" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
       <span>Tesorer&#xED;a</span>
     </a>
+    <a class="ni" id="nav-analisis" href="#">
+      <svg viewBox="0 0 24 24" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>Presupuestos</span>
+    </a>
   </nav>
   <div class="sfoot">
     <div class="uch">
@@ -309,7 +311,6 @@ tbody tr:hover .ra{opacity:1;}
           </select>
         </div>
         <div id="tbl"></div>
-        <button id="btnAna">&#x1F4CA; AN&Aacute;LISIS &mdash; Cuadro de mando de presupuestos</button>
       </div>
     </div>
     <div id="cnt-tes" style="display:none"></div>
@@ -514,7 +515,6 @@ function goSec(s,el){
   var bn=gi("bnew");
   bn.textContent=btns[s];
   bn.style.display=btns[s]?"":"none";
-  var _bAna=gi("btnAna"); if(_bAna)_bAna.style.display=(s==="presupuestos")?"block":"none";
   if(s==="tesoreria"){
     gi("cnt-main").style.display="none";
     gi("cnt-tes").style.display="";
@@ -1695,7 +1695,7 @@ function anaAbrir(){
 function anaCerrar(){gi("anaOverlay").style.display="none";document.body.style.overflow="";}
 
 // Eventos del cuadro de mando
-gi("btnAna").addEventListener("click",anaAbrir);
+gi("nav-analisis").addEventListener("click",function(e){e.preventDefault();anaAbrir();});
 gi("ana-cerrar").addEventListener("click",anaCerrar);
 gi("ana-print").addEventListener("click",function(){window.print();});
 gi("ana-hist").addEventListener("click",function(){gi("ana-anio").value="";anaCargar();});
