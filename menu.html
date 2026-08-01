@@ -353,6 +353,7 @@ tr:last-child td{border-bottom:none}
     <div class="sb-item" id="mn-auditoria" style="display:none" onclick="abrirAuditoria()"><span class="ico">🔍</span> Auditoría Fichajes</div>
     <div class="sb-item" id="mn-vendedores" style="display:none" onclick="abrirVendedores()"><span class="ico">👤</span> Vendedores</div>
     <div class="sb-item" id="mn-erp" style="display:none" onclick="abrirERP()"><span class="ico">🧾</span> ERP</div>
+    <div class="sb-item" id="mn-registro-jornada" style="display:none" onclick="abrirRegistroJornada()"><span class="ico">🖊️</span> Fichas Manuales Jornada</div>
 
     <div class="sb-logout"><button onclick="logout()">Cerrar sesión</button></div>
   </nav>
@@ -924,7 +925,7 @@ function actualizarSidebar(name){
   var mnVac = document.getElementById("mn-vacaciones");
   if(mnVac) mnVac.style.display = puedeVacaciones ? "" : "none";
   // Mostrar sección admin
-  ["mn-sec-admin","mn-stats","mn-auditoria"].forEach(function(id){
+  ["mn-sec-admin","mn-stats","mn-auditoria","mn-registro-jornada"].forEach(function(id){
     var el=document.getElementById(id);
     if(el) el.style.display = esAdmin ? "" : "none";
   });
@@ -958,6 +959,14 @@ function abrirERP(){
   cerrarSidebar();
 }
 window.abrirERP = abrirERP;
+
+function abrirRegistroJornada(){
+  var a=document.createElement("a");
+  a.href="https://factoriajose-source.github.io/muebles-gestion/registro-jornada-meres.html"; a.target="_blank"; a.rel="noopener";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  cerrarSidebar();
+}
+window.abrirRegistroJornada = abrirRegistroJornada;
 // ── FIN MENÚ LATERAL ──────────────────────────────────────────────────────────
 
 function logout() {
