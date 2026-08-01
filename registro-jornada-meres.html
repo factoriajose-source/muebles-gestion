@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registro de Jornada - Meres Central de Compras S.L.</title>
+<style>
+  :root{
+    --gris-domingo:#c9c9c9;
+    --gris-cabecera:#e9e9e9;
+    --negro:#000;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:Arial, Helvetica, sans-serif;
+    margin:0;
+    padding:20px;
+    background:#f2f2f2;
+    color:#000;
+  }
+
+  /* ---------- PANEL DE CONTROL (no se imprime) ---------- */
+  .controles{
+    max-width:900px;
+    margin:0 auto 24px auto;
+    background:#fff;
+    border:1px solid #ccc;
+    border-radius:8px;
+    padding:20px 24px;
+    box-shadow:0 2px 6px rgba(0,0,0,.08);
+  }
+  .controles h2{margin:0 0 4px 0;font-size:18px;color:#4A2C17;}
+  .controles p.sub{margin:0 0 18px 0;font-size:13px;color:#666;}
+  .campos{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 20px;}
+  .campo{display:flex;flex-direction:column;}
+  .campo.ancho{grid-column:1 / -1;}
+  .campo label{font-size:12px;font-weight:bold;margin-bottom:4px;color:#333;}
+  .campo input,.campo select{padding:8px 10px;font-size:14px;border:1px solid #bbb;border-radius:5px;}
+  .campo input:focus,.campo select:focus{outline:none;border-color:#7A9A01;box-shadow:0 0 0 2px rgba(122,154,1,.2);}
+  .acciones{margin-top:18px;display:flex;gap:12px;flex-wrap:wrap;}
+  .btn{border:none;padding:11px 22px;font-size:14px;font-weight:bold;border-radius:6px;cursor:pointer;}
+  .btn-imprimir{background:#7A9A01;color:#fff;}
+  .btn-imprimir:hover{background:#688201;}
+  .aviso{grid-column:1 / -1;font-size:12px;color:#777;background:#f7f7f2;border-left:3px solid #7A9A01;padding:8px 12px;border-radius:4px;}
+
+  /* ---------- HOJA ---------- */
+  .hoja{
+    max-width:900px;
+    margin:0 auto;
+    background:#fff;
+    padding:14px;
+    box-shadow:0 2px 6px rgba(0,0,0,.08);
+    display:flex;
+    flex-direction:column;
+  }
+  .titulo{text-align:center;font-weight:bold;font-size:16px;margin:2px 0 10px 0;letter-spacing:.3px;}
+
+  table{width:100%;border-collapse:collapse;table-layout:fixed;}
+  td,th{border:1px solid var(--negro);font-size:12px;padding:3px 5px;text-align:center;vertical-align:middle;word-wrap:break-word;}
+
+  /* Cabecera de datos */
+  .datos td{text-align:left;font-weight:bold;padding:5px 7px;background:var(--gris-cabecera);}
+  .datos td .valor{font-weight:normal;}
+
+  /* Cabecera de la tabla de horas */
+  thead th{background:var(--gris-cabecera);font-weight:bold;font-size:11px;}
+
+  /* Celda del día */
+  .col-dia{background:var(--gris-cabecera);font-weight:bold;width:52px;font-size:12px;}
+
+  /* Domingo: sombreado, no se firma */
+  tr.domingo td{background:var(--gris-domingo);}
+  tr.domingo .col-dia{background:#b8b8b8;}
+
+  /* Filas de datos (altura cómoda en pantalla) */
+  tbody tr{height:28px;}
+
+  /* Total mes */
+  .total-mes td{font-weight:bold;background:#fff;height:28px;}
+
+  /* Firmas finales */
+  .firmas{display:flex;justify-content:space-between;margin-top:18px;font-size:13px;font-weight:bold;}
+  .firmas .bloque{width:46%;}
+  .firmas .linea-firma{border-top:1px solid #000;margin-top:34px;padding-top:4px;text-align:left;}
+
+  /* ---------- IMPRESIÓN: llenar todo el A4 ---------- */
+  @media print{
+    @page{size:A4 portrait;margin:8mm;}
+    html,body{height:100%;}
+    body{background:#fff;padding:0;}
+    .controles{display:none;}
+
+    .hoja{
+      box-shadow:none;
+      max-width:none;
+      padding:0;
+      margin:0;
+      height:281mm;              /* alto útil A4 con márgenes de 8mm */
+    }
+    .titulo{font-size:14px;margin:0 0 6px 0;}
+
+    /* Zona que se estira para rellenar la página */
+    .contenido{flex:1 1 auto;display:flex;}
+    table.horas{width:100%;height:100%;}
+
+    td,th{font-size:11px;padding:2px 4px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .datos td{padding:4px 6px;font-size:11px;}
+    thead th{font-size:10.5px;height:9mm;}
+    .total-mes td{height:9mm;font-size:11px;}
+    .col-dia{font-size:12px;}
+
+    /* Las filas de días NO llevan altura fija: se reparten el hueco sobrante */
+    tbody tr{height:auto;}
+
+    .firmas{font-size:12px;margin-top:8mm;}
+    .firmas .linea-firma{margin-top:12mm;}
+  }
+</style>
+</head>
+<body>
+
+  <!-- ================= PANEL DE CONTROL ================= -->
+  <div class="controles">
+    <h2>Registro de Jornada — Meres Central de Compras S.L.</h2>
+    <p class="sub">Rellena los datos, elige el mes y el año, y pulsa <b>Imprimir</b>. La hoja ocupa el A4 completo y los domingos no aparecen (no se trabaja).</p>
+    <div class="campos">
+      <div class="campo ancho">
+        <label>Trabajador/a (nombre y apellidos)</label>
+        <input type="text" id="in-trabajador" placeholder="Escribe el nombre o déjalo en blanco para rellenar a mano">
+      </div>
+      <div class="campo">
+        <label>NIF</label>
+        <input type="text" id="in-nif" placeholder="Ej.: 12345678A">
+      </div>
+      <div class="campo">
+        <label>Nº de horas según contrato</label>
+        <input type="text" id="in-horas" placeholder="Ej.: 30 h/semana">
+      </div>
+      <div class="campo">
+        <label>Tienda (centro: Meres, Siero)</label>
+        <input type="text" id="in-tienda" placeholder="Ej.: LA FACTORIA">
+      </div>
+      <div class="campo">
+        <label>Mes</label>
+        <select id="in-mes"></select>
+      </div>
+      <div class="campo">
+        <label>Año</label>
+        <input type="number" id="in-anio" min="2020" max="2100" step="1">
+      </div>
+      <div class="aviso">La empresa (Meres Central de Compras S.L. — CIF B74102807) y el centro de trabajo (Meres, Siero) ya vienen fijados en la hoja.</div>
+    </div>
+    <div class="acciones">
+      <button class="btn btn-imprimir" onclick="window.print()">🖨️ Imprimir</button>
+    </div>
+  </div>
+
+  <!-- ================= HOJA IMPRIMIBLE ================= -->
+  <div class="hoja">
+    <div class="titulo">REGISTRO DE LA JORNADA TRABAJADORES</div>
+
+    <table class="datos">
+      <tr><td>EMPRESA: <span class="valor">Meres Central de Compras S.L. — CIF B74102807</span></td></tr>
+      <tr><td>TRABAJADOR/A y NIF: <span class="valor" id="out-trabajador"></span></td></tr>
+      <tr><td>Nº DE HORAS SEGÚN CONTRATO: <span class="valor" id="out-horas"></span></td></tr>
+      <tr><td>CENTRO DE TRABAJO: <span class="valor">Meres, Siero — Tienda: <span id="out-tienda"></span></span></td></tr>
+      <tr><td>MES: <span class="valor" id="out-mes"></span></td></tr>
+    </table>
+
+    <div class="contenido">
+      <table class="horas">
+        <thead>
+          <tr>
+            <th class="col-dia" rowspan="2">DÍA</th>
+            <th colspan="3">JORNADA MAÑANA</th>
+            <th rowspan="2">firma</th>
+            <th colspan="3">JORNADA TARDE</th>
+            <th rowspan="2">firma</th>
+            <th rowspan="2">TOTAL HORAS JORNADA</th>
+          </tr>
+          <tr>
+            <th>Hora Entrada</th>
+            <th>firma</th>
+            <th>Hora Salida</th>
+            <th>Hora Entrada</th>
+            <th>firma</th>
+            <th>Hora Salida</th>
+          </tr>
+        </thead>
+        <tbody id="cuerpo-tabla"><!-- filas generadas por JS --></tbody>
+        <tfoot>
+          <tr class="total-mes">
+            <td colspan="8">TOTAL HORAS TRABAJADAS MES</td>
+            <td></td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="firmas">
+      <div class="bloque"><div class="linea-firma">FDO: TRABAJADOR</div></div>
+      <div class="bloque"><div class="linea-firma">FDO: LA EMPRESA</div></div>
+    </div>
+  </div>
+
+<script>
+  const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+                 "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const INICIALES = ["D","L","M","X","J","V","S"];   // 0=Domingo ... 6=Sábado
+
+  const selMes = document.getElementById("in-mes");
+  MESES.forEach((m,i)=>{
+    const op=document.createElement("option");
+    op.value=i; op.textContent=m;
+    selMes.appendChild(op);
+  });
+
+  const hoy = new Date();
+  selMes.value = hoy.getMonth();
+  document.getElementById("in-anio").value = hoy.getFullYear();
+
+  const inTrab   = document.getElementById("in-trabajador");
+  const inNif    = document.getElementById("in-nif");
+  const inHoras  = document.getElementById("in-horas");
+  const inTienda = document.getElementById("in-tienda");
+  const inAnio   = document.getElementById("in-anio");
+  const cuerpo   = document.getElementById("cuerpo-tabla");
+
+  function celdaVacia(){ return document.createElement("td"); }
+
+  function generar(){
+    const trab = inTrab.value.trim();
+    const nif  = inNif.value.trim();
+    document.getElementById("out-trabajador").textContent =
+        (trab || nif) ? [trab, nif].filter(Boolean).join(" — ") : "";
+    document.getElementById("out-horas").textContent  = inHoras.value.trim();
+    document.getElementById("out-tienda").textContent = inTienda.value.trim();
+
+    const mes  = parseInt(selMes.value,10);
+    const anio = parseInt(inAnio.value,10) || hoy.getFullYear();
+    document.getElementById("out-mes").textContent = MESES[mes] + " " + anio;
+
+    const numDias = new Date(anio, mes+1, 0).getDate();
+
+    cuerpo.innerHTML = "";
+    for(let d=1; d<=numDias; d++){
+      const fecha = new Date(anio, mes, d);
+      const dow   = fecha.getDay();
+      if(dow === 0) continue;            // sin domingos: no se trabaja
+
+      const tr = document.createElement("tr");
+      const tdDia = document.createElement("td");
+      tdDia.className = "col-dia";
+      tdDia.textContent = d + " " + INICIALES[dow];
+      tr.appendChild(tdDia);
+
+      for(let c=0; c<9; c++) tr.appendChild(celdaVacia());
+      cuerpo.appendChild(tr);
+    }
+  }
+
+  [inTrab,inNif,inHoras,inTienda,inAnio].forEach(el=>el.addEventListener("input", generar));
+  selMes.addEventListener("change", generar);
+  generar();
+</script>
+</body>
+</html>
