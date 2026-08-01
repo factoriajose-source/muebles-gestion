@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panel de Reparto · La Factoría</title>
 
-<!-- SDK de Firebase (compat 9.23.0). Se conecta al mismo proyecto que tu ERP. -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -22,11 +21,7 @@
   --sombra:0 1px 2px rgba(74,44,23,.06), 0 4px 16px rgba(74,44,23,.05);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  background:var(--fondo); color:var(--texto);
-  font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased; line-height:1.4;
-}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:var(--fondo); color:var(--texto); font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased; line-height:1.4}
 .num{font-variant-numeric:tabular-nums}
 .wrap{max-width:1280px; margin:0 auto; padding:20px 22px 60px}
 
@@ -46,7 +41,7 @@ body{
 .filtros{display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; background:var(--blanco); border:1px solid var(--linea); border-radius:14px; padding:14px 16px; margin:16px 0 18px; box-shadow:var(--sombra)}
 .campo{display:flex; flex-direction:column; gap:5px}
 .campo label{font-size:11px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.4px}
-.campo input, .campo select{font:inherit; font-size:14px; padding:9px 11px; border:1px solid var(--beige); border-radius:9px; background:var(--blanco); color:var(--texto); min-width:150px}
+.campo input, .campo select{font:inherit; font-size:14px; padding:9px 11px; border:1px solid var(--beige); border-radius:9px; background:var(--blanco); color:var(--texto); min-width:130px}
 .campo input:focus, .campo select:focus{outline:2px solid var(--oliva); outline-offset:1px; border-color:var(--oliva)}
 .btn{font:inherit; font-weight:700; font-size:14px; cursor:pointer; border:none; padding:10px 16px; border-radius:9px; display:inline-flex; align-items:center; gap:7px}
 .btn-oliva{background:var(--oliva); color:#fff}
@@ -62,7 +57,7 @@ body{
 .kpi.acento-naranja::before{background:var(--naranja)}
 .kpi.acento-marron::before{background:var(--marron)}
 .kpi .et{font-size:11px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px}
-.kpi .val{font-size:27px; font-weight:800; color:var(--marron); margin-top:6px; letter-spacing:-.5px}
+.kpi .val{font-size:26px; font-weight:800; color:var(--marron); margin-top:6px; letter-spacing:-.5px}
 .kpi.acento-oliva .val{color:var(--oliva-osc)}
 .kpi.acento-naranja .val{color:var(--naranja-osc)}
 .kpi .pie{font-size:11.5px; color:var(--gris); margin-top:3px; font-weight:600}
@@ -72,6 +67,16 @@ body{
 .seccion{margin-bottom:26px}
 .seccion h2{font-size:13px; font-weight:800; color:var(--marron); text-transform:uppercase; letter-spacing:.6px; margin-bottom:12px; display:flex; align-items:center; gap:8px}
 .seccion h2::after{content:""; flex:1; height:1px; background:var(--linea)}
+
+/* Gráfico temporal */
+.grafico{display:flex; align-items:flex-end; gap:8px; min-height:196px; padding:14px 10px 8px; background:var(--blanco); border:1px solid var(--linea); border-radius:14px; box-shadow:var(--sombra); overflow-x:auto}
+.col-barra{flex:1 1 0; min-width:30px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:5px; cursor:pointer}
+.col-barra .valor{font-size:10.5px; font-weight:800; color:var(--oliva-osc); white-space:nowrap}
+.col-barra .barra{width:66%; max-width:44px; background:linear-gradient(180deg,var(--oliva),var(--oliva-osc)); border-radius:6px 6px 0 0; min-height:3px; transition:height .35s ease, background .2s}
+.col-barra .etq{font-size:10.5px; color:var(--gris); font-weight:700; white-space:nowrap}
+.col-barra .cnt{font-size:9.5px; color:var(--beige); font-weight:600; margin-top:-2px}
+.col-barra:hover .barra{background:linear-gradient(180deg,var(--naranja),var(--naranja-osc))}
+.pista{font-size:11px; color:var(--gris); text-align:center; margin-top:8px; font-weight:600}
 
 .rutas{display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px}
 .ruta{background:var(--blanco); border:1px solid var(--linea); border-radius:14px; box-shadow:var(--sombra); overflow:hidden}
@@ -105,6 +110,7 @@ tbody tr:hover{background:#faf8f2}
 td .cli{font-weight:700; color:var(--marron)}
 td .dir{font-size:12px; color:var(--gris); margin-top:2px}
 td .bultos{font-size:12.5px; color:var(--texto); max-width:280px}
+td .fecha-cel{font-size:12px; color:var(--gris); white-space:nowrap}
 .chip{display:inline-block; padding:3px 10px; border-radius:20px; font-size:11.5px; font-weight:700; white-space:nowrap}
 .chip.pendiente{background:#fff3e0; color:var(--naranja-osc)}
 .chip.entregado{background:#eaf0d4; color:var(--oliva-osc)}
@@ -114,8 +120,8 @@ td .bultos{font-size:12.5px; color:var(--texto); max-width:280px}
 .vacio-cel{color:var(--beige)}
 tfoot td{padding:13px 14px; background:#faf8f2; font-weight:800; color:var(--marron); border-top:2px solid var(--beige)}
 .sin-datos{padding:40px; text-align:center; color:var(--gris); font-weight:600}
+.aviso-tabla{padding:10px 14px; font-size:12px; color:var(--gris); background:#faf8f2; text-align:center; font-weight:600}
 
-/* Login (solo aparece si tu base de datos pide identificarse) */
 .login-fondo{position:fixed; inset:0; background:rgba(74,44,23,.35); display:none; align-items:center; justify-content:center; z-index:50; padding:20px}
 .login-caja{background:var(--blanco); border-radius:16px; padding:26px; width:100%; max-width:360px; box-shadow:0 20px 60px rgba(74,44,23,.3)}
 .login-caja h3{color:var(--marron); font-size:18px; margin-bottom:6px}
@@ -135,7 +141,7 @@ tfoot td{padding:13px 14px; background:#faf8f2; font-weight:800; color:var(--mar
 @media print{
   body{background:#fff}
   .filtros, .banner, .btn, .reloj, .login-fondo{display:none !important}
-  .kpi, .ruta, .tienda, .tabla-caja{box-shadow:none; border:1px solid #ccc}
+  .kpi, .ruta, .tienda, .tabla-caja, .grafico{box-shadow:none; border:1px solid #ccc}
 }
 </style>
 </head>
@@ -166,11 +172,19 @@ tfoot td{padding:13px 14px; background:#faf8f2; font-weight:800; color:var(--mar
 
   <div class="filtros">
     <div class="campo">
-      <label for="f-fecha">Fecha de entrega</label>
-      <input type="date" id="f-fecha">
+      <label for="f-anio">Año</label>
+      <select id="f-anio"><option value="">Todos</option></select>
     </div>
     <div class="campo">
-      <label for="f-repartidor">Repartidor</label>
+      <label for="f-mes">Mes</label>
+      <select id="f-mes"><option value="">Todos</option></select>
+    </div>
+    <div class="campo">
+      <label for="f-dia">Día</label>
+      <select id="f-dia"><option value="">Todos</option></select>
+    </div>
+    <div class="campo">
+      <label for="f-repartidor">Camión / repartidor</label>
       <select id="f-repartidor"><option value="">Todos</option></select>
     </div>
     <div class="campo">
@@ -178,6 +192,7 @@ tfoot td{padding:13px 14px; background:#faf8f2; font-weight:800; color:var(--mar
       <select id="f-tienda"><option value="">Todas</option></select>
     </div>
     <div class="der">
+      <button class="btn btn-linea" onclick="limpiar()">Todo el histórico</button>
       <button class="btn btn-oliva" onclick="cargar()">Actualizar</button>
       <button class="btn btn-linea" onclick="window.print()">Imprimir</button>
     </div>
@@ -185,8 +200,14 @@ tfoot td{padding:13px 14px; background:#faf8f2; font-weight:800; color:var(--mar
 
   <div class="kpis" id="kpis"></div>
 
+  <section class="seccion" id="sec-tiempo">
+    <h2 id="tiempo-titulo">Evolución del reparto</h2>
+    <div class="grafico" id="grafico"></div>
+    <div class="pista" id="pista"></div>
+  </section>
+
   <section class="seccion">
-    <h2>Reparto por repartidor</h2>
+    <h2 id="rep-titulo">Reparto por camión</h2>
     <div class="rutas" id="rutas"></div>
   </section>
 
@@ -196,15 +217,16 @@ tfoot td{padding:13px 14px; background:#faf8f2; font-weight:800; color:var(--mar
   </section>
 
   <section class="seccion">
-    <h2>Detalle de notas</h2>
+    <h2 id="det-titulo">Detalle de notas</h2>
     <div class="tabla-caja">
       <table>
         <thead>
           <tr>
             <th style="width:34px">Nº</th>
+            <th class="oculta-movil">Fecha</th>
             <th>Cliente</th>
+            <th class="oculta-movil">Camión</th>
             <th class="oculta-movil">Tienda</th>
-            <th class="oculta-movil">Bultos</th>
             <th class="der">Importe</th>
             <th class="der">A cobrar</th>
             <th>Estado</th>
@@ -213,12 +235,12 @@ tfoot td{padding:13px 14px; background:#faf8f2; font-weight:800; color:var(--mar
         <tbody id="tbody"></tbody>
         <tfoot id="tfoot"></tfoot>
       </table>
+      <div class="aviso-tabla" id="aviso-tabla" style="display:none"></div>
     </div>
   </section>
 
 </div>
 
-<!-- Login (oculto salvo que Firestore exija identificación) -->
 <div class="login-fondo" id="login">
   <div class="login-caja">
     <h3>Identifícate</h3>
@@ -232,7 +254,7 @@ tfoot td{padding:13px 14px; background:#faf8f2; font-weight:800; color:var(--mar
 
 <script>
 /* ================================================================= */
-/*  1) CONFIGURACIÓN — ya rellenada con los datos de tu ERP           */
+/*  1) CONFIGURACIÓN (datos reales de tu ERP)                         */
 /* ================================================================= */
 const firebaseConfig = {
   apiKey: "AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
@@ -242,27 +264,17 @@ const firebaseConfig = {
   messagingSenderId: "37365883872",
   appId: "1:37365883872:web:842ca4d318c01652684185"
 };
-
 const COLECCION = "repartos";
-
-/* Nombres reales de los campos en tu Firestore (ya verificados con tu ERP). */
 const CAMPOS = {
-  cliente:    "cliente",
-  direccion:  "direccion",
-  telefono:   "telefono",
-  tienda:     "tienda",
-  bultos:     "bultos",
-  importe:    "importe_reparto",
-  cobrar:     "saldo_cobrar",
-  notas:      "notas",
-  entregado:  "entregado",      // sí/no (booleano)
-  repartidor: "repartidor",
-  matricula:  "matricula",
-  fecha:      "fecha_entrega"
+  cliente:"cliente", direccion:"direccion", telefono:"telefono", tienda:"tienda",
+  bultos:"bultos", importe:"importe_reparto", cobrar:"saldo_cobrar", notas:"notas",
+  entregado:"entregado", repartidor:"repartidor", matricula:"matricula", fecha:"fecha_entrega"
 };
+const MAX_FILAS = 400;   // límite de filas en la tabla de detalle
+const MESES = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
 /* ================================================================= */
-/*  2) DATOS DE DEMOSTRACIÓN (solo si vaciaras la configuración)      */
+/*  2) DATOS DE DEMOSTRACIÓN                                          */
 /* ================================================================= */
 const DATOS_DEMO = [
   {cliente:"MARIA ELENA DE JESUS PARDO IGLESIAS", direccion:"PUERTO SAN ISIDRO, 14 3ºE OVIEDO", telefono:"619554787", tienda:"ExpoSofá", bultos:"BUTACA (512) REVISADO POR FÁBRICA", importe_reparto:0, saldo_cobrar:0, notas:"", entregado:false, repartidor:"ANDRY", matricula:"", fecha_entrega:"2026-07-31"},
@@ -271,7 +283,10 @@ const DATOS_DEMO = [
   {cliente:"MARIN RODRIGUEZ DE LOS SANTOS", direccion:"REYES CATOLICOS, 12 1ºF AVILES", telefono:"647086664", tienda:"ExpoSofá", bultos:"SOFÁ CHAISLONGUE MOD. MELODY (5014)", importe_reparto:1152, saldo_cobrar:0, notas:"", entregado:false, repartidor:"ANDRY", matricula:"", fecha_entrega:"2026-07-31"},
   {cliente:"ANA MARIA MARTINEZ GONZALO", direccion:"AVDA. DE OVIEDO, 18 PORTAL 1 2ºB LUGONES", telefono:"645380682", tienda:"Merkamueble", bultos:"COMPOSICIÓN SALON (985) +", importe_reparto:3219, saldo_cobrar:0, notas:"", entregado:false, repartidor:"ANDRY", matricula:"", fecha_entrega:"2026-07-31"},
   {cliente:"TANIA RODRIGUEZ MENENDEZ", direccion:"FUERTES ACEBEDO, 62, 4ºB OVIEDO", telefono:"696303748", tienda:"ExpoSofá", bultos:"CANAPÉ + COLCHON 135X180 (5014)", importe_reparto:921, saldo_cobrar:0, notas:"", entregado:false, repartidor:"ANDRY", matricula:"", fecha_entrega:"2026-07-31"},
-  {cliente:"PATRICIA SORDO BAJO", direccion:"CESAR MAESE ALONSO, 200 3ºA GIJON", telefono:"650704670", tienda:"Merkamueble", bultos:"CAMBIO CABECERO + BARRA COLGAR ARMARIO (827)", importe_reparto:0, saldo_cobrar:0, notas:"", entregado:false, repartidor:"ANDRY", matricula:"", fecha_entrega:"2026-07-31"}
+  {cliente:"PATRICIA SORDO BAJO", direccion:"CESAR MAESE ALONSO, 200 3ºA GIJON", telefono:"650704670", tienda:"Merkamueble", bultos:"CAMBIO CABECERO + BARRA COLGAR ARMARIO (827)", importe_reparto:0, saldo_cobrar:0, notas:"", entregado:false, repartidor:"ANDRY", matricula:"", fecha_entrega:"2026-07-31"},
+  {cliente:"CLIENTE EJEMPLO MAYO", direccion:"OVIEDO", telefono:"600000000", tienda:"Merkamueble", bultos:"SOFÁ 3 PLAZAS (5014)", importe_reparto:1450, saldo_cobrar:200, notas:"", entregado:true, repartidor:"CLEO", matricula:"1234-ABC", fecha_entrega:"2026-05-14"},
+  {cliente:"CLIENTE EJEMPLO MARZO", direccion:"GIJON", telefono:"600000001", tienda:"ExpoSofá", bultos:"COLCHÓN 150 (5014)", importe_reparto:780, saldo_cobrar:0, notas:"", entregado:true, repartidor:"CLEO", matricula:"1234-ABC", fecha_entrega:"2026-03-02"},
+  {cliente:"CLIENTE EJEMPLO 2025", direccion:"AVILES", telefono:"600000002", tienda:"Muebles La Factoría", bultos:"ARMARIO (827)", importe_reparto:2100, saldo_cobrar:0, notas:"", entregado:true, repartidor:"DARWIN", matricula:"5678-XYZ", fecha_entrega:"2025-11-20"}
 ];
 
 /* ================================================================= */
@@ -279,145 +294,154 @@ const DATOS_DEMO = [
 /* ================================================================= */
 const MODO_DEMO = !firebaseConfig.apiKey;
 let db=null, auth=null;
-if(MODO_DEMO){
-  document.getElementById("banner-demo").style.display = "flex";
-}else{
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-  auth = firebase.auth();
-}
+if(MODO_DEMO){ document.getElementById("banner-demo").style.display="flex"; }
+else{ firebase.initializeApp(firebaseConfig); db=firebase.firestore(); auth=firebase.auth(); }
+
+const $ = id => document.getElementById(id);
+const elAnio=$("f-anio"), elMes=$("f-mes"), elDia=$("f-dia"), elRep=$("f-repartidor"), elTie=$("f-tienda");
 
 const eur = n => (Number(n)||0).toLocaleString("es-ES",{minimumFractionDigits:2, maximumFractionDigits:2}) + " €";
-const num = v => { const n = parseFloat(String(v).replace(/[^0-9,.-]/g,"").replace(",",".")); return isNaN(n)?0:n; };
+const eurK = n => n>=1000 ? (Math.round(n/100)/10).toLocaleString("es-ES")+"k €" : Math.round(n)+" €";
+const num = v => { const n=parseFloat(String(v).replace(/[^0-9,.-]/g,"").replace(",",".")); return isNaN(n)?0:n; };
 const txt = v => (v==null?"":String(v)).trim();
 const boolv = v => v===true || v===1 || /^(true|1|si|sí|entreg)/i.test(String(v));
 
 function fechaISO(v){
   if(!v) return "";
-  if(typeof v==="object" && typeof v.toDate==="function") v = v.toDate();
+  if(typeof v==="object" && typeof v.toDate==="function") v=v.toDate();
   if(v instanceof Date){ return v.toISOString().slice(0,10); }
-  const s = String(v).trim();
-  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);   if(m) return `${m[1]}-${m[2]}-${m[3]}`;
-  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if(m) return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+  const s=String(v).trim();
+  let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);   if(m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if(m) return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
   return s.slice(0,10);
 }
-
 function mapear(d){
-  const g = k => d[CAMPOS[k]];
+  const g=k=>d[CAMPOS[k]];
   return {
-    cliente:   txt(g("cliente")),
-    direccion: txt(g("direccion")),
-    telefono:  txt(g("telefono")),
-    tienda:    txt(g("tienda")) || "Sin tienda",
-    bultos:    txt(g("bultos")),
-    importe:   num(g("importe")),
-    cobrar:    num(g("cobrar")),
-    notas:     txt(g("notas")),
-    entregado: boolv(g("entregado")),
-    repartidor:txt(g("repartidor")) || "Sin asignar",
-    matricula: txt(g("matricula")),
-    fecha:     fechaISO(g("fecha"))
+    cliente:txt(g("cliente")), direccion:txt(g("direccion")), telefono:txt(g("telefono")),
+    tienda:txt(g("tienda"))||"Sin tienda", bultos:txt(g("bultos")),
+    importe:num(g("importe")), cobrar:num(g("cobrar")), notas:txt(g("notas")),
+    entregado:boolv(g("entregado")), repartidor:txt(g("repartidor"))||"Sin asignar",
+    matricula:txt(g("matricula")), fecha:fechaISO(g("fecha"))
   };
 }
 
-let TODO = [];
+let TODO=[];
 
 async function cargar(){
-  if(MODO_DEMO){
-    TODO = DATOS_DEMO.map(mapear);
-    finalizar();
-    return;
-  }
+  if(MODO_DEMO){ TODO=DATOS_DEMO.map(mapear); primeraCarga(); return; }
   try{
-    const snap = await db.collection(COLECCION).get();
-    TODO = snap.docs.map(doc => mapear(doc.data()));
-    document.getElementById("login").style.display = "none";
-    finalizar();
+    const snap=await db.collection(COLECCION).get();
+    TODO=snap.docs.map(doc=>mapear(doc.data()));
+    $("login").style.display="none";
+    primeraCarga();
   }catch(e){
     console.error(e);
-    if(e.code === "permission-denied" || /permiss/i.test(e.message||"")){
-      document.getElementById("login").style.display = "flex";   // pide identificarse
-    }else{
-      alert("No se pudieron leer los datos de Firebase.\n\nDetalle: " + e.message);
-    }
+    if(e.code==="permission-denied" || /permiss/i.test(e.message||"")){ $("login").style.display="flex"; }
+    else{ alert("No se pudieron leer los datos de Firebase.\n\nDetalle: "+e.message); }
   }
 }
-
 async function entrar(){
-  const err = document.getElementById("login-err");
-  err.style.display = "none";
+  const err=$("login-err"); err.style.display="none";
   try{
-    await auth.signInWithEmailAndPassword(
-      document.getElementById("login-email").value.trim(),
-      document.getElementById("login-pass").value
-    );
+    await auth.signInWithEmailAndPassword($("login-email").value.trim(), $("login-pass").value);
     cargar();
-  }catch(e){
-    err.textContent = "No se pudo entrar: revisa el correo y la contraseña.";
-    err.style.display = "block";
+  }catch(e){ err.textContent="No se pudo entrar: revisa el correo y la contraseña."; err.style.display="block"; }
+}
+
+let primera=true;
+function primeraCarga(){
+  reconstruirCascada();
+  if(primera){
+    const y=String(new Date().getFullYear());
+    if([...elAnio.options].some(o=>o.value===y)){ elAnio.value=y; reconstruirCascada(); }
+    primera=false;
   }
+  render();
+  $("reloj").textContent=new Date().toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
 }
 
-function finalizar(){
-  poblarSelectores();
-  pintar();
-  document.getElementById("reloj").textContent =
-    new Date().toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
-}
-
-function poblarSelectores(){
-  const rep = document.getElementById("f-repartidor");
-  const tie = document.getElementById("f-tienda");
-  const rA = rep.value, tA = tie.value;
-  const reps = [...new Set(TODO.map(n=>n.repartidor))].sort();
-  const ties = [...new Set(TODO.map(n=>n.tienda))].sort();
-  rep.innerHTML = '<option value="">Todos</option>' + reps.map(r=>`<option>${r}</option>`).join("");
-  tie.innerHTML = '<option value="">Todas</option>'  + ties.map(t=>`<option>${t}</option>`).join("");
-  rep.value = rA; tie.value = tA;
-}
-
-function filtradas(){
-  const fF = document.getElementById("f-fecha").value;
-  const fR = document.getElementById("f-repartidor").value;
-  const fT = document.getElementById("f-tienda").value;
+/* ---- Filtros en cascada ---- */
+function subset(f){
   return TODO.filter(n =>
-    (!fF || n.fecha === fF) &&
-    (!fR || n.repartidor === fR) &&
-    (!fT || n.tienda === fT)
+    (!f.anio || n.fecha.slice(0,4)===f.anio) &&
+    (!f.mes  || n.fecha.slice(5,7)===f.mes)  &&
+    (!f.dia  || n.fecha.slice(8,10)===f.dia) &&
+    (!f.rep  || n.repartidor===f.rep) &&
+    (!f.tie  || n.tienda===f.tie)
   );
 }
+function estado(){ return {anio:elAnio.value, mes:elMes.value, dia:elDia.value, rep:elRep.value, tie:elTie.value}; }
+function setSel(sel, html, keep){ sel.innerHTML=html; sel.value=keep||""; if(sel.value!==(keep||"")) sel.value=""; }
 
-function pintar(){
-  const L = filtradas();
-  const total = L.length;
-  const entregados = L.filter(n=>n.entregado).length;
-  const pendientes = total - entregados;
-  const impTotal = L.reduce((s,n)=>s+n.importe,0);
-  const aCobrar  = L.reduce((s,n)=>s+n.cobrar,0);
-  const sinRep   = L.filter(n=>n.repartidor==="Sin asignar").length;
+function reconstruirCascada(){
+  const c=estado();
+  const anios=[...new Set(TODO.map(n=>n.fecha.slice(0,4)).filter(Boolean))].sort().reverse();
+  setSel(elAnio, '<option value="">Todos</option>'+anios.map(a=>`<option value="${a}">${a}</option>`).join(""), c.anio);
+  const anio=elAnio.value;
+  const meses=[...new Set(subset({anio}).map(n=>n.fecha.slice(5,7)).filter(Boolean))].sort();
+  setSel(elMes, '<option value="">Todos</option>'+meses.map(m=>`<option value="${m}">${MESES[parseInt(m)]}</option>`).join(""), c.mes);
+  const mes=elMes.value;
+  const dias=[...new Set(subset({anio,mes}).map(n=>n.fecha.slice(8,10)).filter(Boolean))].sort();
+  setSel(elDia, '<option value="">Todos</option>'+dias.map(d=>`<option value="${d}">${parseInt(d)}</option>`).join(""), c.dia);
+  const dia=elDia.value;
+  const reps=[...new Set(subset({anio,mes,dia}).map(n=>n.repartidor))].sort();
+  setSel(elRep, '<option value="">Todos</option>'+reps.map(r=>`<option value="${r}">${r}</option>`).join(""), c.rep);
+  const rep=elRep.value;
+  const ties=[...new Set(subset({anio,mes,dia,rep}).map(n=>n.tienda))].sort();
+  setSel(elTie, '<option value="">Todas</option>'+ties.map(t=>`<option value="${t}">${t}</option>`).join(""), c.tie);
+}
 
-  document.getElementById("kpis").innerHTML = `
-    <div class="kpi acento-marron"><div class="et">Notas del día</div><div class="val num">${total}</div><div class="pie">${entregados} entregadas · ${pendientes} pendientes</div></div>
+[elAnio,elMes,elDia,elRep,elTie].forEach(el=>el.addEventListener("change",()=>{ reconstruirCascada(); render(); }));
+
+function limpiar(){ elAnio.value=""; reconstruirCascada(); render(); }
+function drill(tipo,key){
+  if(tipo==="anio") elAnio.value=key;
+  if(tipo==="mes")  elMes.value=key;
+  if(tipo==="dia")  elDia.value=key;
+  reconstruirCascada(); render();
+}
+
+function periodoTexto(){
+  const {anio,mes,dia}=estado();
+  if(dia&&mes&&anio) return `${parseInt(dia)} de ${MESES[parseInt(mes)]} de ${anio}`;
+  if(mes&&anio) return `${MESES[parseInt(mes)]} de ${anio}`;
+  if(anio) return `Año ${anio}`;
+  return "Todo el histórico";
+}
+function agrupar(arr, fn){ return arr.reduce((o,n)=>{const k=fn(n);(o[k]=o[k]||[]).push(n);return o;},{}); }
+
+/* ---- Render ---- */
+function render(){
+  const L=subset(estado());
+  const total=L.length, entregados=L.filter(n=>n.entregado).length, pendientes=total-entregados;
+  const impTotal=L.reduce((s,n)=>s+n.importe,0), aCobrar=L.reduce((s,n)=>s+n.cobrar,0);
+  const sinRep=L.filter(n=>n.repartidor==="Sin asignar").length;
+  const periodo=periodoTexto();
+
+  $("kpis").innerHTML=`
+    <div class="kpi acento-marron"><div class="et">Notas</div><div class="val num">${total}</div><div class="pie">${periodo}</div></div>
     <div class="kpi acento-oliva"><div class="et">Entregadas</div><div class="val num">${entregados}</div><div class="pie">de ${total}</div></div>
     <div class="kpi"><div class="et">Pendientes</div><div class="val num">${pendientes}</div><div class="pie">por repartir</div></div>
-    <div class="kpi acento-oliva"><div class="et">Importe total</div><div class="val num">${eur(impTotal)}</div><div class="pie">en ruta hoy</div></div>
+    <div class="kpi acento-oliva"><div class="et">Importe repartido</div><div class="val num">${eur(impTotal)}</div><div class="pie">${periodo}</div></div>
     <div class="kpi acento-naranja"><div class="et">A cobrar</div><div class="val num">${eur(aCobrar)}</div><div class="pie">contra entrega</div></div>
-    <div class="kpi ${sinRep>0?'alerta':''}"><div class="et">Sin repartidor</div><div class="val num">${sinRep}</div><div class="pie">${sinRep>0?'requieren asignación':'todo asignado'}</div></div>
-  `;
+    <div class="kpi ${sinRep>0?'alerta':''}"><div class="et">Sin camión</div><div class="val num">${sinRep}</div><div class="pie">${sinRep>0?'requieren asignación':'todo asignado'}</div></div>`;
 
-  const porRep = agrupar(L, n=>n.repartidor);
-  document.getElementById("rutas").innerHTML = Object.entries(porRep).map(([nombre,arr])=>{
-    const imp = arr.reduce((s,n)=>s+n.importe,0);
-    const cob = arr.reduce((s,n)=>s+n.cobrar,0);
-    const ent = arr.filter(n=>n.entregado).length;
-    const mat = arr.map(n=>n.matricula).find(m=>m) || "Sin matrícula";
-    const pct = arr.length ? Math.round(ent/arr.length*100) : 0;
-    return `
-      <div class="ruta">
+  graficoTemporal(L);
+
+  // Por camión
+  $("rep-titulo").textContent = "Reparto por camión · "+periodo;
+  const porRep=agrupar(L, n=>n.repartidor);
+  $("rutas").innerHTML=Object.entries(porRep)
+    .sort((a,b)=> b[1].reduce((s,n)=>s+n.importe,0)-a[1].reduce((s,n)=>s+n.importe,0))
+    .map(([nombre,arr])=>{
+      const imp=arr.reduce((s,n)=>s+n.importe,0), cob=arr.reduce((s,n)=>s+n.cobrar,0);
+      const ent=arr.filter(n=>n.entregado).length, pct=arr.length?Math.round(ent/arr.length*100):0;
+      const mat=arr.map(n=>n.matricula).find(m=>m)||"Sin matrícula";
+      return `<div class="ruta">
         <div class="cab">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M3 6h11v9H3zM14 9h4l3 3v3h-7z"/><circle cx="7" cy="17" r="1.8" fill="#4A2C17"/><circle cx="17.5" cy="17" r="1.8" fill="#4A2C17"/></svg>
-          <span class="nom">${nombre}</span>
-          <span class="mat">${mat}</span>
+          <span class="nom">${nombre}</span><span class="mat">${mat}</span>
         </div>
         <div class="cuerpo">
           <div class="fila"><span class="k">Entregas</span><span class="v">${arr.length}</span></div>
@@ -425,54 +449,74 @@ function pintar(){
           <div class="fila"><span class="k">A cobrar</span><span class="v cobrar">${eur(cob)}</span></div>
           <div class="barra"><i style="width:${pct}%"></i></div>
           <div class="prog">${ent} de ${arr.length} entregadas (${pct}%)</div>
-        </div>
-      </div>`;
-  }).join("") || `<div class="sin-datos" style="grid-column:1/-1">Sin repartos para los filtros seleccionados.</div>`;
+        </div></div>`;
+    }).join("") || `<div class="sin-datos" style="grid-column:1/-1">Sin repartos para los filtros seleccionados.</div>`;
 
-  const porTie = agrupar(L, n=>n.tienda);
-  const maxImp = Math.max(1, ...Object.values(porTie).map(a=>a.reduce((s,n)=>s+n.importe,0)));
-  document.getElementById("tiendas").innerHTML = Object.entries(porTie)
-    .sort((a,b)=> b[1].reduce((s,n)=>s+n.importe,0) - a[1].reduce((s,n)=>s+n.importe,0))
-    .map(([nombre,arr])=>{
-      const imp = arr.reduce((s,n)=>s+n.importe,0);
-      return `
-        <div class="tienda">
-          <div class="nom">${nombre}</div>
-          <div class="track"><i style="width:${Math.round(imp/maxImp*100)}%"></i></div>
-          <div class="datos">${arr.length} nota${arr.length!==1?'s':''} · <b>${eur(imp)}</b></div>
-        </div>`;
+  // Por tienda
+  const porTie=agrupar(L, n=>n.tienda);
+  const maxT=Math.max(1,...Object.values(porTie).map(a=>a.reduce((s,n)=>s+n.importe,0)));
+  $("tiendas").innerHTML=Object.entries(porTie)
+    .sort((a,b)=> b[1].reduce((s,n)=>s+n.importe,0)-a[1].reduce((s,n)=>s+n.importe,0))
+    .map(([nombre,arr])=>{ const imp=arr.reduce((s,n)=>s+n.importe,0);
+      return `<div class="tienda"><div class="nom">${nombre}</div>
+        <div class="track"><i style="width:${Math.round(imp/maxT*100)}%"></i></div>
+        <div class="datos">${arr.length} nota${arr.length!==1?'s':''} · <b>${eur(imp)}</b></div></div>`;
     }).join("") || `<div class="sin-datos">Sin datos.</div>`;
 
-  document.getElementById("tbody").innerHTML = L.map((n,i)=>`
+  // Detalle
+  $("det-titulo").textContent="Detalle de notas · "+periodo;
+  const orden=[...L].sort((a,b)=> b.fecha.localeCompare(a.fecha));
+  const vista=orden.slice(0,MAX_FILAS);
+  $("tbody").innerHTML=vista.map((n,i)=>`
     <tr>
       <td class="num">${i+1}</td>
+      <td class="oculta-movil"><span class="fecha-cel">${n.fecha.split("-").reverse().join("/")}</span></td>
       <td><div class="cli">${n.cliente}</div><div class="dir">${n.direccion}${n.telefono?' · '+n.telefono:''}</div></td>
+      <td class="oculta-movil"><span class="tienda-tag">${n.repartidor}</span></td>
       <td class="oculta-movil"><span class="tienda-tag">${n.tienda}</span></td>
-      <td class="oculta-movil"><div class="bultos">${n.bultos||'—'}</div></td>
       <td class="der ${n.importe?'importe-cel':'vacio-cel'}">${n.importe?eur(n.importe):'—'}</td>
       <td class="der ${n.cobrar?'cobrar-cel':'vacio-cel'}">${n.cobrar?eur(n.cobrar):'—'}</td>
       <td><span class="chip ${n.entregado?'entregado':'pendiente'}">${n.entregado?'Entregado':'Pendiente'}</span></td>
-    </tr>`).join("") || `<tr><td colspan="7" class="sin-datos">No hay notas para estos filtros.</td></tr>`;
+    </tr>`).join("") || `<tr><td colspan="8" class="sin-datos">No hay notas para estos filtros.</td></tr>`;
 
-  document.getElementById("tfoot").innerHTML = L.length ? `
-    <tr>
-      <td colspan="4">TOTAL · ${L.length} nota${L.length!==1?'s':''}</td>
+  $("tfoot").innerHTML = L.length ? `<tr>
+      <td colspan="5">TOTAL · ${L.length} nota${L.length!==1?'s':''}</td>
       <td class="der">${eur(impTotal)}</td>
-      <td class="der">${eur(aCobrar)}</td>
-      <td></td>
-    </tr>` : "";
+      <td class="der">${eur(aCobrar)}</td><td></td></tr>` : "";
+
+  const aviso=$("aviso-tabla");
+  if(L.length>MAX_FILAS){ aviso.style.display="block"; aviso.textContent=`Mostrando las ${MAX_FILAS} más recientes de ${L.length}. Afina el filtro para ver el resto (los totales de arriba sí incluyen todas).`; }
+  else aviso.style.display="none";
 }
 
-function agrupar(arr, fn){
-  return arr.reduce((o,n)=>{ const k=fn(n); (o[k]=o[k]||[]).push(n); return o; },{});
+function graficoTemporal(L){
+  const {anio,mes,dia}=estado();
+  const sec=$("sec-tiempo");
+  if(dia){ sec.style.display="none"; return; }   // un solo día: sin gráfico temporal
+  sec.style.display="";
+  let grupos, etq, titulo, tipo;
+  if(mes){ grupos=agrupar(L,n=>n.fecha.slice(8,10)); etq=k=>String(parseInt(k)); titulo=`Reparto diario · ${MESES[parseInt(mes)]} ${anio}`; tipo="dia"; }
+  else if(anio){ grupos=agrupar(L,n=>n.fecha.slice(5,7)); etq=k=>MESES[parseInt(k)].slice(0,3); titulo=`Reparto mensual · ${anio}`; tipo="mes"; }
+  else { grupos=agrupar(L,n=>n.fecha.slice(0,4)); etq=k=>k; titulo=`Reparto por año`; tipo="anio"; }
+
+  $("tiempo-titulo").textContent=titulo;
+  const entradas=Object.entries(grupos).sort((a,b)=>a[0].localeCompare(b[0]));
+  const maxImp=Math.max(1,...entradas.map(([,a])=>a.reduce((s,n)=>s+n.importe,0)));
+  const pocos=entradas.length<=12;
+
+  $("grafico").innerHTML = entradas.length ? entradas.map(([k,arr])=>{
+    const imp=arr.reduce((s,n)=>s+n.importe,0);
+    const h=6+Math.round(imp/maxImp*140);
+    return `<div class="col-barra" onclick="drill('${tipo}','${k}')" title="${etq(k)}: ${arr.length} nota${arr.length!==1?'s':''} · ${eur(imp)}">
+      ${pocos?`<div class="valor">${eurK(imp)}</div>`:``}
+      <div class="barra" style="height:${h}px"></div>
+      <div class="etq">${etq(k)}</div>
+      <div class="cnt">${arr.length}</div>
+    </div>`;
+  }).join("") : `<div class="sin-datos" style="width:100%">Sin datos en este período.</div>`;
+
+  $("pista").textContent = entradas.length ? (tipo==="dia"?"Toca una barra para ver ese día":"Toca una barra para profundizar") : "";
 }
-
-document.getElementById("f-repartidor").addEventListener("change", pintar);
-document.getElementById("f-tienda").addEventListener("change", pintar);
-document.getElementById("f-fecha").addEventListener("change", pintar);
-
-// Fecha inicial: hoy (o el día del pantallazo en modo demo)
-document.getElementById("f-fecha").value = MODO_DEMO ? "2026-07-31" : new Date().toISOString().slice(0,10);
 
 cargar();
 </script>
