@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- facturacion v0.9 - 01/08/2026 - presupuestos conectados al formato de menu.html (numero, cliente, tienda, total) -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -251,7 +252,7 @@ var T={
 };
 
 var CU=null,SEC="facturas",FT="all",TA="lafactoria",DOCS=[],LIN=[],EID=null;
-var ECLS={borrador:"eb",enviada:"ee",cobrada:"ec",vencida:"ev",pendiente:"ep",aceptado:"ea",rechazado:"er",entregado:"eet"};
+var ECLS={borrador:"eb",enviada:"ee",cobrada:"ec",vencida:"ev",pendiente:"ep",aceptado:"ea",pedido:"ea",rechazado:"er",entregado:"eet"};
 var PCLS={lafactoria:"plf",exposofa:"pes",merkamueble:"pmk"};
 
 function gi(i){return document.getElementById(i);}
@@ -367,11 +368,69 @@ function selT(t){
   gi("mts").style.display="none";
 }
 
+// ===== TRADUCCION DE PRESUPUESTOS CREADOS EN menu.html =====
+// menu.html guarda los presupuestos con otros nombres de campo (num, cliente objeto,
+// lines, tienda con nombre completo) y NO guarda el total. Aqui los adaptamos al
+// formato que espera esta pantalla, sin tocar menu.html.
+function tiendaCodigo(t){
+  if(!t)return "lafactoria";
+  if(T[t])return t; // ya es un codigo valido (lafactoria/exposofa/merkamueble)
+  var s=(""+t).toLowerCase();
+  if(s.indexOf("merka")>=0)return "merkamueble";
+  if(s.indexOf("expo")>=0||s.indexOf("sof")>=0)return "exposofa";
+  if(s.indexOf("factor")>=0)return "lafactoria";
+  return "lafactoria";
+}
+function tiendaNombreMenu(code){
+  var m={lafactoria:"Muebles La Factor\u00EDa",exposofa:"ExpoSof\u00E1",merkamueble:"Merkamueble"};
+  return m[code]||code;
+}
+function normalizarPresupuesto(o){
+  var cli=(o.cliente&&typeof o.cliente==="object")?o.cliente:{};
+  // Guardamos los datos originales de menu.html para poder devolverlos tal cual al guardar
+  o._menu={num:o.num,cliente:o.cliente,lines:o.lines,mo:o.mo,descuento:o.descuento,
+           validez:o.validez,pagos:o.pagos,fin:o.fin,vendedor:o.vendedor,tienda:o.tienda};
+  o._esMenu=true;
+  // Numero: menu usa 'num'
+  o.numero=o.numero||o.num||"--";
+  // Cliente: menu lo guarda como objeto; aqui se espera texto
+  o.cliente=(cli.nombre)?cli.nombre:(typeof o._menu.cliente==="string"?o._menu.cliente:"--");
+  o.nif=cli.dni||"";
+  o.telefono=cli.tel||"";
+  o.direccion=cli.dir||"";
+  o.obs=cli.notas||o.obs||"";
+  // Tienda: menu la guarda con nombre completo; aqui se usa codigo
+  o.tienda=tiendaCodigo(o.tienda);
+  // Total: menu NO lo guarda, se calcula igual que en menu.html
+  var lineasMenu=o._menu.lines||[];
+  var baseProd=lineasMenu.reduce(function(s,l){return s+(l.qty||0)*(l.price||l.precio||0);},0);
+  var descPct=o._menu.descuento||0;
+  var descImp=baseProd*descPct/100;
+  var moPrecio=(o._menu.mo&&o._menu.mo.precio)?o._menu.mo.precio:0;
+  o.total=baseProd-descImp+moPrecio;
+  o.baseImponible=o.total; o.iva=0;
+  // Lineas de articulos (para ver el detalle y poder imprimir)
+  o.lineas=lineasMenu.map(function(l){
+    var precio=l.price||l.precio||0, cant=l.qty||1;
+    return {tipo:"art",desc:l.desc||"",fabrica:l.prv||"",modelo:l.mod||"",medidas:l.medidas||"",
+            cant:cant,precio:precio,iva:0,sub:cant*precio};
+  });
+  if(moPrecio){
+    o.lineas.push({tipo:"art",desc:(o._menu.mo&&o._menu.mo.desc)||"Transporte y montaje",
+                   fabrica:"",modelo:"",medidas:"",cant:1,precio:moPrecio,iva:0,sub:moPrecio});
+  }
+  if(descPct){
+    o.lineas.push({tipo:"dto",desc:"Descuento "+descPct+"%",pct:0,imp:descImp});
+  }
+  return o;
+}
+
 // DATOS
 function cargar(){
   gi("tbl").innerHTML='<div class="ld"><div class="sp"></div> Cargando...</div>';
   db.collection(getCol()).orderBy("fecha","desc").limit(300).get().then(function(snap){
     DOCS=snap.docs.map(function(d){var o=d.data();o.id=d.id;return o;});
+    if(SEC==="presupuestos")DOCS=DOCS.map(normalizarPresupuesto);
     filtrar();metricas();
   }).catch(function(e){
     console.error("Firebase:",e.message);
@@ -484,7 +543,7 @@ function abrirF(doc,tie){
   var hoy=new Date().toISOString().split("T")[0];
   var v30=new Date();v30.setDate(v30.getDate()+30);
   var vs=v30.toISOString().split("T")[0];
-  var ests=SEC==="facturas"?["borrador","enviada","cobrada","vencida"]:SEC==="presupuestos"?["pendiente","aceptado","rechazado"]:["pendiente","entregado"];
+  var ests=SEC==="facturas"?["borrador","enviada","cobrada","vencida"]:SEC==="presupuestos"?["pendiente","aceptado","pedido","rechazado"]:["pendiente","entregado"];
   var topts=Object.keys(T).map(function(k){return "<option value='"+k+"'"+(((doc&&doc.tienda)||tie)===k?" selected":"")+">"+ T[k].n+"</option>";}).join("");
   var eopts=ests.map(function(e){return "<option value='"+e+"'"+(doc&&doc.estado===e?" selected":"")+">"+ e.charAt(0).toUpperCase()+e.slice(1)+"</option>";}).join("");
   var vencField=SEC==="facturas"?"<div class='fl'><label>Vencimiento</label><input type='date' id='fvnc' value='"+(doc&&doc.vencimiento?doc.vencimiento:vs)+"'></div>":"<div></div>";
@@ -642,6 +701,35 @@ function guardar(){
   var tie=gi("ftie")&&gi("ftie").value||TA;
   var cli=(gi("fcli")&&gi("fcli").value||"").trim();
   if(!cli){toast("El nombre del cliente es obligatorio");return;}
+  // Si es un presupuesto creado en menu.html, lo guardamos en SU formato para no romperlo.
+  // Solo se actualizan los datos de cabecera (cliente, estado, fecha, tienda);
+  // los articulos del presupuesto se editan en menu.html.
+  var origP=EID?DOCS.find(function(d){return d.id===EID;}):null;
+  if(getCol()==="presupuestos"&&origP&&origP._esMenu){
+    var m=origP._menu||{};
+    var cliObj=(m.cliente&&typeof m.cliente==="object")?m.cliente:{};
+    var datosMenu={
+      num:m.num||origP.numero||"",
+      fecha:gi("ffch")&&gi("ffch").value||origP.fecha||"",
+      estado:gi("fest2")&&gi("fest2").value||origP.estado||"pendiente",
+      tienda:tiendaNombreMenu(gi("ftie")&&gi("ftie").value||origP.tienda),
+      vendedor:m.vendedor||origP.vendedor||"",
+      cliente:{
+        nombre:cli,
+        tel:gi("ftel")&&gi("ftel").value||cliObj.tel||"",
+        email:cliObj.email||"",
+        dni:gi("fnif")&&gi("fnif").value||cliObj.dni||"",
+        dir:gi("fdir")&&gi("fdir").value||cliObj.dir||"",
+        notas:gi("fobs")&&gi("fobs").value||cliObj.notas||""
+      },
+      lines:m.lines||[],mo:m.mo||{desc:"",precio:0},descuento:m.descuento||0,
+      validez:m.validez||"",pagos:m.pagos||[],fin:m.fin||{}
+    };
+    db.collection("presupuestos").doc(EID).update(datosMenu)
+      .then(function(){toast("Presupuesto guardado");cerrar();cargar();})
+      .catch(function(e){toast("Error: "+e.message);});
+    return;
+  }
   var res=calcT();
   var datos={
     tienda:tie,cliente:cli,
@@ -1090,6 +1178,8 @@ function cvt(id){
     var fac=JSON.parse(JSON.stringify(doc));
     fac.numero=num;fac.estado="borrador";fac.presupuestoOrigen=doc.numero;
     delete fac.id;
+    // Quitar campos internos y los del formato original de menu.html
+    ["_menu","_esMenu","num","lines","mo","descuento","validez","pagos","fin"].forEach(function(k){delete fac[k];});
     fac.createdAt=firebase.firestore.FieldValue.serverTimestamp();
     fac.updatedAt=firebase.firestore.FieldValue.serverTimestamp();
     db.collection("facturas").add(fac).then(function(){
