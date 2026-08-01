@@ -307,7 +307,7 @@ tr:last-child td{border-bottom:none}
     </div>
 
   </div>
-  <div style="position:fixed;bottom:10px;left:12px;font-size:11px;color:#888;font-family:monospace;pointer-events:none;font-weight:700">v3.3 — 25/07/2026</div>
+  <div style="position:fixed;bottom:10px;left:12px;font-size:11px;color:#888;font-family:monospace;pointer-events:none;font-weight:700">v3.4 — 01/08/2026</div>
   <!-- BOTÓN FLOTANTE FICHAJE en pantalla de selección -->
   <button onclick="window._abrirFichajeRapido&&window._abrirFichajeRapido()" style="position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:#1a6b2a;color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(26,107,42,.4);z-index:500;display:flex;align-items:center;justify-content:center;touch-action:manipulation" title="Fichar">⏱️</button>
 </div>
@@ -352,6 +352,7 @@ tr:last-child td{border-bottom:none}
     <div class="sb-item" id="mn-editor" style="display:none" onclick="abrirEditor()"><span class="ico">✏️</span> Editor Fichajes</div>
     <div class="sb-item" id="mn-auditoria" style="display:none" onclick="abrirAuditoria()"><span class="ico">🔍</span> Auditoría Fichajes</div>
     <div class="sb-item" id="mn-vendedores" style="display:none" onclick="abrirVendedores()"><span class="ico">👤</span> Vendedores</div>
+    <div class="sb-item" id="mn-erp" style="display:none" onclick="abrirERP()"><span class="ico">🧾</span> ERP</div>
 
     <div class="sb-logout"><button onclick="logout()">Cerrar sesión</button></div>
   </nav>
@@ -937,6 +938,9 @@ function actualizarSidebar(name){
   // Vendedores SOLO Jose Angel
   var mnVend = document.getElementById("mn-vendedores");
   if(mnVend) mnVend.style.display = (name==="Jose Angel") ? "" : "none";
+  // ERP (facturacion.html) SOLO Jose Angel
+  var mnERP = document.getElementById("mn-erp");
+  if(mnERP) mnERP.style.display = (name==="Jose Angel") ? "" : "none";
 }
 
 function abrirFallos(){
@@ -946,6 +950,14 @@ function abrirFallos(){
   cerrarSidebar();
 }
 window.abrirFallos = abrirFallos;
+
+function abrirERP(){
+  var a=document.createElement("a");
+  a.href="facturacion.html"; a.target="_blank"; a.rel="noopener";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  cerrarSidebar();
+}
+window.abrirERP = abrirERP;
 // ── FIN MENÚ LATERAL ──────────────────────────────────────────────────────────
 
 function logout() {
