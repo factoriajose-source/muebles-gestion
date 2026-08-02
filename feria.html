@@ -35,6 +35,10 @@
   /* ---------- Header ---------- */
   header{background:var(--shell);color:var(--shell-ink);padding:16px 20px 0}
   .head-in{max-width:1180px;margin:0 auto}
+  .toprow{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+  .btn-volver{background:rgba(255,255,255,.08);border:1.5px solid rgba(239,232,219,.28);color:var(--shell-ink);padding:9px 16px;border-radius:10px;font-weight:600;font-size:14px;white-space:nowrap;transition:.15s}
+  .btn-volver:hover{background:rgba(255,255,255,.16);border-color:var(--shell-ink)}
+  .btn-volver:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   .brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
   .brand .logo{font-size:26px;line-height:1}
   .brand h1{font-family:var(--disp);font-size:26px;font-weight:600;letter-spacing:-.01em}
@@ -156,10 +160,13 @@
 <body>
 <header>
   <div class="head-in">
-    <div class="brand">
-      <span class="logo">🎪</span>
-      <h1>Feria de Muestras de Gijón</h1>
-      <span class="sub">Ventas de los stands · Meres</span>
+    <div class="toprow">
+      <div class="brand">
+        <span class="logo">🎪</span>
+        <h1>Feria de Muestras de Gijón</h1>
+        <span class="sub">Ventas de los stands · Meres</span>
+      </div>
+      <button class="btn-volver" onclick="location.href='menu.html'" title="Volver al menú principal">← Volver al menú</button>
     </div>
     <nav class="tabs" id="tabs">
       <button data-tab="registrar" class="on">📝 Registrar ventas</button>
