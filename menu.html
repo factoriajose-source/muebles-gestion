@@ -5868,5 +5868,39 @@ window._abrirFichajeRapido = function() {
   setTimeout(() => dniInput.focus(), 100);
 };
 </script>
+  <!-- ====== Enlace 🎪 Feria (solo Jose Angel) — pegar justo antes de </body> ====== -->
+<script>
+(function(){
+  function initFeria(){
+    if (document.getElementById('mn-feria')) return;              // evita duplicados
+    var ref = document.getElementById('mn-erp')                   // lo coloca tras "ERP"
+           || document.getElementById('mn-sec-admin');
+    if (!ref) return;                                             // el menú aún no está listo
+    var item = document.createElement('div');
+    item.className = 'sb-item';
+    item.id = 'mn-feria';
+    item.style.display = 'none';
+    item.setAttribute('onclick', "location.href='feria.html'");
+    item.innerHTML = '<span class="ico">🎪</span> Feria';
+    ref.parentNode.insertBefore(item, ref.nextSibling);
+
+    var nameEl = document.getElementById('sb-name');
+    function sync(){
+      var u = nameEl ? nameEl.textContent.trim() : '';
+      var el = document.getElementById('mn-feria');
+      if (el) el.style.display = (u === 'Jose Angel') ? '' : 'none';
+    }
+    sync();
+    if (nameEl && window.MutationObserver){
+      new MutationObserver(sync).observe(nameEl, {childList:true, characterData:true, subtree:true});
+    } else {
+      setInterval(sync, 1000);
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initFeria);
+  else initFeria();
+  setTimeout(initFeria, 1500);   // por si el menú se construye un poco más tarde
+})();
+</script>
 </body>
 </html>
