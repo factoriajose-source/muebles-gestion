@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1F1B16">
+<title>🎪 Feria de Gijón · Ventas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root{
+    --paper:#F3F0E8; --card:#FFFFFF; --ink:#2A2621; --muted:#7A7267;
+    --line:#E4DDCF; --line-soft:#EFEAE0;
+    --shell:#1F1B16; --shell-2:#2A241D; --shell-ink:#EFE8DB;
+    --factoria:#C9852F; --factoria-soft:#F6E9D3;
+    --exposofa:#2E8B7F; --exposofa-soft:#D9EDE9;
+    --gold:#B8892B; --danger:#B23A3A; --ok:#2E7D5B;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --sans:'Inter',system-ui,sans-serif;
+    --disp:'Fraunces',Georgia,serif;
+    --radius:14px; --shadow:0 1px 2px rgba(31,27,22,.06),0 8px 24px rgba(31,27,22,.05);
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+  h1,h2,h3{margin:0;font-weight:600}
+  button{font-family:inherit;cursor:pointer}
+  input,select,textarea{font-family:inherit;font-size:15px}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  a{color:inherit}
+
+  /* ---------- Header ---------- */
+  header{background:var(--shell);color:var(--shell-ink);padding:16px 20px 0}
+  .head-in{max-width:1180px;margin:0 auto}
+  .toprow{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+  .head-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .cloud-badge{font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:999px;white-space:nowrap;border:1.5px solid transparent}
+  .cloud-badge.conectando{background:rgba(255,255,255,.08);color:#C6BBA8;border-color:rgba(239,232,219,.2)}
+  .cloud-badge.online{background:rgba(46,139,127,.22);color:#8fe6d4;border-color:rgba(46,139,127,.5)}
+  .cloud-badge.offline{background:rgba(201,133,47,.2);color:#f0c489;border-color:rgba(201,133,47,.5);cursor:help}
+  .cloud-badge.sinlogin{background:rgba(178,58,58,.22);color:#f3b0b0;border-color:rgba(178,58,58,.5);cursor:help}
+  .btn-volver{background:rgba(255,255,255,.08);border:1.5px solid rgba(239,232,219,.28);color:var(--shell-ink);padding:9px 16px;border-radius:10px;font-weight:600;font-size:14px;white-space:nowrap;transition:.15s}
+  .btn-volver:hover{background:rgba(255,255,255,.16);border-color:var(--shell-ink)}
+  .btn-volver:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .brand .logo{font-size:26px;line-height:1}
+  .brand h1{font-family:var(--disp);font-size:26px;font-weight:600;letter-spacing:-.01em}
+  .brand .sub{font-size:12.5px;color:#B9AE9C;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+  nav.tabs{display:flex;gap:2px;margin-top:16px;flex-wrap:wrap}
+  nav.tabs button{background:transparent;border:none;color:#C6BBA8;padding:11px 15px;border-radius:10px 10px 0 0;font-size:14.5px;font-weight:600;position:relative}
+  nav.tabs button:hover{color:#fff}
+  nav.tabs button.on{background:var(--paper);color:var(--ink)}
+  nav.tabs button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+  /* ---------- Layout ---------- */
+  main{max-width:1180px;margin:0 auto;padding:22px 20px 70px}
+  .panel{display:none}
+  .panel.on{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .pad{padding:18px 20px}
+  .row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+  .grow{flex:1 1 auto}
+  .eyebrow{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:4px}
+  .section-title{font-family:var(--disp);font-size:21px;margin-bottom:2px}
+  .hint{color:var(--muted);font-size:13.5px}
+
+  label.field{display:flex;flex-direction:column;gap:5px;font-size:12.5px;font-weight:600;color:var(--muted)}
+  label.field .lbl{letter-spacing:.02em}
+  input[type=text],input[type=number],input[type=date],select,textarea{
+    background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--ink);width:100%;transition:border-color .15s,box-shadow .15s}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,137,43,.15)}
+  .num{font-family:var(--mono);text-align:right}
+
+  .btn{border:1.5px solid var(--line);background:#fff;color:var(--ink);padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:7px;transition:.15s}
+  .btn:hover{border-color:var(--gold);background:#FCFAF5}
+  .btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .btn.primary{background:var(--shell);color:#fff;border-color:var(--shell)}
+  .btn.primary:hover{background:#332b22}
+  .btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+  .btn.ghost:hover{color:var(--ink);background:#EFEAE0}
+  .btn.sm{padding:7px 11px;font-size:13px}
+  .btn.danger{color:var(--danger);border-color:#E9CFCF}
+  .btn.danger:hover{background:#FBF1F1;border-color:var(--danger)}
+
+  /* stand segmented control */
+  .seg{display:inline-flex;background:#EFEAE0;border-radius:11px;padding:3px;gap:3px}
+  .seg button{border:none;background:transparent;padding:8px 16px;border-radius:9px;font-weight:600;font-size:14px;color:var(--muted)}
+  .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .seg button.on[data-stand=FACTORIA]{color:var(--factoria)}
+  .seg button.on[data-stand=EXPOSOFA]{color:var(--exposofa)}
+
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.02em}
+  .pill.FACTORIA{background:var(--factoria-soft);color:#8a5713}
+  .pill.EXPOSOFA{background:var(--exposofa-soft);color:#1c5f56}
+  .pill.prov{background:#EFE7F3;color:#6b4a86}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .dot.FACTORIA{background:var(--factoria)} .dot.EXPOSOFA{background:var(--exposofa)}
+
+  /* ---------- KPIs ---------- */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--gold)}
+  .kpi .k-lbl{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.03em}
+  .kpi .k-val{font-family:var(--mono);font-size:27px;font-weight:600;margin-top:6px;letter-spacing:-.02em}
+  .kpi .k-sub{font-size:12px;color:var(--muted);margin-top:2px}
+
+  /* ---------- Table ---------- */
+  .tablewrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line)}
+  table{border-collapse:collapse;width:100%;background:#fff}
+  thead th{background:#FAF7F1;text-align:left;font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:11px 12px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0}
+  tbody td{padding:4px 8px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+  tbody tr:nth-child(even){background:#FBFAF6}
+  tbody tr:hover{background:#FCF5E8}
+  td.n{font-family:var(--mono);color:var(--muted);text-align:right;font-size:13px;width:44px}
+  td .cell-input{border:1.5px solid transparent;background:transparent;border-radius:7px;padding:7px 8px;width:100%}
+  td .cell-input:hover{border-color:var(--line)}
+  td .cell-input:focus{border-color:var(--gold);background:#fff;box-shadow:0 0 0 3px rgba(184,137,43,.12)}
+  td.importe .cell-input{font-family:var(--mono);text-align:right;font-weight:600}
+  .tfoot-total{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#FAF7F1;border-top:1px solid var(--line);font-weight:600}
+  .tfoot-total .mono{font-size:18px}
+  .rowdel{color:var(--muted);border:none;background:transparent;font-size:17px;line-height:1;padding:6px 8px;border-radius:8px}
+  .rowdel:hover{color:var(--danger);background:#FBF1F1}
+  .empty{padding:40px 20px;text-align:center;color:var(--muted)}
+  .empty .big{font-size:30px;margin-bottom:6px}
+
+  /* charts grid */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .chart-card{padding:16px 18px}
+  .chart-card h3{font-size:15px;margin-bottom:2px}
+  .chart-box{position:relative;height:300px;margin-top:10px}
+  .chart-box.tall{height:340px}
+
+  /* vendedor chips manager */
+  .vlist{display:flex;flex-direction:column;gap:8px}
+  .vitem{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .vitem .vname{font-weight:600;flex:1}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--shell);color:#fff;padding:12px 20px;border-radius:12px;font-weight:600;font-size:14px;opacity:0;pointer-events:none;transition:.28s;z-index:99;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .note{background:#FBF6EA;border:1px solid #ECDCB8;border-radius:12px;padding:13px 16px;font-size:13.5px;color:#6b5a34;display:flex;gap:10px;align-items:flex-start}
+  .note b{color:#4d4026}
+  .stack{display:flex;flex-direction:column;gap:16px}
+  .sp{height:2px}
+  .quick{display:grid;grid-template-columns:1.3fr 1.3fr .9fr 1.6fr auto;gap:12px;align-items:end}
+  .btn-add{padding:11px 18px;height:44px}
+
+  @media(max-width:860px){
+    .kpis{grid-template-columns:1fr 1fr}
+    .grid2{grid-template-columns:1fr}
+    .quick{grid-template-columns:1fr 1fr}
+    .brand h1{font-size:22px}
+  }
+  @media(max-width:520px){
+    .kpis{grid-template-columns:1fr}
+    .quick{grid-template-columns:1fr}
+    main{padding:16px 13px 60px}
+  }
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <div class="toprow">
+      <div class="brand">
+        <span class="logo">🎪</span>
+        <h1>Feria de Muestras de Gijón</h1>
+        <span class="sub">Ventas de los stands · Meres</span>
+      </div>
+      <div class="head-actions">
+        <span id="cloudBadge" class="cloud-badge conectando" title="Estado de la sincronización">☁️ Conectando…</span>
+        <button class="btn-volver" onclick="location.href='menu.html'" title="Volver al menú principal">← Volver al menú</button>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="registrar" class="on">📝 Registrar ventas</button>
+      <button data-tab="estadisticas">📊 Estadísticas</button>
+      <button data-tab="historico">📜 Histórico anual</button>
+      <button data-tab="vendedores">👥 Vendedores</button>
+      <button data-tab="datos">💾 Copias de seguridad</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- ============ REGISTRAR ============ -->
+  <section class="panel on" id="panel-registrar">
+    <div class="stack">
+      <div class="card pad">
+        <div class="row" style="justify-content:space-between">
+          <div>
+            <div class="eyebrow">Paso 1 · Elige dónde y cuándo</div>
+            <div class="section-title">¿Qué stand y qué día estás registrando?</div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <div>
+            <div class="lbl" style="font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:6px">Stand</div>
+            <div class="seg" id="regStand">
+              <button data-stand="FACTORIA" class="on">🟠 Factoria Feria</button>
+              <button data-stand="EXPOSOFA">🟢 Exposofa Feria</button>
+            </div>
+          </div>
+          <label class="field" style="width:120px"><span class="lbl">Año de la feria</span>
+            <input type="number" id="regAnio" value="2026" min="2016" max="2099"></label>
+          <label class="field" style="width:180px"><span class="lbl">Fecha de la venta</span>
+            <input type="date" id="regFecha"></label>
+        </div>
+      </div>
+
+      <div class="card pad">
+        <div class="eyebrow">Paso 2 · Añade una venta</div>
+        <div class="section-title" style="margin-bottom:14px">Rellena y pulsa <b>Añadir</b> (o la tecla Intro)</div>
+        <div class="quick">
+          <label class="field"><span class="lbl">Vendedor/a</span>
+            <select id="qVendedor"></select></label>
+          <label class="field"><span class="lbl">Fábrica / Proveedor</span>
+            <input type="text" id="qFabrica" list="fabricasList" placeholder="p. ej. QUALITY" autocomplete="off">
+            <datalist id="fabricasList"></datalist></label>
+          <label class="field"><span class="lbl">Importe (€)</span>
+            <input type="number" id="qImporte" class="num" placeholder="0" min="0" step="1"></label>
+          <label class="field"><span class="lbl">Modelo</span>
+            <input type="text" id="qModelo" list="modelosList" placeholder="p. ej. NEPAL" autocomplete="off">
+            <datalist id="modelosList"></datalist></label>
+          <button class="btn primary btn-add" id="qAdd">＋ Añadir venta</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="pad" style="padding-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <div>
+            <div class="eyebrow">Paso 3 · Repasa y corrige</div>
+            <div class="section-title" id="tablaTitulo">Ventas registradas</div>
+            <div class="hint">Puedes editar cualquier casilla directamente, como en Excel. Se guarda solo.</div>
+          </div>
+          <span class="pill" id="tablaStandPill">FACTORIA</span>
+        </div>
+        <div style="padding:0 16px 16px">
+          <div class="tablewrap">
+            <table id="tablaVentas">
+              <thead><tr>
+                <th style="width:44px">Nº</th><th>Fecha</th><th>Stand</th><th>Vendedor/a</th>
+                <th>Fábrica</th><th style="text-align:right">Importe</th><th>Modelo</th><th style="width:40px"></th>
+              </tr></thead>
+              <tbody id="tablaBody"></tbody>
+            </table>
+          </div>
+          <div class="tfoot-total">
+            <span id="tablaCount">0 ventas</span>
+            <span>Total <span class="mono" id="tablaTotal">0 €</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ESTADISTICAS ============ -->
+  <section class="panel" id="panel-estadisticas">
+    <div class="stack">
+      <div class="card pad">
+        <div class="row" style="justify-content:space-between">
+          <div>
+            <div class="eyebrow">Cuadro de mando</div>
+            <div class="section-title">Estadísticas de la feria</div>
+          </div>
+          <div class="row" style="align-items:flex-end">
+            <label class="field" style="width:110px"><span class="lbl">Año</span>
+              <select id="stAnio"></select></label>
+            <div>
+              <div class="lbl" style="font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:6px">Stand</div>
+              <div class="seg" id="stStand">
+                <button data-stand="AMBOS" class="on">Ambos</button>
+                <button data-stand="FACTORIA">Factoria</button>
+                <button data-stand="EXPOSOFA">Exposofa</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpis" id="kpis"></div>
+
+      <div class="card chart-card">
+        <h3>📈 Evolución día a día</h3>
+        <div class="hint">Importe vendido cada jornada de feria.</div>
+        <div class="chart-box tall"><canvas id="chDia"></canvas></div>
+      </div>
+
+      <div class="grid2">
+        <div class="card chart-card">
+          <h3>🏅 Ranking de vendedores</h3>
+          <div class="hint">Quién ha vendido más en el periodo elegido.</div>
+          <div class="chart-box"><canvas id="chVend"></canvas></div>
+        </div>
+        <div class="card chart-card">
+          <h3>🏭 Importe por proveedor</h3>
+          <div class="hint">Proveedores que más facturan (€).</div>
+          <div class="chart-box"><canvas id="chFab"></canvas></div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card chart-card">
+          <h3>📦 Artículos por proveedor</h3>
+          <div class="hint">Cuántas ventas (artículos) de cada proveedor.</div>
+          <div class="chart-box"><canvas id="chArt"></canvas></div>
+        </div>
+        <div class="card chart-card">
+          <h3>🧩 Modelos distintos por proveedor</h3>
+          <div class="hint">Cuántos modelos diferentes vendemos de cada uno.</div>
+          <div class="chart-box"><canvas id="chModel"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="pad" style="padding-bottom:8px">
+          <h3 class="section-title" style="font-size:18px">🛋️ Detalle por proveedor</h3>
+          <div class="hint">Artículos, modelos distintos e importe de cada proveedor.</div>
+        </div>
+        <div style="padding:0 16px 16px">
+          <div class="tablewrap">
+            <table>
+              <thead><tr>
+                <th>Proveedor</th>
+                <th style="text-align:right">Artículos</th>
+                <th style="text-align:right">Modelos distintos</th>
+                <th style="text-align:right">Importe</th>
+                <th style="text-align:right">Ticket medio</th>
+              </tr></thead>
+              <tbody id="provBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="pad" style="padding-bottom:8px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px">
+          <div>
+            <h3 class="section-title" style="font-size:18px">🧾 Modelos vendidos de un proveedor</h3>
+            <div class="hint">Al cerrar la feria, elige un proveedor y verás cada modelo con las unidades vendidas.</div>
+          </div>
+          <label class="field" style="min-width:220px"><span class="lbl">Proveedor</span>
+            <select id="provModelSel"></select></label>
+        </div>
+        <div style="padding:0 16px 16px">
+          <div class="tablewrap">
+            <table>
+              <thead><tr><th>Modelo</th><th style="text-align:right">Unidades vendidas</th><th style="text-align:right">Importe</th></tr></thead>
+              <tbody id="modelosProvBody"></tbody>
+            </table>
+          </div>
+          <div class="tfoot-total"><span>Resumen del proveedor</span><span class="mono" id="modelosProvTotal"></span></div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card chart-card">
+          <h3>⚖️ Comparativa de stands</h3>
+          <div class="hint">Reparto del total entre los dos stands.</div>
+          <div class="chart-box"><canvas id="chStand"></canvas></div>
+        </div>
+        <div class="card chart-card">
+          <h3>👥 Vendedores por stand</h3>
+          <div class="hint">Detalle de cada equipo.</div>
+          <div class="chart-box"><canvas id="chVendStand"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HISTORICO ============ -->
+  <section class="panel" id="panel-historico">
+    <div class="stack">
+      <div class="card pad">
+        <div class="eyebrow">Serie histórica</div>
+        <div class="section-title">Total vendido por año (2016 → hoy)</div>
+        <div class="hint">Los años con ventas detalladas se calculan solos. Los años antiguos puedes editarlos a mano.</div>
+      </div>
+      <div class="card chart-card">
+        <h3>📊 Comparativa anual por stand</h3>
+        <div class="chart-box tall"><canvas id="chHist"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="pad" style="padding-bottom:8px"><h3 class="section-title" style="font-size:18px">Tabla del histórico</h3></div>
+        <div style="padding:0 16px 16px">
+          <div class="tablewrap">
+            <table>
+              <thead><tr><th>Año</th><th style="text-align:right">Factoria Feria</th><th style="text-align:right">Exposofa Feria</th><th style="text-align:right">Total</th><th>Nota</th></tr></thead>
+              <tbody id="histBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ VENDEDORES ============ -->
+  <section class="panel" id="panel-vendedores">
+    <div class="stack">
+      <div class="card pad">
+        <div class="eyebrow">Equipo</div>
+        <div class="section-title">Vendedores</div>
+        <div class="hint">Estos aparecen en el desplegable al registrar. Marca “solo feria” para los provisionales.</div>
+        <div class="row" style="margin-top:16px">
+          <label class="field grow" style="max-width:320px"><span class="lbl">Nombre del vendedor/a</span>
+            <input type="text" id="vNombre" placeholder="p. ej. SANDRA"></label>
+          <label class="field" style="justify-content:flex-end">
+            <span class="lbl">&nbsp;</span>
+            <label style="display:flex;gap:8px;align-items:center;font-weight:600;color:var(--ink);padding:10px 0">
+              <input type="checkbox" id="vProv" style="width:auto"> Solo para la feria (provisional)</label>
+          </label>
+          <button class="btn primary" id="vAdd" style="height:44px">＋ Añadir</button>
+        </div>
+      </div>
+      <div class="card pad">
+        <div class="vlist" id="vList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DATOS ============ -->
+  <section class="panel" id="panel-datos">
+    <div class="stack">
+      <div class="note">
+        <span>☁️</span>
+        <div><b>Tus datos se guardan en la nube (Firebase).</b> Las ventas se sincronizan entre todos los dispositivos donde entres con tu sesión: metas la venta en el móvil, la tablet o el ordenador y aparece en todos. Además, se guarda una copia en cada dispositivo por si te quedas sin internet. Aun así, es buena costumbre pulsar <b>“Guardar copia”</b> al final de cada día.</div>
+      </div>
+
+      <div class="card pad">
+        <div class="eyebrow">Sincronización</div>
+        <div class="section-title">La nube</div>
+        <div class="hint" id="cloudInfo" style="margin:8px 0 14px">Comprobando conexión…</div>
+        <div class="row">
+          <button class="btn" id="cloudPush">☁️⬆️ Subir los datos de este equipo a la nube</button>
+        </div>
+        <div class="note" style="margin-top:14px;background:#F1F4F3;border-color:#D6E0DC;color:#3d4f4a">
+          <span>🔒</span>
+          <div><b>¿No sincroniza?</b> Suele ser por dos motivos: (1) no has iniciado sesión en el sistema en ese navegador —abre el menú y entra— o (2) faltan permisos en Firebase. Si es lo segundo, en la <b>consola de Firebase → Firestore → Reglas</b> añade dentro de <code>match /databases/{db}/documents</code>:
+          <pre style="white-space:pre-wrap;background:#fff;border:1px solid #D6E0DC;border-radius:8px;padding:10px;margin:8px 0 0;font-family:var(--mono);font-size:12px">match /feria_ventas/{id} {
+  allow read, write: if request.auth != null;
+}
+match /feria_meta/{id} {
+  allow read, write: if request.auth != null;
+}</pre></div>
+        </div>
+      </div>
+
+      <div class="card pad">
+        <div class="eyebrow">Copia de seguridad</div>
+        <div class="section-title">Guardar y recuperar todo</div>
+        <div class="hint" style="margin-bottom:14px">Un único archivo con todas las ventas, vendedores e histórico.</div>
+        <div class="row">
+          <button class="btn primary" id="dSave">⬇️ Guardar copia (archivo)</button>
+          <button class="btn" id="dLoad">⬆️ Cargar copia</button>
+          <input type="file" id="dLoadFile" accept="application/json,.json" hidden>
+        </div>
+      </div>
+
+      <div class="card pad">
+        <div class="eyebrow">Exportar / Importar Excel-CSV</div>
+        <div class="section-title">Compatible con Airtable / Excel</div>
+        <div class="hint" style="margin-bottom:14px">Exporta un año y un stand al mismo formato que exportabas de Airtable, o importa un CSV antiguo (2023, 2024…).</div>
+        <div class="row" style="align-items:flex-end">
+          <label class="field" style="width:110px"><span class="lbl">Año</span><select id="csvAnio"></select></label>
+          <div>
+            <div class="lbl" style="font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:6px">Stand</div>
+            <div class="seg" id="csvStand">
+              <button data-stand="FACTORIA" class="on">Factoria</button>
+              <button data-stand="EXPOSOFA">Exposofa</button>
+            </div>
+          </div>
+          <button class="btn" id="csvExport">⬇️ Exportar CSV</button>
+          <span style="width:1px;height:30px;background:var(--line)"></span>
+          <button class="btn" id="csvImportBtn">⬆️ Importar CSV</button>
+          <input type="file" id="csvImportFile" accept=".csv,text/csv" hidden>
+        </div>
+      </div>
+
+      <div class="card pad">
+        <div class="eyebrow">Zona delicada</div>
+        <div class="section-title">Reiniciar</div>
+        <div class="hint" style="margin-bottom:14px">Si algo se lía, puedes volver a los datos de ejemplo (2025) o empezar de cero.</div>
+        <div class="row">
+          <button class="btn" id="dReset">↩️ Restaurar datos de ejemplo (2025)</button>
+          <button class="btn danger" id="dWipe">🗑️ Borrar todo y empezar vacío</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== DATOS SEMILLA (vienen cargados) ====================
+const SEED = {"ventas":[{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-02","vendedor":"ELISA","fabrica":"DIVANI","importe":2700.0,"id":"v1","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-02","vendedor":"PATRICIA","fabrica":"BOSETTI","importe":1982.0,"id":"v2","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-02","vendedor":"PATRICIA","fabrica":"MAYOR TAPIZADOS","importe":1916.0,"id":"v3","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-02","vendedor":"SIN ASIGNAR","fabrica":"QUALITY","importe":1705.0,"id":"v4","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-03","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1666.0,"id":"v5","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-03","vendedor":"ELISA","fabrica":"BLANCA & UCEDA","importe":420.0,"id":"v6","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-04","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1796.0,"id":"v7","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-05","vendedor":"PATRICIA","fabrica":"DIVANI","importe":2599.0,"id":"v8","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-05","vendedor":"ELISA","fabrica":"MG","importe":2078.0,"id":"v9","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-05","vendedor":"ELISA","fabrica":"QUALITY","importe":2275.0,"id":"v10","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-07","vendedor":"ELISA","fabrica":"MAYOR TAPIZADOS","importe":1652.0,"id":"v11","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-07","vendedor":"ELISA","fabrica":"MAYOR TAPIZADOS","importe":1230.0,"id":"v12","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-07","vendedor":"ELISA","fabrica":"QUALITY","importe":1444.0,"id":"v13","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-07","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1611.0,"id":"v14","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-08","vendedor":"PATRICIA","fabrica":"BOSETTI","importe":1899.0,"id":"v15","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-08","vendedor":"PATRICIA","fabrica":"DIVANI","importe":2594.0,"id":"v16","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-08","vendedor":"ELISA","fabrica":"QUALITY","importe":1690.0,"id":"v17","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-08","vendedor":"ELISA","fabrica":"MAYOR TAPIZADOS","importe":2000.0,"id":"v18","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-10","vendedor":"PATRICIA","fabrica":"MAYOR TAPIZADOS","importe":1856.0,"id":"v19","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-10","vendedor":"ELISA","fabrica":"MAYOR TAPIZADOS","importe":1387.0,"id":"v20","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-10","vendedor":"ELISA","fabrica":"SORIANO & MARTINEZ","importe":1972.0,"id":"v21","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-11","vendedor":"ELISA","fabrica":"MAYOR TAPIZADOS","importe":1400.0,"id":"v22","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-11","vendedor":"ELISA","fabrica":"QUALITY","importe":2508.0,"id":"v23","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-12","vendedor":"PATRICIA","fabrica":"SORIANO & MARTINEZ","importe":1921.0,"id":"v24","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-12","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1562.0,"id":"v25","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-12","vendedor":"PATRICIA","fabrica":"BOSETTI","importe":1899.0,"id":"v26","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-12","vendedor":"ELISA","fabrica":"DIVANI","importe":2566.0,"id":"v27","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-12","vendedor":"ELISA","fabrica":"DIVANI","importe":1767.0,"id":"v28","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-12","vendedor":"ELISA","fabrica":"QUALITY","importe":1562.0,"id":"v29","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-12","vendedor":"ELISA","fabrica":"QUALITY","importe":1978.0,"id":"v30","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-12","vendedor":"ELISA","fabrica":"SORIANO & MARTINEZ","importe":1984.0,"id":"v31","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-13","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1283.0,"id":"v32","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-13","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1768.0,"id":"v33","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-13","vendedor":"ELISA","fabrica":"QUALITY","importe":900.0,"id":"v34","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-13","vendedor":"ELISA","fabrica":"AZOR MUEBLES","importe":1194.0,"id":"v35","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-13","vendedor":"ELISA","fabrica":"AZOR MUEBLES","importe":1194.0,"id":"v36","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-13","vendedor":"ELISA","fabrica":"QUALITY","importe":1747.0,"id":"v37","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-13","vendedor":"ELISA","fabrica":"QUALITY","importe":1554.0,"id":"v38","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-13","vendedor":"ELISA","fabrica":"BOSETTI","importe":2680.0,"id":"v39","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-14","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1856.0,"id":"v40","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-14","vendedor":"PATRICIA","fabrica":"PICCOLO","importe":1186.0,"id":"v41","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-14","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1611.0,"id":"v42","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-14","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1671.0,"id":"v43","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-14","vendedor":"ELISA","fabrica":"QUALITY","importe":1878.0,"id":"v44","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-14","vendedor":"BELEN","fabrica":"QUALITY","importe":1690.0,"id":"v45","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-14","vendedor":"ELISA","fabrica":"MOPAL","importe":1336.0,"id":"v46","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-16","vendedor":"ELISA","fabrica":"BOSETTI","importe":1996.0,"id":"v47","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-16","vendedor":"ELISA","fabrica":"PEDRO ORTIZ","importe":2032.0,"id":"v48","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-16","vendedor":"ELISA","fabrica":"BLANCA & UCEDA","importe":435.0,"id":"v49","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-16","vendedor":"ELISA","fabrica":"AZOR MUEBLES","importe":627.0,"id":"v50","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-16","vendedor":"JOSE ANGEL","fabrica":"MG","importe":1020.0,"id":"v51","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-16","vendedor":"PATRICIA","fabrica":"SORIANO & MARTINEZ","importe":3285.0,"id":"v52","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-16","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1665.0,"id":"v53","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-16","vendedor":"PATRICIA","fabrica":"QUALITY","importe":2404.0,"id":"v54","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-16","vendedor":"PATRICIA","fabrica":"BOSETTI","importe":1389.0,"id":"v55","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-16","vendedor":"BELEN","fabrica":"QUALITY","importe":1768.0,"id":"v56","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-17","vendedor":"BELEN","fabrica":"QUALITY","importe":1435.0,"id":"v57","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-17","vendedor":"ELISA","fabrica":"QUALITY","importe":1768.0,"id":"v58","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-17","vendedor":"ELISA","fabrica":"DIVANI","importe":2600.0,"id":"v59","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-17","vendedor":"JOSE ANGEL","fabrica":"QUALITY","importe":1799.0,"id":"v60","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-17","vendedor":"JOSE ANGEL","fabrica":"BOSETTI","importe":1799.0,"id":"v61","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-17","vendedor":"ELISA","fabrica":"DIVANI","importe":2594.0,"id":"v62","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-17","vendedor":"ELISA","fabrica":"DIVANI","importe":2600.0,"id":"v63","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-17","vendedor":"ELISA","fabrica":"MG","importe":1397.0,"id":"v64","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-17","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1637.0,"id":"v65","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-17","vendedor":"PATRICIA","fabrica":"MAYOR TAPIZADOS","importe":1856.0,"id":"v66","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-17","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1705.0,"id":"v67","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-17","vendedor":"PATRICIA","fabrica":"DIVANI","importe":1738.0,"id":"v68","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-17","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1327.0,"id":"v69","modelo":""},{"stand":"FACTORIA","anio":2025,"fecha":"2025-08-17","vendedor":"PATRICIA","fabrica":"MOPAL","importe":1246.0,"id":"v70","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-03","vendedor":"LUCIA","fabrica":"BOSETTI","importe":2099.0,"id":"v71","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-03","vendedor":"LUCIA","fabrica":"MINI","importe":1376.0,"id":"v72","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-03","vendedor":"CARMEN","fabrica":"QUALITY","importe":1791.0,"id":"v73","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-03","vendedor":"CARMEN","fabrica":"QUALITY","importe":1789.0,"id":"v74","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-03","vendedor":"LUCIA","fabrica":"QUALITY","importe":1476.0,"id":"v75","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-04","vendedor":"MARLEN","fabrica":"MAYOR TAPIZADOS","importe":1326.0,"id":"v76","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-04","vendedor":"CARMEN","fabrica":"QUALITY","importe":1885.0,"id":"v77","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-04","vendedor":"CARMEN","fabrica":"QUALITY","importe":1660.0,"id":"v78","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-05","vendedor":"MARLEN","fabrica":"CHINOS","importe":1049.0,"id":"v79","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-05","vendedor":"LUCIA","fabrica":"BOSETTI","importe":1998.0,"id":"v80","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-05","vendedor":"LUCIA","fabrica":"CHINOS","importe":1390.0,"id":"v81","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-05","vendedor":"LUCIA","fabrica":"QUALITY","importe":1181.0,"id":"v82","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-06","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":2485.0,"id":"v83","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-06","vendedor":"CARMEN","fabrica":"QUALITY","importe":1168.0,"id":"v84","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-06","vendedor":"MARLEN","fabrica":"QUALITY","importe":1423.0,"id":"v85","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-07","vendedor":"CARMEN","fabrica":"QUALITY","importe":2160.0,"id":"v86","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-07","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":2485.0,"id":"v87","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-07","vendedor":"LUCIA","fabrica":"QUALITY","importe":897.0,"id":"v88","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-07","vendedor":"LUCIA","fabrica":"QUALITY","importe":2243.0,"id":"v89","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-07","vendedor":"MARLEN","fabrica":"AZOR MUEBLES","importe":502.0,"id":"v90","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-07","vendedor":"MARLEN","fabrica":"CHITRA","importe":1389.0,"id":"v91","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-07","vendedor":"CARMEN","fabrica":"QUALITY","importe":1554.0,"id":"v92","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-07","vendedor":"MARLEN","fabrica":"QUALITY","importe":1985.0,"id":"v93","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-08","vendedor":"LUCIA","fabrica":"QUALITY","importe":1819.0,"id":"v94","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-08","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":3082.0,"id":"v95","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-08","vendedor":"CARMEN","fabrica":"QUALITY","importe":1651.0,"id":"v96","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-09","vendedor":"LUCIA","fabrica":"QUALITY","importe":852.0,"id":"v97","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-09","vendedor":"LUCIA","fabrica":"QUALITY","importe":873.0,"id":"v98","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-09","vendedor":"LUCIA","fabrica":"QUALITY","importe":1995.0,"id":"v99","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-09","vendedor":"MARLEN","fabrica":"MINI","importe":899.0,"id":"v100","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-09","vendedor":"MARLEN","fabrica":"MINI","importe":899.0,"id":"v101","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-09","vendedor":"MARLEN","fabrica":"MG","importe":950.0,"id":"v102","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-09","vendedor":"MARLEN","fabrica":"RELAX","importe":469.0,"id":"v103","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-10","vendedor":"LUCIA","fabrica":"BOSETTI","importe":1998.0,"id":"v104","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-10","vendedor":"LUCIA","fabrica":"GALLEGAS","importe":375.0,"id":"v105","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-10","vendedor":"LUCIA","fabrica":"QUALITY","importe":1808.0,"id":"v106","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-10","vendedor":"LUCIA","fabrica":"QUALITY","importe":1448.0,"id":"v107","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-10","vendedor":"CARMEN","fabrica":"QUALITY","importe":1700.0,"id":"v108","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-10","vendedor":"CARMEN","fabrica":"QUALITY","importe":1500.0,"id":"v109","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-10","vendedor":"CARMEN","fabrica":"QUALITY","importe":1957.0,"id":"v110","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-11","vendedor":"LUCIA","fabrica":"QUALITY","importe":1448.0,"id":"v111","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-11","vendedor":"CARMEN","fabrica":"QUALITY","importe":947.0,"id":"v112","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-11","vendedor":"CARMEN","fabrica":"QUALITY","importe":4600.0,"id":"v113","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-12","vendedor":"CARMEN","fabrica":"MAYOR TAPIZADOS","importe":1326.0,"id":"v114","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-12","vendedor":"CARMEN","fabrica":"MAYOR TAPIZADOS","importe":1387.0,"id":"v115","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-12","vendedor":"CARMEN","fabrica":"CHITRA","importe":648.0,"id":"v116","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-12","vendedor":"CARMEN","fabrica":"CHITRA","importe":1390.0,"id":"v117","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-12","vendedor":"LUCIA","fabrica":"QUALITY","importe":1713.0,"id":"v118","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-12","vendedor":"LUCIA","fabrica":"QUALITY","importe":1860.0,"id":"v119","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-12","vendedor":"LUCIA","fabrica":"CHITRA","importe":648.0,"id":"v120","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-12","vendedor":"MARLEN","fabrica":"BOSETTI","importe":1493.0,"id":"v121","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-13","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":2334.0,"id":"v122","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-14","vendedor":"MARLEN","fabrica":"GALLEGAS","importe":465.0,"id":"v123","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-14","vendedor":"MARLEN","fabrica":"CHINOS","importe":999.0,"id":"v124","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-14","vendedor":"LUCIA","fabrica":"MG","importe":949.0,"id":"v125","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-14","vendedor":"LUCIA","fabrica":"QUALITY","importe":664.0,"id":"v126","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-14","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":4225.0,"id":"v127","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-14","vendedor":"LUCIA","fabrica":"QUALITY","importe":2519.0,"id":"v128","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-14","vendedor":"LUCIA","fabrica":"QUALITY","importe":1933.0,"id":"v129","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-14","vendedor":"LUCIA","fabrica":"PICCOLO","importe":76.0,"id":"v130","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-14","vendedor":"CARMEN","fabrica":"QUALITY","importe":1885.0,"id":"v131","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-14","vendedor":"CARMEN","fabrica":"QUALITY","importe":1990.0,"id":"v132","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-14","vendedor":"CARMEN","fabrica":"BOSETTI","importe":1493.0,"id":"v133","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-16","vendedor":"JOSE ANGEL","fabrica":"OLIVO","importe":749.0,"id":"v134","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-16","vendedor":"CARMEN","fabrica":"AZOR MUEBLES","importe":612.0,"id":"v135","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-16","vendedor":"CARMEN","fabrica":"QUALITY","importe":1558.0,"id":"v136","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-16","vendedor":"CARMEN","fabrica":"BOSETTI","importe":2099.0,"id":"v137","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-16","vendedor":"LUCIA","fabrica":"QUALITY","importe":1515.0,"id":"v138","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-16","vendedor":"LUCIA","fabrica":"BOSETTI","importe":1493.0,"id":"v139","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-16","vendedor":"LUCIA","fabrica":"MAYOR TAPIZADOS","importe":1300.0,"id":"v140","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-16","vendedor":"LUCIA","fabrica":"QUALITY","importe":1448.0,"id":"v141","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-16","vendedor":"LUCIA","fabrica":"QUALITY","importe":1310.0,"id":"v142","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-17","vendedor":"LUCIA","fabrica":"QUALITY","importe":1789.0,"id":"v143","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-17","vendedor":"CARMEN","fabrica":"QUALITY","importe":1819.0,"id":"v144","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-17","vendedor":"CARMEN","fabrica":"QUALITY","importe":1605.0,"id":"v145","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-17","vendedor":"CARMEN","fabrica":"QUALITY","importe":2075.0,"id":"v146","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-17","vendedor":"CARMEN","fabrica":"QUALITY","importe":1448.0,"id":"v147","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-17","vendedor":"CARMEN","fabrica":"QUALITY","importe":1883.0,"id":"v148","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-17","vendedor":"CARMEN","fabrica":"QUALITY","importe":1960.0,"id":"v149","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-17","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":2623.0,"id":"v150","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-17","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":3793.0,"id":"v151","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-17","vendedor":"LUCIA","fabrica":"MAYOR TAPIZADOS","importe":1673.0,"id":"v152","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-17","vendedor":"MARLEN","fabrica":"AZOR MUEBLES","importe":632.0,"id":"v153","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-17","vendedor":"MARLEN","fabrica":"PICCOLO","importe":2230.0,"id":"v154","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-17","vendedor":"MARLEN","fabrica":"MG","importe":999.0,"id":"v155","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-17","vendedor":"MARLEN","fabrica":"QUALITY","importe":1789.0,"id":"v156","modelo":""},{"stand":"EXPOSOFA","anio":2025,"fecha":"2025-08-17","vendedor":"MARLEN","fabrica":"CHINOS","importe":1438.0,"id":"v157","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-05","vendedor":"RUBIO","fabrica":"QUALITY","importe":1770.0,"id":"v158","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-06","vendedor":"RUBIO","fabrica":"QUALITY","importe":1270.0,"id":"v159","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-07","vendedor":"RUBIO","fabrica":"QUALITY","importe":1456.0,"id":"v160","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-08","vendedor":"RUBIO","fabrica":"QUALITY","importe":1489.0,"id":"v161","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-08","vendedor":"RUBIO","fabrica":"QUALITY","importe":1367.0,"id":"v162","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-09","vendedor":"RUBIO","fabrica":"QUALITY","importe":1618.0,"id":"v163","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-10","vendedor":"RUBIO","fabrica":"QUALITY","importe":1797.0,"id":"v164","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-10","vendedor":"RUBIO","fabrica":"QUALITY","importe":1632.0,"id":"v165","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-12","vendedor":"RUBIO","fabrica":"QUALITY","importe":1827.0,"id":"v166","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-12","vendedor":"RUBIO","fabrica":"QUALITY","importe":1429.0,"id":"v167","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-12","vendedor":"RUBIO","fabrica":"QUALITY","importe":1852.0,"id":"v168","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-12","vendedor":"RUBIO","fabrica":"QUALITY","importe":1787.0,"id":"v169","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-12","vendedor":"RUBIO","fabrica":"QUALITY","importe":1711.0,"id":"v170","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-13","vendedor":"RUBIO","fabrica":"QUALITY","importe":2122.0,"id":"v171","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-13","vendedor":"RUBIO","fabrica":"QUALITY","importe":1499.0,"id":"v172","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-13","vendedor":"RUBIO","fabrica":"QUALITY","importe":1548.0,"id":"v173","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-13","vendedor":"RUBIO","fabrica":"QUALITY","importe":1500.0,"id":"v174","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-14","vendedor":"RUBIO","fabrica":"QUALITY","importe":622.0,"id":"v175","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-14","vendedor":"RUBIO","fabrica":"QUALITY","importe":1850.0,"id":"v176","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-15","vendedor":"RUBIO","fabrica":"QUALITY","importe":1838.0,"id":"v177","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-15","vendedor":"RUBIO","fabrica":"QUALITY","importe":1286.0,"id":"v178","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-16","vendedor":"RUBIO","fabrica":"QUALITY","importe":1457.0,"id":"v179","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-17","vendedor":"RUBIO","fabrica":"QUALITY","importe":1500.0,"id":"v180","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-03","vendedor":"RUBIO","fabrica":"MG","importe":1589.0,"id":"v181","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-05","vendedor":"RUBIO","fabrica":"MG","importe":674.0,"id":"v182","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-06","vendedor":"RUBIO","fabrica":"MG","importe":1997.0,"id":"v183","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-06","vendedor":"RUBIO","fabrica":"MG","importe":1430.0,"id":"v184","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-08","vendedor":"RUBIO","fabrica":"MG","importe":1465.0,"id":"v185","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-08","vendedor":"RUBIO","fabrica":"MG","importe":1580.0,"id":"v186","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-09","vendedor":"RUBIO","fabrica":"MG","importe":1589.0,"id":"v187","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-09","vendedor":"RUBIO","fabrica":"MG","importe":1629.0,"id":"v188","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-09","vendedor":"RUBIO","fabrica":"MG","importe":599.0,"id":"v189","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-10","vendedor":"RUBIO","fabrica":"MG","importe":1769.0,"id":"v190","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-11","vendedor":"RUBIO","fabrica":"MG","importe":1440.0,"id":"v191","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-11","vendedor":"RUBIO","fabrica":"MG","importe":1465.0,"id":"v192","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-12","vendedor":"RUBIO","fabrica":"MG","importe":1400.0,"id":"v193","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-12","vendedor":"RUBIO","fabrica":"MG","importe":1797.0,"id":"v194","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-14","vendedor":"RUBIO","fabrica":"MG","importe":1589.0,"id":"v195","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-15","vendedor":"RUBIO","fabrica":"MG","importe":1300.0,"id":"v196","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-15","vendedor":"RUBIO","fabrica":"MG","importe":1739.0,"id":"v197","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-17","vendedor":"RUBIO","fabrica":"MG","importe":1388.0,"id":"v198","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-18","vendedor":"RUBIO","fabrica":"MG","importe":1198.0,"id":"v199","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-18","vendedor":"RUBIO","fabrica":"MG","importe":1090.0,"id":"v200","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-18","vendedor":"RUBIO","fabrica":"MG","importe":1281.0,"id":"v201","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-18","vendedor":"RUBIO","fabrica":"PEDRO ORTIZ","importe":2396.0,"id":"v202","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-07","vendedor":"RUBIO","fabrica":"BLANCA & UCEDA","importe":408.0,"id":"v203","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-12","vendedor":"RUBIO","fabrica":"BLANCA & UCEDA","importe":860.0,"id":"v204","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-16","vendedor":"RUBIO","fabrica":"BLANCA & UCEDA","importe":864.0,"id":"v205","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-04","vendedor":"RUBIO","fabrica":"IBERCAM","importe":1199.0,"id":"v206","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-05","vendedor":"RUBIO","fabrica":"IBERCAM","importe":1420.0,"id":"v207","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-05","vendedor":"RUBIO","fabrica":"IBERCAM","importe":1196.0,"id":"v208","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-04","vendedor":"RUBIO","fabrica":"CONFOURT","importe":899.0,"id":"v209","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-11","vendedor":"RUBIO","fabrica":"CONFOURT","importe":1798.0,"id":"v210","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-03","vendedor":"RUBIO","fabrica":"PICCOLO","importe":1149.0,"id":"v211","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-15","vendedor":"RUBIO","fabrica":"PICCOLO","importe":1069.0,"id":"v212","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-16","vendedor":"RUBIO","fabrica":"PICCOLO","importe":2088.0,"id":"v213","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-04","vendedor":"PATRICIA","fabrica":"QUALITY","importe":2061.0,"id":"v214","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-04","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1127.0,"id":"v215","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-03","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1745.0,"id":"v216","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-05","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1727.0,"id":"v217","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-06","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1207.0,"id":"v218","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-07","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1008.0,"id":"v219","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-10","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1147.0,"id":"v220","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-10","vendedor":"PATRICIA","fabrica":"QUALITY","importe":622.0,"id":"v221","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-12","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1755.0,"id":"v222","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-13","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1559.0,"id":"v223","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-13","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1608.0,"id":"v224","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-14","vendedor":"PATRICIA","fabrica":"QUALITY","importe":2131.0,"id":"v225","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-14","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1061.0,"id":"v226","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-14","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1572.0,"id":"v227","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-15","vendedor":"PATRICIA","fabrica":"QUALITY","importe":2424.0,"id":"v228","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-15","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1558.0,"id":"v229","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-16","vendedor":"PATRICIA","fabrica":"QUALITY","importe":960.0,"id":"v230","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-16","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1852.0,"id":"v231","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-16","vendedor":"PATRICIA","fabrica":"QUALITY","importe":932.0,"id":"v232","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-16","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1529.0,"id":"v233","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-18","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1260.0,"id":"v234","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-18","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1290.0,"id":"v235","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-04","vendedor":"PATRICIA","fabrica":"MG","importe":995.0,"id":"v236","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-04","vendedor":"PATRICIA","fabrica":"MG","importe":1388.0,"id":"v237","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-08","vendedor":"PATRICIA","fabrica":"MG","importe":1189.0,"id":"v238","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-09","vendedor":"PATRICIA","fabrica":"MG","importe":362.0,"id":"v239","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-12","vendedor":"PATRICIA","fabrica":"MG","importe":1189.0,"id":"v240","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-12","vendedor":"PATRICIA","fabrica":"MG","importe":789.0,"id":"v241","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-12","vendedor":"PATRICIA","fabrica":"MG","importe":1198.0,"id":"v242","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-12","vendedor":"PATRICIA","fabrica":"MG","importe":1121.0,"id":"v243","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-17","vendedor":"PATRICIA","fabrica":"MG","importe":1340.0,"id":"v244","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-18","vendedor":"PATRICIA","fabrica":"MG","importe":1589.0,"id":"v245","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-09","vendedor":"PATRICIA","fabrica":"PEDRO ORTIZ","importe":2396.0,"id":"v246","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-09","vendedor":"PATRICIA","fabrica":"PEDRO ORTIZ","importe":3064.0,"id":"v247","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-13","vendedor":"PATRICIA","fabrica":"PEDRO ORTIZ","importe":3083.0,"id":"v248","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-16","vendedor":"PATRICIA","fabrica":"PEDRO ORTIZ","importe":3171.0,"id":"v249","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-15","vendedor":"PATRICIA","fabrica":"BLANCA & UCEDA","importe":650.0,"id":"v250","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-15","vendedor":"PATRICIA","fabrica":"BLANCA & UCEDA","importe":650.0,"id":"v251","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-16","vendedor":"PATRICIA","fabrica":"BLANCA & UCEDA","importe":650.0,"id":"v252","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-17","vendedor":"PATRICIA","fabrica":"IBERCAM","importe":1380.0,"id":"v253","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-10","vendedor":"PATRICIA","fabrica":"CONFOURT","importe":899.0,"id":"v254","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-12","vendedor":"PATRICIA","fabrica":"CONFOURT","importe":642.0,"id":"v255","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-16","vendedor":"PATRICIA","fabrica":"PICCOLO","importe":2727.0,"id":"v256","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-09","vendedor":"JOSE ANGEL","fabrica":"QUALITY","importe":1499.0,"id":"v257","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-17","vendedor":"JOSE ANTONIO","fabrica":"QUALITY","importe":1495.0,"id":"v258","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-18","vendedor":"JOSE ANTONIO","fabrica":"QUALITY","importe":1698.0,"id":"v259","modelo":""},{"stand":"FACTORIA","anio":2024,"fecha":"2024-08-15","vendedor":"JOSE ANTONIO","fabrica":"PICCOLO","importe":1979.0,"id":"v260","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-03","vendedor":"ELISA","fabrica":"QUALITY","importe":1308.0,"id":"v261","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-05","vendedor":"ELISA","fabrica":"QUALITY","importe":1026.0,"id":"v262","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-05","vendedor":"ELISA","fabrica":"QUALITY","importe":1898.0,"id":"v263","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-05","vendedor":"ELISA","fabrica":"QUALITY","importe":1289.0,"id":"v264","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-06","vendedor":"ELISA","fabrica":"QUALITY","importe":1797.0,"id":"v265","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-06","vendedor":"ELISA","fabrica":"QUALITY","importe":1799.0,"id":"v266","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-07","vendedor":"ELISA","fabrica":"QUALITY","importe":1060.0,"id":"v267","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-07","vendedor":"ELISA","fabrica":"QUALITY","importe":1487.0,"id":"v268","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-12","vendedor":"ELISA","fabrica":"QUALITY","importe":952.0,"id":"v269","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-12","vendedor":"ELISA","fabrica":"QUALITY","importe":2101.0,"id":"v270","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-12","vendedor":"ELISA","fabrica":"QUALITY","importe":1831.0,"id":"v271","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-13","vendedor":"ELISA","fabrica":"QUALITY","importe":1884.0,"id":"v272","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-13","vendedor":"ELISA","fabrica":"QUALITY","importe":1625.0,"id":"v273","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-13","vendedor":"ELISA","fabrica":"QUALITY","importe":1853.0,"id":"v274","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-13","vendedor":"ELISA","fabrica":"QUALITY","importe":1885.0,"id":"v275","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-14","vendedor":"ELISA","fabrica":"QUALITY","importe":1458.0,"id":"v276","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-15","vendedor":"ELISA","fabrica":"QUALITY","importe":1885.0,"id":"v277","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-15","vendedor":"ELISA","fabrica":"QUALITY","importe":1542.0,"id":"v278","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-15","vendedor":"ELISA","fabrica":"QUALITY","importe":2028.0,"id":"v279","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-15","vendedor":"ELISA","fabrica":"QUALITY","importe":1286.0,"id":"v280","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-16","vendedor":"ELISA","fabrica":"QUALITY","importe":1398.0,"id":"v281","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-16","vendedor":"ELISA","fabrica":"QUALITY","importe":1435.0,"id":"v282","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-16","vendedor":"ELISA","fabrica":"QUALITY","importe":1383.0,"id":"v283","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-16","vendedor":"ELISA","fabrica":"QUALITY","importe":1121.0,"id":"v284","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-16","vendedor":"ELISA","fabrica":"QUALITY","importe":1548.0,"id":"v285","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-17","vendedor":"ELISA","fabrica":"QUALITY","importe":1779.0,"id":"v286","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-17","vendedor":"ELISA","fabrica":"QUALITY","importe":1571.0,"id":"v287","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-10","vendedor":"ELISA","fabrica":"CHINOS","importe":1409.0,"id":"v288","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-12","vendedor":"ELISA","fabrica":"CHINOS","importe":1409.0,"id":"v289","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-14","vendedor":"ELISA","fabrica":"CHINOS","importe":1558.0,"id":"v290","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-10","vendedor":"ELISA","fabrica":"PEDRO ORTIZ","importe":2596.0,"id":"v291","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-03","vendedor":"ELISA","fabrica":"COLCHONERIA","importe":729.0,"id":"v292","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-13","vendedor":"ELISA","fabrica":"COLCHONERIA","importe":410.0,"id":"v293","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-18","vendedor":"ELISA","fabrica":"COLCHONERIA","importe":553.0,"id":"v294","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-07","vendedor":"ELISA","fabrica":"MAYOR TAPIZADOS","importe":1692.0,"id":"v295","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-13","vendedor":"ELISA","fabrica":"MAYOR TAPIZADOS","importe":3135.0,"id":"v296","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-14","vendedor":"ELISA","fabrica":"MAYOR TAPIZADOS","importe":1972.0,"id":"v297","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-15","vendedor":"ELISA","fabrica":"MAYOR TAPIZADOS","importe":1848.0,"id":"v298","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-17","vendedor":"ELISA","fabrica":"MAYOR TAPIZADOS","importe":1597.0,"id":"v299","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-18","vendedor":"ELISA","fabrica":"MAYOR TAPIZADOS","importe":1690.0,"id":"v300","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-18","vendedor":"ELISA","fabrica":"MAYOR TAPIZADOS","importe":1597.0,"id":"v301","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-09","vendedor":"ELISA","fabrica":"MOPAL","importe":1635.0,"id":"v302","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-18","vendedor":"ELISA","fabrica":"SORIANO & MARTINEZ","importe":1921.0,"id":"v303","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-08","vendedor":"ELISA","fabrica":"PICCOLO","importe":2096.0,"id":"v304","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-07","vendedor":"LUCIA","fabrica":"QUALITY","importe":2860.0,"id":"v305","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-07","vendedor":"LUCIA","fabrica":"QUALITY","importe":1671.0,"id":"v306","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-09","vendedor":"LUCIA","fabrica":"QUALITY","importe":664.0,"id":"v307","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-10","vendedor":"LUCIA","fabrica":"QUALITY","importe":1425.0,"id":"v308","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-12","vendedor":"LUCIA","fabrica":"QUALITY","importe":1398.0,"id":"v309","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-13","vendedor":"LUCIA","fabrica":"QUALITY","importe":1286.0,"id":"v310","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-15","vendedor":"LUCIA","fabrica":"QUALITY","importe":2287.0,"id":"v311","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-15","vendedor":"LUCIA","fabrica":"QUALITY","importe":1880.0,"id":"v312","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-15","vendedor":"LUCIA","fabrica":"QUALITY","importe":1298.0,"id":"v313","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-16","vendedor":"LUCIA","fabrica":"QUALITY","importe":1054.0,"id":"v314","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-16","vendedor":"LUCIA","fabrica":"QUALITY","importe":1542.0,"id":"v315","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-17","vendedor":"LUCIA","fabrica":"QUALITY","importe":1834.0,"id":"v316","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-17","vendedor":"LUCIA","fabrica":"QUALITY","importe":1827.0,"id":"v317","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-17","vendedor":"LUCIA","fabrica":"QUALITY","importe":1425.0,"id":"v318","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-17","vendedor":"LUCIA","fabrica":"QUALITY","importe":1700.0,"id":"v319","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-18","vendedor":"LUCIA","fabrica":"QUALITY","importe":1896.0,"id":"v320","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-18","vendedor":"LUCIA","fabrica":"QUALITY","importe":1171.0,"id":"v321","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-14","vendedor":"LUCIA","fabrica":"MG","importe":640.0,"id":"v322","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-09","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":1680.0,"id":"v323","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-10","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":2725.0,"id":"v324","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-12","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":2304.0,"id":"v325","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-12","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":1171.0,"id":"v326","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-13","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":1550.0,"id":"v327","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-13","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":1249.0,"id":"v328","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-18","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":1249.0,"id":"v329","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-15","vendedor":"LUCIA","fabrica":"COLCHONERIA","importe":857.0,"id":"v330","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-18","vendedor":"LUCIA","fabrica":"COLCHONERIA","importe":410.0,"id":"v331","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-13","vendedor":"LUCIA","fabrica":"COLCHONERIA","importe":911.0,"id":"v332","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-11","vendedor":"LUCIA","fabrica":"MAYOR TAPIZADOS","importe":2459.0,"id":"v333","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-12","vendedor":"LUCIA","fabrica":"MAYOR TAPIZADOS","importe":2194.0,"id":"v334","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-13","vendedor":"LUCIA","fabrica":"MAYOR TAPIZADOS","importe":1745.0,"id":"v335","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-14","vendedor":"LUCIA","fabrica":"MAYOR TAPIZADOS","importe":1745.0,"id":"v336","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-17","vendedor":"LUCIA","fabrica":"MAYOR TAPIZADOS","importe":1597.0,"id":"v337","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-18","vendedor":"LUCIA","fabrica":"MAYOR TAPIZADOS","importe":1597.0,"id":"v338","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-05","vendedor":"LUCIA","fabrica":"MOPAL","importe":1084.0,"id":"v339","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-09","vendedor":"LUCIA","fabrica":"BLANCA & UCEDA","importe":1298.0,"id":"v340","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-13","vendedor":"LUCIA","fabrica":"BLANCA & UCEDA","importe":669.0,"id":"v341","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-18","vendedor":"LUCIA","fabrica":"FRANCES & BAÑON","importe":1149.0,"id":"v342","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-03","vendedor":"LUCIA","fabrica":"SORIANO & MARTINEZ","importe":3396.0,"id":"v343","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-10","vendedor":"LUCIA","fabrica":"SORIANO & MARTINEZ","importe":2099.0,"id":"v344","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-16","vendedor":"LUCIA","fabrica":"SORIANO & MARTINEZ","importe":1898.0,"id":"v345","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-18","vendedor":"LUCIA","fabrica":"PICCOLO","importe":1198.0,"id":"v346","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-17","vendedor":"CARMEN","fabrica":"QUALITY","importe":1719.0,"id":"v347","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-18","vendedor":"CARMEN","fabrica":"QUALITY","importe":1298.0,"id":"v348","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-17","vendedor":"CARMEN","fabrica":"PEDRO ORTIZ","importe":1250.0,"id":"v349","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-17","vendedor":"CARMEN","fabrica":"PEDRO ORTIZ","importe":2519.0,"id":"v350","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-17","vendedor":"CARMEN","fabrica":"CONFOURT","importe":1098.0,"id":"v351","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-15","vendedor":"LIVI","fabrica":"QUALITY","importe":1900.0,"id":"v352","modelo":""},{"stand":"EXPOSOFA","anio":2024,"fecha":"2024-08-18","vendedor":"LIVI","fabrica":"MAYOR TAPIZADOS","importe":1597.0,"id":"v353","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-05","vendedor":"RUBIO","fabrica":"MG","importe":1400.0,"id":"v354","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-05","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1457.0,"id":"v355","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-05","vendedor":"PATRICIA","fabrica":"MG","importe":1589.0,"id":"v356","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-05","vendedor":"PABLO","fabrica":"MG","importe":1695.0,"id":"v357","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-06","vendedor":"RUBIO","fabrica":"MG","importe":1589.0,"id":"v358","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-06","vendedor":"RUBIO","fabrica":"CHINOS","importe":1353.0,"id":"v359","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-06","vendedor":"RUBIO","fabrica":"BLANCA & UCEDA","importe":1300.0,"id":"v360","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-06","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1628.0,"id":"v361","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-06","vendedor":"LIVI","fabrica":"CHINOS","importe":1200.0,"id":"v362","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-07","vendedor":"RUBIO","fabrica":"BLANCA & UCEDA","importe":864.0,"id":"v363","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-08","vendedor":"RUBIO","fabrica":"MG","importe":1200.0,"id":"v364","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-08","vendedor":"RUBIO","fabrica":"MG","importe":1037.0,"id":"v365","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-08","vendedor":"RUBIO","fabrica":"QUALITY","importe":1300.0,"id":"v366","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-08","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1500.0,"id":"v367","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-08","vendedor":"PATRICIA","fabrica":"CHINOS","importe":757.0,"id":"v368","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-09","vendedor":"RUBIO","fabrica":"MG","importe":2046.0,"id":"v369","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-09","vendedor":"RUBIO","fabrica":"QUALITY","importe":1727.0,"id":"v370","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-09","vendedor":"PATRICIA","fabrica":"MG","importe":1756.0,"id":"v371","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-09","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1004.0,"id":"v372","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-09","vendedor":"PABLO","fabrica":"CHINOS","importe":457.0,"id":"v373","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-09","vendedor":"DANIEL","fabrica":"MG","importe":2979.0,"id":"v374","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-10","vendedor":"RUBIO","fabrica":"CHINOS","importe":798.0,"id":"v375","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-10","vendedor":"RUBIO","fabrica":"MG","importe":1589.0,"id":"v376","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-10","vendedor":"RUBIO","fabrica":"MG","importe":1736.0,"id":"v377","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-10","vendedor":"PATRICIA","fabrica":"CHINOS","importe":905.0,"id":"v378","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-10","vendedor":"PATRICIA","fabrica":"CHINOS","importe":1770.0,"id":"v379","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-10","vendedor":"PATRICIA","fabrica":"CHINOS","importe":712.0,"id":"v380","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-10","vendedor":"PATRICIA","fabrica":"MG","importe":1695.0,"id":"v381","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-10","vendedor":"PABLO","fabrica":"CHINOS","importe":885.0,"id":"v382","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-10","vendedor":"PABLO","fabrica":"QUALITY","importe":1646.0,"id":"v383","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-11","vendedor":"PATRICIA","fabrica":"MG","importe":559.0,"id":"v384","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-11","vendedor":"DANIEL","fabrica":"BLANCA & UCEDA","importe":841.0,"id":"v385","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-11","vendedor":"DANIEL","fabrica":"PEDRO ORTIZ","importe":1014.0,"id":"v386","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-11","vendedor":"LUCIA","fabrica":"CHINOS","importe":798.0,"id":"v387","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-12","vendedor":"RUBIO","fabrica":"CHINOS","importe":68.0,"id":"v388","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-12","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1946.0,"id":"v389","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-12","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1241.0,"id":"v390","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-12","vendedor":"PABLO","fabrica":"QUALITY","importe":1866.0,"id":"v391","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-12","vendedor":"DANIEL","fabrica":"CHINOS","importe":757.0,"id":"v392","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-12","vendedor":"DANIEL","fabrica":"MG","importe":1757.0,"id":"v393","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-12","vendedor":"KIKE","fabrica":"CHINOS","importe":457.0,"id":"v394","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-13","vendedor":"RUBIO","fabrica":"QUALITY","importe":1460.0,"id":"v395","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-13","vendedor":"RUBIO","fabrica":"MG","importe":1679.0,"id":"v396","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-13","vendedor":"RUBIO","fabrica":"CHINOS","importe":885.0,"id":"v397","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-13","vendedor":"PATRICIA","fabrica":"MG","importe":1834.0,"id":"v398","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-13","vendedor":"PABLO","fabrica":"QUALITY","importe":1449.0,"id":"v399","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-13","vendedor":"PABLO","fabrica":"QUALITY","importe":1727.0,"id":"v400","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-13","vendedor":"LIVI","fabrica":"QUALITY","importe":1499.0,"id":"v401","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-13","vendedor":"LIVI","fabrica":"MG","importe":1757.0,"id":"v402","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-13","vendedor":"JOSE ANTONIO","fabrica":"MG","importe":1589.0,"id":"v403","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-14","vendedor":"DANIEL","fabrica":"CHINOS","importe":650.0,"id":"v404","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-14","vendedor":"RUBIO","fabrica":"MG","importe":1690.0,"id":"v405","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-14","vendedor":"RUBIO","fabrica":"MG","importe":1198.0,"id":"v406","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-14","vendedor":"RUBIO","fabrica":"MG","importe":1230.0,"id":"v407","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-14","vendedor":"PABLO","fabrica":"CORDOBA ANDALUZ","importe":955.0,"id":"v408","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-14","vendedor":"RUBIO","fabrica":"MG","importe":1000.0,"id":"v409","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-14","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1521.0,"id":"v410","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-14","vendedor":"DANIEL","fabrica":"QUALITY","importe":1966.0,"id":"v411","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-14","vendedor":"RUBIO","fabrica":"QUALITY","importe":1564.0,"id":"v412","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-14","vendedor":"RUBIO","fabrica":"CHINOS","importe":757.0,"id":"v413","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-15","vendedor":"PATRICIA","fabrica":"CHINOS","importe":885.0,"id":"v414","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-15","vendedor":"PATRICIA","fabrica":"CHINOS","importe":1353.0,"id":"v415","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-15","vendedor":"DANIEL","fabrica":"BLANCA & UCEDA","importe":841.0,"id":"v416","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-15","vendedor":"PABLO","fabrica":"QUALITY","importe":1332.0,"id":"v417","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-15","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1061.0,"id":"v418","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-15","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1800.0,"id":"v419","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-15","vendedor":"RUBIO","fabrica":"CHINOS","importe":1655.0,"id":"v420","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-16","vendedor":"PABLO","fabrica":"QUALITY","importe":1727.0,"id":"v421","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-16","vendedor":"PABLO","fabrica":"QUALITY","importe":1511.0,"id":"v422","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-16","vendedor":"LIVI","fabrica":"MG","importe":1820.0,"id":"v423","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-16","vendedor":"PABLO","fabrica":"CHINOS","importe":1353.0,"id":"v424","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-16","vendedor":"PATRICIA","fabrica":"MG","importe":1768.0,"id":"v425","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-16","vendedor":"PATRICIA","fabrica":"MG","importe":1506.0,"id":"v426","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-16","vendedor":"RUBIO","fabrica":"MG","importe":1589.0,"id":"v427","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-16","vendedor":"PATRICIA","fabrica":"BLANCA & UCEDA","importe":650.0,"id":"v428","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-16","vendedor":"RUBIO","fabrica":"MG","importe":900.0,"id":"v429","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-16","vendedor":"RUBIO","fabrica":"QUALITY","importe":1026.0,"id":"v430","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-16","vendedor":"RUBIO","fabrica":"MG","importe":1589.0,"id":"v431","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-16","vendedor":"RUBIO","fabrica":"QUALITY","importe":1499.0,"id":"v432","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-16","vendedor":"RUBIO","fabrica":"MG","importe":1913.0,"id":"v433","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-17","vendedor":"RUBIO","fabrica":"CHINOS","importe":1353.0,"id":"v434","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-17","vendedor":"RUBIO","fabrica":"MG","importe":2140.0,"id":"v435","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-17","vendedor":"RUBIO","fabrica":"MG","importe":1470.0,"id":"v436","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-17","vendedor":"PABLO","fabrica":"MG","importe":1050.0,"id":"v437","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-17","vendedor":"PABLO","fabrica":"QUALITY","importe":1384.0,"id":"v438","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-17","vendedor":"RUBIO","fabrica":"CHINOS","importe":885.0,"id":"v439","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-17","vendedor":"RUBIO","fabrica":"QUALITY","importe":1559.0,"id":"v440","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-17","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1542.0,"id":"v441","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-17","vendedor":"PATRICIA","fabrica":"MG","importe":1198.0,"id":"v442","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-18","vendedor":"PATRICIA","fabrica":"MG","importe":1695.0,"id":"v443","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-18","vendedor":"PABLO","fabrica":"CORDOBA ANDALUZ","importe":782.0,"id":"v444","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-18","vendedor":"PATRICIA","fabrica":"CHINOS","importe":1353.0,"id":"v445","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-18","vendedor":"PATRICIA","fabrica":"CHINOS","importe":936.0,"id":"v446","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-18","vendedor":"DANIEL","fabrica":"QUALITY","importe":1588.0,"id":"v447","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-18","vendedor":"PATRICIA","fabrica":"MG","importe":1118.0,"id":"v448","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-18","vendedor":"RUBIO","fabrica":"QUALITY","importe":1457.0,"id":"v449","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-18","vendedor":"RUBIO","fabrica":"MG","importe":1348.0,"id":"v450","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-18","vendedor":"RUBIO","fabrica":"MG","importe":1600.0,"id":"v451","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-18","vendedor":"PABLO","fabrica":"QUALITY","importe":1727.0,"id":"v452","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-19","vendedor":"RUBIO","fabrica":"QUALITY","importe":1520.0,"id":"v453","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-19","vendedor":"RUBIO","fabrica":"CHINOS","importe":650.0,"id":"v454","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-19","vendedor":"RUBIO","fabrica":"QUALITY","importe":1499.0,"id":"v455","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-19","vendedor":"RUBIO","fabrica":"QUALITY","importe":2760.0,"id":"v456","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-19","vendedor":"PATRICIA","fabrica":"BLANCA & UCEDA","importe":650.0,"id":"v457","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-19","vendedor":"PATRICIA","fabrica":"MG","importe":1198.0,"id":"v458","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-19","vendedor":"JOSE ANGEL","fabrica":"CHINOS","importe":712.0,"id":"v459","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-19","vendedor":"JOSE ANGEL","fabrica":"MG","importe":1430.0,"id":"v460","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-19","vendedor":"JOSE ANGEL","fabrica":"QUALITY","importe":1386.0,"id":"v461","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-19","vendedor":"PABLO","fabrica":"QUALITY","importe":1914.0,"id":"v462","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-19","vendedor":"PABLO","fabrica":"QUALITY","importe":1449.0,"id":"v463","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-19","vendedor":"PABLO","fabrica":"QUALITY","importe":1457.0,"id":"v464","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-19","vendedor":"PABLO","fabrica":"MG","importe":1787.0,"id":"v465","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-20","vendedor":"PATRICIA","fabrica":"QUALITY","importe":1542.0,"id":"v466","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-20","vendedor":"RUBIO","fabrica":"CHINOS","importe":936.0,"id":"v467","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-20","vendedor":"PATRICIA","fabrica":"QUALITY","importe":2157.0,"id":"v468","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-20","vendedor":"RUBIO","fabrica":"CHINOS","importe":899.0,"id":"v469","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-20","vendedor":"RUBIO","fabrica":"QUALITY","importe":1400.0,"id":"v470","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-20","vendedor":"RUBIO","fabrica":"QUALITY","importe":1500.0,"id":"v471","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-20","vendedor":"RUBIO","fabrica":"QUALITY","importe":1276.0,"id":"v472","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-20","vendedor":"JOSE ANTONIO","fabrica":"MG","importe":1198.0,"id":"v473","modelo":""},{"stand":"FACTORIA","anio":2023,"fecha":"2023-08-20","vendedor":"PABLO","fabrica":"MG","importe":1577.0,"id":"v474","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-05","vendedor":"ELISA","fabrica":"MG","importe":1950.0,"id":"v475","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-05","vendedor":"ELISA","fabrica":"QUALITY","importe":1471.0,"id":"v476","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-06","vendedor":"ELISA","fabrica":"CHINOS","importe":798.0,"id":"v477","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-06","vendedor":"LUCIA","fabrica":"QUALITY","importe":1499.0,"id":"v478","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-06","vendedor":"LUCIA","fabrica":"MG","importe":1422.0,"id":"v479","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-06","vendedor":"ELISA","fabrica":"SIN FABRICA","importe":76.0,"id":"v480","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-06","vendedor":"DANIEL","fabrica":"COLCHONERIA","importe":399.0,"id":"v481","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-07","vendedor":"ELISA","fabrica":"COLCHONERIA","importe":524.0,"id":"v482","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-07","vendedor":"LUCIA","fabrica":"CHINOS","importe":899.0,"id":"v483","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-07","vendedor":"ELISA","fabrica":"PEDRO ORTIZ","importe":935.0,"id":"v484","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-08","vendedor":"DANIEL","fabrica":"MAYOR TAPIZADOS","importe":899.0,"id":"v485","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-08","vendedor":"ELISA","fabrica":"QUALITY","importe":1799.0,"id":"v486","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-09","vendedor":"LUCIA","fabrica":"COLCHONERIA","importe":459.0,"id":"v487","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-09","vendedor":"ELISA","fabrica":"CHINOS","importe":493.0,"id":"v488","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-09","vendedor":"LUCIA","fabrica":"QUALITY","importe":1827.0,"id":"v489","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-09","vendedor":"ELISA","fabrica":"COLCHONERIA","importe":36.0,"id":"v490","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-09","vendedor":"LUCIA","fabrica":"QUALITY","importe":1316.0,"id":"v491","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-10","vendedor":"LUCIA","fabrica":"MG","importe":1589.0,"id":"v492","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-10","vendedor":"ELISA","fabrica":"QUALITY","importe":2040.0,"id":"v493","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-10","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":2966.0,"id":"v494","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-11","vendedor":"LUCIA","fabrica":"MOPAL","importe":899.0,"id":"v495","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-11","vendedor":"ELISA","fabrica":"QUALITY","importe":1884.0,"id":"v496","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-11","vendedor":"ELISA","fabrica":"BLANCA & UCEDA","importe":378.0,"id":"v497","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-11","vendedor":"ELISA","fabrica":"QUALITY","importe":1998.0,"id":"v498","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-12","vendedor":"ELISA","fabrica":"QUALITY","importe":76.0,"id":"v499","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-12","vendedor":"CARMEN","fabrica":"COLCHONERIA","importe":1048.0,"id":"v500","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-12","vendedor":"CARMEN","fabrica":"COLCHONERIA","importe":312.0,"id":"v501","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-12","vendedor":"ELISA","fabrica":"QUALITY","importe":1799.0,"id":"v502","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-12","vendedor":"LUCIA","fabrica":"QUALITY","importe":3298.0,"id":"v503","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-12","vendedor":"CARMEN","fabrica":"PEDRO ORTIZ","importe":2991.0,"id":"v504","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-12","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":1599.0,"id":"v505","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-12","vendedor":"ELISA","fabrica":"QUALITY","importe":1310.0,"id":"v506","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-12","vendedor":"ELISA","fabrica":"COLCHONERIA","importe":970.0,"id":"v507","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-12","vendedor":"ELISA","fabrica":"QUALITY","importe":1499.0,"id":"v508","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-13","vendedor":"LUCIA","fabrica":"QUALITY","importe":1745.0,"id":"v509","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-13","vendedor":"LUCIA","fabrica":"QUALITY","importe":1800.0,"id":"v510","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-13","vendedor":"LUCIA","fabrica":"QUALITY","importe":1938.0,"id":"v511","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-13","vendedor":"CARMEN","fabrica":"PEDRO ORTIZ","importe":1526.0,"id":"v512","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-13","vendedor":"ELISA","fabrica":"QUALITY","importe":1600.0,"id":"v513","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-14","vendedor":"ELISA","fabrica":"QUALITY","importe":978.0,"id":"v514","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-14","vendedor":"ELISA","fabrica":"QUALITY","importe":1499.0,"id":"v515","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-14","vendedor":"ELISA","fabrica":"QUALITY","importe":1268.0,"id":"v516","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-14","vendedor":"ELISA","fabrica":"QUALITY","importe":1926.0,"id":"v517","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-14","vendedor":"ELISA","fabrica":"COLCHONERIA","importe":399.0,"id":"v518","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-14","vendedor":"ELISA","fabrica":"CHINOS","importe":650.0,"id":"v519","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-14","vendedor":"LUCIA","fabrica":"CHINOS","importe":457.0,"id":"v520","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-14","vendedor":"LUCIA","fabrica":"QUALITY","importe":1944.0,"id":"v521","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-14","vendedor":"LUCIA","fabrica":"QUALITY","importe":970.0,"id":"v522","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-14","vendedor":"DANIEL","fabrica":"QUALITY","importe":1461.0,"id":"v523","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-14","vendedor":"DANIEL","fabrica":"PEDRO ORTIZ","importe":2109.0,"id":"v524","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-14","vendedor":"ELISA","fabrica":"QUALITY","importe":1799.0,"id":"v525","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-14","vendedor":"ELISA","fabrica":"QUALITY","importe":1799.0,"id":"v526","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-15","vendedor":"ELISA","fabrica":"QUALITY","importe":1034.0,"id":"v527","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-15","vendedor":"CARMEN","fabrica":"QUALITY","importe":1884.0,"id":"v528","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-15","vendedor":"ELISA","fabrica":"QUALITY","importe":1417.0,"id":"v529","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-15","vendedor":"CARMEN","fabrica":"QUALITY","importe":1300.0,"id":"v530","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-15","vendedor":"ANGEL","fabrica":"MG","importe":1589.0,"id":"v531","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-15","vendedor":"LUCIA","fabrica":"QUALITY","importe":2081.0,"id":"v532","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-15","vendedor":"ANGEL","fabrica":"MG","importe":1019.0,"id":"v533","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"ELISA","fabrica":"QUALITY","importe":1310.0,"id":"v534","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"ELISA","fabrica":"CHINOS","importe":1397.0,"id":"v535","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"ELISA","fabrica":"QUALITY","importe":1799.0,"id":"v536","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"ELISA","fabrica":"QUALITY","importe":1189.0,"id":"v537","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"ELISA","fabrica":"QUALITY","importe":1839.0,"id":"v538","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"ELISA","fabrica":"MOPAL","importe":1120.0,"id":"v539","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":1253.0,"id":"v540","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":1272.0,"id":"v541","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"LUCIA","fabrica":"QUALITY","importe":1944.0,"id":"v542","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":3216.0,"id":"v543","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"LUCIA","fabrica":"QUALITY","importe":1310.0,"id":"v544","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"LUCIA","fabrica":"MG","importe":1589.0,"id":"v545","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"DANIEL","fabrica":"QUALITY","importe":1316.0,"id":"v546","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"DANIEL","fabrica":"QUALITY","importe":1884.0,"id":"v547","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"DANIEL","fabrica":"QUALITY","importe":2457.0,"id":"v548","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"DANIEL","fabrica":"QUALITY","importe":1799.0,"id":"v549","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"LUCIA","fabrica":"MG","importe":1589.0,"id":"v550","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"LUCIA","fabrica":"QUALITY","importe":1548.0,"id":"v551","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"ELISA","fabrica":"QUALITY","importe":1956.0,"id":"v552","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"JOSE ANGEL","fabrica":"COLCHONERIA","importe":857.0,"id":"v553","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-16","vendedor":"LUCIA","fabrica":"COLCHONERIA","importe":2694.0,"id":"v554","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-17","vendedor":"ELISA","fabrica":"QUALITY","importe":2381.0,"id":"v555","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-17","vendedor":"ELISA","fabrica":"QUALITY","importe":2026.0,"id":"v556","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-17","vendedor":"ELISA","fabrica":"PEDRO ORTIZ","importe":2481.0,"id":"v557","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-17","vendedor":"ELISA","fabrica":"QUALITY","importe":1678.0,"id":"v558","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-17","vendedor":"ELISA","fabrica":"MOPAL","importe":1170.0,"id":"v559","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-17","vendedor":"LUCIA","fabrica":"QUALITY","importe":1200.0,"id":"v560","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-17","vendedor":"LUCIA","fabrica":"QUALITY","importe":1286.0,"id":"v561","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-17","vendedor":"LUCIA","fabrica":"PEDRO ORTIZ","importe":1679.0,"id":"v562","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-17","vendedor":"LUCIA","fabrica":"CHINOS","importe":457.0,"id":"v563","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-17","vendedor":"LUCIA","fabrica":"QUALITY","importe":1383.0,"id":"v564","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-17","vendedor":"DANIEL","fabrica":"QUALITY","importe":1499.0,"id":"v565","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-18","vendedor":"LUCIA","fabrica":"QUALITY","importe":1559.0,"id":"v566","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-18","vendedor":"LUCIA","fabrica":"CHINOS","importe":864.0,"id":"v567","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-18","vendedor":"LUCIA","fabrica":"QUALITY","importe":1461.0,"id":"v568","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-18","vendedor":"LUCIA","fabrica":"QUALITY","importe":1938.0,"id":"v569","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-18","vendedor":"ELISA","fabrica":"QUALITY","importe":1310.0,"id":"v570","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-18","vendedor":"ELISA","fabrica":"MG","importe":1422.0,"id":"v571","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-18","vendedor":"ELISA","fabrica":"CHINOS","importe":650.0,"id":"v572","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-18","vendedor":"DANIEL","fabrica":"CHINOS","importe":1225.0,"id":"v573","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-18","vendedor":"ELISA","fabrica":"CHINOS","importe":742.0,"id":"v574","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-18","vendedor":"ELISA","fabrica":"QUALITY","importe":1799.0,"id":"v575","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-18","vendedor":"ELISA","fabrica":"QUALITY","importe":1384.0,"id":"v576","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-19","vendedor":"LUCIA","fabrica":"QUALITY","importe":1610.0,"id":"v577","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-19","vendedor":"LUCIA","fabrica":"QUALITY","importe":1495.0,"id":"v578","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-19","vendedor":"ELISA","fabrica":"OLIVO","importe":746.0,"id":"v579","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-19","vendedor":"ELISA","fabrica":"MG","importe":1589.0,"id":"v580","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-19","vendedor":"ELISA","fabrica":"BLANCA & UCEDA","importe":398.0,"id":"v581","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-19","vendedor":"ELISA","fabrica":"QUALITY","importe":1759.0,"id":"v582","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-19","vendedor":"ELISA","fabrica":"QUALITY","importe":1598.0,"id":"v583","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-19","vendedor":"LUCIA","fabrica":"CHINOS","importe":1352.0,"id":"v584","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-19","vendedor":"ELISA","fabrica":"MG","importe":66.0,"id":"v585","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-20","vendedor":"DANIEL","fabrica":"QUALITY","importe":1518.0,"id":"v586","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-20","vendedor":"ELISA","fabrica":"QUALITY","importe":1348.0,"id":"v587","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-20","vendedor":"CARMEN","fabrica":"QUALITY","importe":1336.0,"id":"v588","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-20","vendedor":"ELISA","fabrica":"FRANCES & BAÑON","importe":1115.0,"id":"v589","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-20","vendedor":"ELISA","fabrica":"CHINOS","importe":650.0,"id":"v590","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-20","vendedor":"DANIEL","fabrica":"QUALITY","importe":1350.0,"id":"v591","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-20","vendedor":"ANGEL","fabrica":"QUALITY","importe":1449.0,"id":"v592","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-20","vendedor":"LUCIA","fabrica":"QUALITY","importe":1789.0,"id":"v593","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-20","vendedor":"ELISA","fabrica":"QUALITY","importe":1495.0,"id":"v594","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-20","vendedor":"LUCIA","fabrica":"QUALITY","importe":1542.0,"id":"v595","modelo":""},{"stand":"EXPOSOFA","anio":2023,"fecha":"2023-08-20","vendedor":"LUCIA","fabrica":"QUALITY","importe":2308.0,"id":"v596","modelo":""}],"vendedores":[{"nombre":"ANGEL","provisional":true},{"nombre":"BELEN","provisional":false},{"nombre":"CARMEN","provisional":false},{"nombre":"DANIEL","provisional":true},{"nombre":"ELISA","provisional":false},{"nombre":"JOSE ANGEL","provisional":false},{"nombre":"JOSE ANTONIO","provisional":true},{"nombre":"KIKE","provisional":true},{"nombre":"LIVI","provisional":true},{"nombre":"LUCIA","provisional":false},{"nombre":"MARLEN","provisional":false},{"nombre":"PABLO","provisional":true},{"nombre":"PATRICIA","provisional":false},{"nombre":"RUBIO","provisional":true}],"fabricas":["AZOR MUEBLES","BLANCA & UCEDA","BOSETTI","CHINOS","CHITRA","COLCHONERIA","CONFOURT","CORDOBA ANDALUZ","DIVANI","FRANCES & BAÑON","GALLEGAS","IBERCAM","MAYOR TAPIZADOS","MG","MINI","MOPAL","OLIVO","PEDRO ORTIZ","PICCOLO","QUALITY","RELAX","SIN FABRICA","SORIANO & MARTINEZ"],"historico":[{"anio":2016,"stand":"FACTORIA","total":162927,"nota":""},{"anio":2017,"stand":"FACTORIA","total":189826,"nota":""},{"anio":2018,"stand":"FACTORIA","total":146748,"nota":""},{"anio":2019,"stand":"FACTORIA","total":170907,"nota":""},{"anio":2020,"stand":"FACTORIA","total":0,"nota":"Covid - No se hizo"},{"anio":2021,"stand":"FACTORIA","total":127551,"nota":"Con mascarillas"},{"anio":2022,"stand":"FACTORIA","total":162927,"nota":""},{"anio":2016,"stand":"EXPOSOFA","total":202398,"nota":""},{"anio":2017,"stand":"EXPOSOFA","total":204806,"nota":""},{"anio":2018,"stand":"EXPOSOFA","total":200775,"nota":""},{"anio":2019,"stand":"EXPOSOFA","total":163980,"nota":""},{"anio":2020,"stand":"EXPOSOFA","total":0,"nota":"Covid - No se hizo"},{"anio":2021,"stand":"EXPOSOFA","total":69268,"nota":"Con mascarillas"},{"anio":2022,"stand":"EXPOSOFA","total":212331,"nota":""}]};
+const STORE_KEY = 'meres_feria_v1';
+
+// ==================== ESTADO + PERSISTENCIA ====================
+let DB = null;
+let memFallback = false;
+
+function load(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){ return JSON.parse(raw); }
+  }catch(e){ memFallback = true; }
+  return null;
+}
+function save(){
+  try{
+    localStorage.setItem(STORE_KEY, JSON.stringify(DB));
+  }catch(e){ memFallback = true; }
+}
+function seed(){ return JSON.parse(JSON.stringify(SEED)); }
+
+// ---------- Puente con la nube (Firebase) ----------
+function metaObj(){ return {vendedores:DB.vendedores, fabricas:DB.fabricas, historico:DB.historico}; }
+const FC = ()=> (window.FeriaCloud && window.FeriaCloud.enabled) ? window.FeriaCloud : null;
+function cloudSetVenta(v){ const fc=FC(); if(fc) fc.setVenta(v); }
+function cloudDelVenta(id){ const fc=FC(); if(fc) fc.deleteVenta(id); }
+function cloudSetMeta(){ const fc=FC(); if(fc) fc.setMeta(metaObj()); }
+function cloudMergeUp(){ const fc=FC(); if(fc) fc.mergeUp(DB); }
+function cloudOverwriteAll(){ const fc=FC(); if(fc) fc.overwriteAll(DB); }
+
+window.getLocalDB = ()=> DB;
+window.toastCloud = (m)=> toast(m);
+
+window.applyCloudMeta = function(meta){
+  if(meta.vendedores) DB.vendedores=meta.vendedores;
+  if(meta.fabricas) DB.fabricas=meta.fabricas;
+  if(meta.historico) DB.historico=meta.historico;
+  save();
+  poblarVendedoresSelect(); poblarFabricas();
+  if($('#panel-vendedores').classList.contains('on')) renderVendedores();
+  if($('#panel-historico').classList.contains('on')) renderHistorico();
+};
+window.applyCloudVentas = function(ventas){
+  DB.ventas = ventas.map(v=>({
+    id:v.id, stand:v.stand==='EXPOSOFA'?'EXPOSOFA':'FACTORIA', anio:+v.anio||new Date().getFullYear(),
+    fecha:v.fecha||'', vendedor:v.vendedor||'SIN ASIGNAR', fabrica:v.fabrica||'SIN FABRICA',
+    importe:+v.importe||0, modelo:v.modelo||''
+  }));
+  save(); poblarModelos();
+  const editando = document.activeElement && document.activeElement.closest && document.activeElement.closest('#tablaBody');
+  if(!editando) renderTabla();
+  poblarAnioSelect($('#stAnio'), $('#stAnio').value || anioDefectoConVentas());
+  poblarAnioSelect($('#csvAnio'), $('#csvAnio').value || anioDefectoConVentas());
+  if($('#panel-estadisticas').classList.contains('on')) renderStats();
+  if($('#panel-historico').classList.contains('on')) renderHistorico();
+};
+window.updateCloudBadge = function(status, extra){
+  const b=$('#cloudBadge'); const info=$('#cloudInfo');
+  if(b){ b.className='cloud-badge '+({online:'online',sinlogin:'sinlogin',offline:'offline'}[status]||'conectando'); }
+  if(status==='online'){ if(b){b.textContent='☁️ Sincronizado'; b.title='Las ventas se guardan en la nube y en todos tus dispositivos.';} if(info) info.textContent='✅ Conectado. Las ventas se sincronizan entre todos tus dispositivos.'; }
+  else if(status==='sinlogin'){ if(b){b.textContent='🔒 Inicia sesión'; b.title='Abre el menú e inicia sesión para sincronizar.';} if(info) info.textContent='🔒 No hay sesión iniciada en este navegador. Abre el menú, entra con tu usuario y vuelve. Mientras tanto, se guarda solo en este equipo.'; }
+  else if(status==='offline'){ if(b){b.textContent='⚠️ Solo este equipo'; b.title=extra||'Sin conexión con la nube.';} if(info) info.textContent='⚠️ No se pudo conectar con la nube ('+(extra||'sin detalle')+'). Se guarda solo en este equipo. Revisa la conexión o los permisos (abajo).'; }
+  else { if(b){b.textContent='☁️ Conectando…';} if(info) info.textContent='Comprobando conexión…'; }
+};
+
+DB = load() || seed();
+if(!DB.ventas) DB.ventas=[];
+if(!DB.vendedores) DB.vendedores=[];
+if(!DB.fabricas) DB.fabricas=[];
+if(!DB.historico) DB.historico=[];
+DB.ventas.forEach(v=>{ if(v.modelo===undefined) v.modelo = v.notas || ''; delete v.notas; });
+save();
+
+// ==================== UTILIDADES ====================
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const STAND_NAME = {FACTORIA:'Factoria Feria', EXPOSOFA:'Exposofa Feria'};
+const COL = {FACTORIA:'#C9852F', EXPOSOFA:'#2E8B7F'};
+const fmtEur = n => new Intl.NumberFormat('es-ES').format(Math.round(n||0)) + ' €';
+const fmtEurK = n => { n=Math.round(n||0); return n>=1000 ? new Intl.NumberFormat('es-ES').format(n)+' €' : n+' €'; };
+const todayISO = () => new Date().toISOString().slice(0,10);
+function isoToES(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${+d}/${+m}/${y}`; }
+function esToISO(s){ // acepta d/m/yyyy o yyyy-mm-dd
+  if(!s) return null; s=String(s).trim();
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if(m){ let[_,d,mo,y]=m; if(y.length===2)y='20'+y; return `${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`; }
+  return null;
+}
+function uid(){ return 'v'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+let toastT;
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2200); }
+
+// años disponibles (de ventas + histórico), incluye el año actual del selector de registro
+function aniosDisponibles(){
+  const s = new Set();
+  DB.ventas.forEach(v=> s.add(+v.anio));
+  DB.historico.forEach(h=> s.add(+h.anio));
+  s.add(+($('#regAnio')?.value || new Date().getFullYear()));
+  return Array.from(s).filter(Boolean).sort((a,b)=>b-a);
+}
+
+// ==================== NAVEGACIÓN PESTAÑAS ====================
+$('#tabs').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  $$('#tabs button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  $$('.panel').forEach(p=>p.classList.remove('on'));
+  $('#panel-'+b.dataset.tab).classList.add('on');
+  if(b.dataset.tab==='estadisticas') renderStats();
+  if(b.dataset.tab==='historico') renderHistorico();
+  if(b.dataset.tab==='vendedores') renderVendedores();
+});
+
+// ==================== REGISTRAR ====================
+let regStand = 'FACTORIA';
+$('#regFecha').value = todayISO();
+$('#regAnio').value = new Date().getFullYear();
+
+$('#regStand').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  regStand=b.dataset.stand;
+  $$('#regStand button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  renderTabla();
+});
+
+function poblarVendedoresSelect(){
+  const sel=$('#qVendedor'); const prev=sel.value;
+  sel.innerHTML='';
+  DB.vendedores.forEach(v=>{
+    const o=document.createElement('option'); o.value=v.nombre;
+    o.textContent = v.provisional ? v.nombre+' · (feria)' : v.nombre;
+    sel.appendChild(o);
+  });
+  if(prev && DB.vendedores.some(v=>v.nombre===prev)) sel.value=prev;
+}
+function poblarFabricas(){
+  const dl=$('#fabricasList'); dl.innerHTML='';
+  [...DB.fabricas].sort().forEach(f=>{ const o=document.createElement('option'); o.value=f; dl.appendChild(o); });
+}
+
+function addVenta(){
+  const vendedor = $('#qVendedor').value;
+  const fabrica = $('#qFabrica').value.trim().toUpperCase();
+  const importe = parseFloat($('#qImporte').value);
+  const modelo = $('#qModelo').value.trim().toUpperCase();
+  if(!vendedor){ toast('Elige un vendedor/a'); return; }
+  if(!importe || importe<=0){ toast('Escribe un importe válido'); $('#qImporte').focus(); return; }
+  let fabNueva=false;
+  if(fabrica && !DB.fabricas.includes(fabrica)){ DB.fabricas.push(fabrica); poblarFabricas(); fabNueva=true; }
+  const nueva={ id:uid(), stand:regStand, anio:+$('#regAnio').value,
+    fecha:$('#regFecha').value, vendedor, fabrica:fabrica||'SIN FABRICA', importe, modelo };
+  DB.ventas.push(nueva);
+  save(); renderTabla(); poblarModelos();
+  cloudSetVenta(nueva); if(fabNueva) cloudSetMeta();
+  $('#qImporte').value=''; $('#qFabrica').value=''; $('#qModelo').value='';
+  $('#qFabrica').focus();
+  toast('✅ Venta añadida: '+fmtEur(importe));
+}
+$('#qAdd').addEventListener('click', addVenta);
+['qImporte','qFabrica','qModelo'].forEach(id=>{
+  $('#'+id).addEventListener('keydown', e=>{ if(e.key==='Enter') addVenta(); });
+});
+
+function ventasFiltradas(stand, anio){
+  return DB.ventas
+    .filter(v=>v.stand===stand && +v.anio===+anio)
+    .sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||'') || (b.id>a.id?1:-1));
+}
+
+function renderTabla(){
+  const anio = +$('#regAnio').value;
+  $('#tablaStandPill').className='pill '+regStand;
+  $('#tablaStandPill').textContent = STAND_NAME[regStand];
+  $('#tablaTitulo').textContent = `Ventas de ${STAND_NAME[regStand]} · ${anio}`;
+  const rows = ventasFiltradas(regStand, anio);
+  const tb=$('#tablaBody'); tb.innerHTML='';
+  if(rows.length===0){
+    tb.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="big">🗒️</div>Todavía no hay ventas para este stand y año.<br>Añade la primera arriba.</div></td></tr>`;
+  }
+  let total=0;
+  rows.forEach((v,i)=>{
+    total+=v.importe;
+    const tr=document.createElement('tr'); tr.dataset.id=v.id;
+    tr.innerHTML=`
+      <td class="n">${i+1}</td>
+      <td><input class="cell-input" type="date" data-k="fecha" value="${v.fecha||''}"></td>
+      <td>${standSelect(v.stand)}</td>
+      <td>${vendedorSelect(v.vendedor)}</td>
+      <td><input class="cell-input" data-k="fabrica" list="fabricasList" value="${escapeHtml(v.fabrica)}"></td>
+      <td class="importe"><input class="cell-input" type="number" data-k="importe" value="${v.importe}"></td>
+      <td><input class="cell-input" data-k="modelo" list="modelosList" value="${escapeHtml(v.modelo||'')}" placeholder="—"></td>
+      <td><button class="rowdel" title="Borrar venta">✕</button></td>`;
+    tb.appendChild(tr);
+  });
+  $('#tablaCount').textContent = rows.length + (rows.length===1?' venta':' ventas');
+  $('#tablaTotal').textContent = fmtEur(total);
+}
+function escapeHtml(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function standSelect(cur){
+  return `<select class="cell-input" data-k="stand">
+    <option value="FACTORIA"${cur==='FACTORIA'?' selected':''}>🟠 Factoria</option>
+    <option value="EXPOSOFA"${cur==='EXPOSOFA'?' selected':''}>🟢 Exposofa</option></select>`;
+}
+function vendedorSelect(cur){
+  let opts='';
+  const nombres=DB.vendedores.map(v=>v.nombre);
+  if(cur && !nombres.includes(cur)) opts+=`<option value="${escapeHtml(cur)}" selected>${escapeHtml(cur)}</option>`;
+  DB.vendedores.forEach(v=>{ opts+=`<option value="${escapeHtml(v.nombre)}"${v.nombre===cur?' selected':''}>${escapeHtml(v.nombre)}${v.provisional?' · (feria)':''}</option>`; });
+  return `<select class="cell-input" data-k="vendedor">${opts}</select>`;
+}
+function poblarModelos(){
+  const dl=$('#modelosList'); if(!dl) return; dl.innerHTML='';
+  [...new Set(DB.ventas.map(v=>v.modelo).filter(Boolean))].sort()
+    .forEach(m=>{ const o=document.createElement('option'); o.value=m; dl.appendChild(o); });
+}
+
+// edición en línea + borrado
+$('#tablaBody').addEventListener('change', e=>{
+  const inp=e.target.closest('.cell-input'); if(!inp) return;
+  const id=e.target.closest('tr').dataset.id; const v=DB.ventas.find(x=>x.id===id); if(!v) return;
+  const k=inp.dataset.k;
+  if(k==='importe'){ v.importe=parseFloat(inp.value)||0; }
+  else if(k==='fabrica'){ v.fabrica=inp.value.trim().toUpperCase()||'SIN FABRICA'; if(v.fabrica&&!DB.fabricas.includes(v.fabrica)){DB.fabricas.push(v.fabrica);poblarFabricas();cloudSetMeta();} }
+  else if(k==='modelo'){ v.modelo=inp.value.trim().toUpperCase(); poblarModelos(); }
+  else if(k==='stand'){ v.stand=inp.value; save(); renderTabla(); cloudSetVenta(v); toast('↔️ Venta movida a '+STAND_NAME[v.stand]); return; }
+  else { v[k]=inp.value; }
+  save(); renderTabla(); cloudSetVenta(v); toast('Guardado');
+});
+$('#tablaBody').addEventListener('click', e=>{
+  const del=e.target.closest('.rowdel'); if(!del) return;
+  const id=e.target.closest('tr').dataset.id;
+  if(confirm('¿Borrar esta venta?')){ DB.ventas=DB.ventas.filter(x=>x.id!==id); save(); renderTabla(); cloudDelVenta(id); toast('Venta borrada'); }
+});
+$('#regAnio').addEventListener('input', renderTabla);
+
+// ==================== VENDEDORES ====================
+function renderVendedores(){
+  const wrap=$('#vList'); wrap.innerHTML='';
+  if(DB.vendedores.length===0){ wrap.innerHTML='<div class="hint">No hay vendedores. Añade el primero arriba.</div>'; }
+  DB.vendedores.forEach((v,idx)=>{
+    const el=document.createElement('div'); el.className='vitem';
+    el.innerHTML=`<span class="vname">${escapeHtml(v.nombre)}</span>
+      ${v.provisional?'<span class="pill prov">Solo feria</span>':''}
+      <button class="btn sm" data-act="prov" data-i="${idx}">${v.provisional?'Hacer fijo':'Marcar feria'}</button>
+      <button class="btn sm danger" data-act="del" data-i="${idx}">Quitar</button>`;
+    wrap.appendChild(el);
+  });
+}
+$('#vList').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  const i=+b.dataset.i;
+  if(b.dataset.act==='prov'){ DB.vendedores[i].provisional=!DB.vendedores[i].provisional; }
+  if(b.dataset.act==='del'){ if(confirm('¿Quitar '+DB.vendedores[i].nombre+'?')) DB.vendedores.splice(i,1); }
+  save(); renderVendedores(); poblarVendedoresSelect(); cloudSetMeta();
+});
+$('#vAdd').addEventListener('click', ()=>{
+  const nombre=$('#vNombre').value.trim().toUpperCase();
+  if(!nombre){ toast('Escribe un nombre'); return; }
+  if(DB.vendedores.some(v=>v.nombre===nombre)){ toast('Ese vendedor ya existe'); return; }
+  DB.vendedores.push({nombre, provisional:$('#vProv').checked});
+  $('#vNombre').value=''; $('#vProv').checked=false;
+  save(); renderVendedores(); poblarVendedoresSelect(); cloudSetMeta(); toast('✅ Vendedor añadido');
+});
+$('#vNombre').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#vAdd').click(); });
+
+// ==================== ESTADÍSTICAS ====================
+let stStand='AMBOS', charts={};
+function poblarAnioSelect(sel, val){
+  const anios=aniosDisponibles(); sel.innerHTML='';
+  anios.forEach(a=>{ const o=document.createElement('option'); o.value=a; o.textContent=a; sel.appendChild(o); });
+  if(val && anios.includes(+val)) sel.value=val; else if(anios.length) sel.value=anios[0];
+}
+function anioDefectoConVentas(){
+  const conVentas=[...new Set(DB.ventas.map(v=>+v.anio))].sort((a,b)=>b-a);
+  if(conVentas.length) return conVentas[0];
+  const a=aniosDisponibles(); return a.length?a[0]:new Date().getFullYear();
+}
+$('#stStand').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  stStand=b.dataset.stand; $$('#stStand button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  renderStats();
+});
+$('#stAnio').addEventListener('change', renderStats);
+$('#provModelSel').addEventListener('change', ()=> pintarModelosDe($('#provModelSel').value, ventasStats()));
+
+function ventasStats(){
+  const anio=+$('#stAnio').value;
+  return DB.ventas.filter(v=> +v.anio===anio && (stStand==='AMBOS' || v.stand===stStand));
+}
+function agrupar(arr, key){
+  const m={}; arr.forEach(v=>{ const k=v[key]||'—'; m[k]=(m[k]||0)+v.importe; }); return m;
+}
+function destroyChart(id){ if(charts[id]){ charts[id].destroy(); charts[id]=null; } }
+
+Chart.defaults.font.family="'Inter',system-ui,sans-serif";
+Chart.defaults.color='#7A7267';
+Chart.defaults.font.size=12;
+
+function renderStats(){
+  if(!$('#stAnio').options.length) poblarAnioSelect($('#stAnio'));
+  const data=ventasStats();
+  const total=data.reduce((s,v)=>s+v.importe,0);
+  const nOps=data.length;
+  const ticket=nOps?total/nOps:0;
+  // mejor día
+  const porDia=agrupar(data,'fecha');
+  let mejorDia='—', mejorImp=0;
+  Object.entries(porDia).forEach(([d,imp])=>{ if(imp>mejorImp){mejorImp=imp;mejorDia=d;} });
+  // mejor vendedor
+  const porVend=agrupar(data,'vendedor');
+  let mejorVend='—', mv=0; Object.entries(porVend).forEach(([n,imp])=>{if(imp>mv){mv=imp;mejorVend=n;}});
+
+  $('#kpis').innerHTML=`
+    ${kpi('Total vendido', fmtEur(total), STAND_NAME[stStand]||'Ambos stands')}
+    ${kpi('Operaciones', nOps, 'ventas registradas')}
+    ${kpi('Ticket medio', fmtEur(ticket), 'por venta')}
+    ${kpi('Mejor día', mejorDia==='—'?'—':isoToES(mejorDia), mejorDia==='—'?'':fmtEur(mejorImp))}`;
+
+  chartDia(data);
+  chartVend(porVend);
+  chartFab(agrupar(data,'fabrica'));
+  chartArt(data);
+  chartModel(data);
+  renderProvTable(data);
+  renderModelosProv(data);
+  chartStand();
+  chartVendStand();
+}
+function kpi(l,v,s){ return `<div class="kpi"><div class="k-lbl">${l}</div><div class="k-val">${v}</div><div class="k-sub">${s||''}</div></div>`; }
+
+function chartDia(data){
+  destroyChart('chDia');
+  const dias=[...new Set(data.map(v=>v.fecha).filter(Boolean))].sort();
+  const stands = stStand==='AMBOS' ? ['FACTORIA','EXPOSOFA'] : [stStand];
+  const ds = stands.map(st=>({
+    label:STAND_NAME[st], borderColor:COL[st], backgroundColor:COL[st]+'22',
+    data:dias.map(d=> data.filter(v=>v.fecha===d && v.stand===st).reduce((s,v)=>s+v.importe,0)),
+    tension:.3, fill:true, pointRadius:3, pointHoverRadius:5, borderWidth:2.5
+  }));
+  charts.chDia=new Chart($('#chDia'),{type:'line',
+    data:{labels:dias.map(isoToES),datasets:ds},
+    options:baseOpts({legend:stands.length>1, money:true})});
+}
+function chartVend(porVend){
+  destroyChart('chVend');
+  const ent=Object.entries(porVend).sort((a,b)=>b[1]-a[1]);
+  charts.chVend=new Chart($('#chVend'),{type:'bar',
+    data:{labels:ent.map(e=>e[0]),datasets:[{data:ent.map(e=>e[1]),
+      backgroundColor:'#B8892B', borderRadius:6, maxBarThickness:34}]},
+    options:baseOpts({horizontal:true, money:true, legend:false})});
+}
+function chartFab(porFab){
+  destroyChart('chFab');
+  let ent=Object.entries(porFab).sort((a,b)=>b[1]-a[1]);
+  if(ent.length>10){ const top=ent.slice(0,9); const resto=ent.slice(9).reduce((s,e)=>s+e[1],0); top.push(['OTRAS',resto]); ent=top; }
+  charts.chFab=new Chart($('#chFab'),{type:'bar',
+    data:{labels:ent.map(e=>e[0]),datasets:[{data:ent.map(e=>e[1]),
+      backgroundColor:'#2E8B7F', borderRadius:6, maxBarThickness:34}]},
+    options:baseOpts({horizontal:true, money:true, legend:false})});
+}
+function metricsPorProveedor(data){
+  const m={};
+  data.forEach(v=>{ const f=v.fabrica||'—'; m[f]=m[f]||{art:0,imp:0,modelos:new Set()};
+    m[f].art++; m[f].imp+=v.importe; if(v.modelo) m[f].modelos.add(v.modelo); });
+  return Object.entries(m).map(([f,o])=>({fabrica:f,art:o.art,imp:o.imp,modelos:o.modelos.size}))
+    .sort((a,b)=>b.imp-a.imp);
+}
+function chartArt(data){
+  destroyChart('chArt');
+  let ent=metricsPorProveedor(data).sort((a,b)=>b.art-a.art);
+  if(ent.length>10){ const top=ent.slice(0,9); const resto=ent.slice(9).reduce((s,e)=>s+e.art,0); top.push({fabrica:'OTRAS',art:resto}); ent=top; }
+  charts.chArt=new Chart($('#chArt'),{type:'bar',
+    data:{labels:ent.map(e=>e.fabrica),datasets:[{data:ent.map(e=>e.art),
+      backgroundColor:'#8a5cb0', borderRadius:6, maxBarThickness:34}]},
+    options:baseOpts({horizontal:true, money:false, legend:false})});
+}
+function chartModel(data){
+  destroyChart('chModel');
+  let ent=metricsPorProveedor(data).filter(e=>e.modelos>0).sort((a,b)=>b.modelos-a.modelos).slice(0,10);
+  charts.chModel=new Chart($('#chModel'),{type:'bar',
+    data:{labels:ent.map(e=>e.fabrica),datasets:[{data:ent.map(e=>e.modelos),
+      backgroundColor:'#C9852F', borderRadius:6, maxBarThickness:34}]},
+    options:baseOpts({horizontal:true, money:false, legend:false})});
+}
+function renderModelosProv(data){
+  const sel=$('#provModelSel');
+  const provs=metricsPorProveedor(data).map(r=>r.fabrica);
+  const prev=sel.value;
+  sel.innerHTML='';
+  provs.forEach(p=>{ const o=document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); });
+  if(prev && provs.includes(prev)) sel.value=prev; else if(provs.length) sel.value=provs[0];
+  pintarModelosDe(sel.value, data);
+}
+function pintarModelosDe(prov, data){
+  const tb=$('#modelosProvBody'); tb.innerHTML='';
+  const rows=data.filter(v=>v.fabrica===prov);
+  if(!prov || rows.length===0){ tb.innerHTML=`<tr><td colspan="3"><div class="empty">Sin ventas para este proveedor.</div></td></tr>`; $('#modelosProvTotal').textContent=''; return; }
+  const m={};
+  rows.forEach(v=>{ const k=(v.modelo && v.modelo.trim())? v.modelo.trim() : '(sin modelo apuntado)';
+    m[k]=m[k]||{u:0,imp:0}; m[k].u++; m[k].imp+=v.importe; });
+  const ent=Object.entries(m).sort((a,b)=> a[0].localeCompare(b[0],'es'));
+  let totalU=0,totalI=0;
+  ent.forEach(([mod,o])=>{ totalU+=o.u; totalI+=o.imp;
+    tb.innerHTML+=`<tr>
+      <td style="font-weight:600">${escapeHtml(mod)}</td>
+      <td class="mono" style="text-align:right">${o.u}</td>
+      <td class="mono" style="text-align:right;color:var(--muted)">${fmtEur(o.imp)}</td></tr>`;
+  });
+  $('#modelosProvTotal').textContent = `${ent.length} modelo(s) · ${totalU} unidades · ${fmtEur(totalI)}`;
+}
+function renderProvTable(data){
+  const rows=metricsPorProveedor(data);
+  const tb=$('#provBody'); tb.innerHTML='';
+  if(rows.length===0){ tb.innerHTML=`<tr><td colspan="5"><div class="empty">Sin datos para este periodo.</div></td></tr>`; return; }
+  rows.forEach(r=>{
+    const ticket=r.art?r.imp/r.art:0;
+    tb.innerHTML+=`<tr>
+      <td style="font-weight:600">${escapeHtml(r.fabrica)}</td>
+      <td class="mono" style="text-align:right">${r.art}</td>
+      <td class="mono" style="text-align:right">${r.modelos||'—'}</td>
+      <td class="mono" style="text-align:right;font-weight:600">${fmtEur(r.imp)}</td>
+      <td class="mono" style="text-align:right;color:var(--muted)">${fmtEur(ticket)}</td>
+    </tr>`;
+  });
+}
+function chartStand(){
+  destroyChart('chStand');
+  const anio=+$('#stAnio').value;
+  const f=DB.ventas.filter(v=>+v.anio===anio && v.stand==='FACTORIA').reduce((s,v)=>s+v.importe,0);
+  const e=DB.ventas.filter(v=>+v.anio===anio && v.stand==='EXPOSOFA').reduce((s,v)=>s+v.importe,0);
+  charts.chStand=new Chart($('#chStand'),{type:'doughnut',
+    data:{labels:['Factoria Feria','Exposofa Feria'],datasets:[{data:[f,e],
+      backgroundColor:[COL.FACTORIA,COL.EXPOSOFA], borderWidth:3, borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.label+': '+fmtEur(c.raw)}}}}});
+}
+function chartVendStand(){
+  destroyChart('chVendStand');
+  const anio=+$('#stAnio').value;
+  const stands = stStand==='AMBOS'?['FACTORIA','EXPOSOFA']:[stStand];
+  const vendSet=[...new Set(DB.ventas.filter(v=>+v.anio===anio && stands.includes(v.stand)).map(v=>v.vendedor))];
+  const ds=stands.map(st=>({label:STAND_NAME[st],backgroundColor:COL[st],borderRadius:5,maxBarThickness:30,
+    data:vendSet.map(nm=>DB.ventas.filter(v=>+v.anio===anio&&v.stand===st&&v.vendedor===nm).reduce((s,v)=>s+v.importe,0))}));
+  charts.chVendStand=new Chart($('#chVendStand'),{type:'bar',
+    data:{labels:vendSet,datasets:ds},
+    options:baseOpts({money:true, legend:stands.length>1, stacked:false})});
+}
+function baseOpts({horizontal=false,money=false,legend=false,stacked=false}={}){
+  const valTick = v => money?fmtEurK(v):v;
+  return {responsive:true,maintainAspectRatio:false,
+    indexAxis:horizontal?'y':'x',
+    plugins:{legend:{display:legend,position:'bottom'},
+      tooltip:{callbacks:{label:c=>{const val=horizontal?c.parsed.x:c.parsed.y; return (c.dataset.label?c.dataset.label+': ':'')+ (money?fmtEur(val):val);}}}},
+    scales:{
+      x:{stacked, grid:{color:'#F0EBE0'}, ticks:{callback:function(v){return horizontal?valTick(v):this.getLabelForValue(v);}}},
+      y:{stacked, grid:{color:'#F0EBE0'}, ticks:{callback:function(v){return horizontal?this.getLabelForValue(v):valTick(v);}}}
+    }};
+}
+
+// ==================== HISTÓRICO ====================
+function totalesPorAnioStand(){
+  // combina: años con detalle (ventas) -> suma; años solo-resumen (historico) -> valor guardado
+  const detalle={}; // anio -> {FACTORIA, EXPOSOFA}
+  DB.ventas.forEach(v=>{ detalle[v.anio]=detalle[v.anio]||{}; detalle[v.anio][v.stand]=(detalle[v.anio][v.stand]||0)+v.importe; });
+  const map={};
+  DB.historico.forEach(h=>{ map[h.anio]=map[h.anio]||{anio:h.anio,FACTORIA:null,EXPOSOFA:null,nota:'',fuente:{}};
+    map[h.anio][h.stand]=h.total; map[h.anio].fuente[h.stand]='resumen'; if(h.nota) map[h.anio].nota=h.nota; });
+  Object.keys(detalle).forEach(a=>{ map[a]=map[a]||{anio:+a,FACTORIA:null,EXPOSOFA:null,nota:'',fuente:{}};
+    ['FACTORIA','EXPOSOFA'].forEach(st=>{ if(detalle[a][st]!=null){ map[a][st]=detalle[a][st]; map[a].fuente[st]='ventas'; }});
+  });
+  return Object.values(map).sort((x,y)=>x.anio-y.anio);
+}
+function renderHistorico(){
+  const rows=totalesPorAnioStand();
+  const tb=$('#histBody'); tb.innerHTML='';
+  rows.forEach(r=>{
+    const tot=(r.FACTORIA||0)+(r.EXPOSOFA||0);
+    tb.innerHTML+=`<tr data-anio="${r.anio}">
+      <td class="mono" style="font-weight:600">${r.anio}</td>
+      <td class="importe">${histCell(r,'FACTORIA')}</td>
+      <td class="importe">${histCell(r,'EXPOSOFA')}</td>
+      <td class="mono" style="text-align:right;font-weight:600">${fmtEur(tot)}</td>
+      <td>${escapeHtml(r.nota||'')}</td></tr>`;
+  });
+  chartHist(rows);
+}
+function histCell(r,st){
+  const val=r[st];
+  if(r.fuente[st]==='ventas'){ return `<span class="mono" title="Calculado desde las ventas">${fmtEur(val)} <span style="color:var(--ok);font-size:11px">•auto</span></span>`; }
+  return `<input class="cell-input mono" style="text-align:right" type="number" data-anio="${r.anio}" data-st="${st}" value="${val!=null?val:''}" placeholder="—">`;
+}
+$('#histBody').addEventListener('change', e=>{
+  const inp=e.target.closest('input[data-anio]'); if(!inp) return;
+  const anio=+inp.dataset.anio, st=inp.dataset.st, val=parseFloat(inp.value);
+  let h=DB.historico.find(x=>x.anio===anio&&x.stand===st);
+  if(isNaN(val)){ if(h) DB.historico=DB.historico.filter(x=>!(x.anio===anio&&x.stand===st)); }
+  else if(h){ h.total=val; } else { DB.historico.push({anio,stand:st,total:val,nota:''}); }
+  save(); cloudSetMeta(); renderHistorico();
+});
+let chHist;
+function chartHist(rows){
+  if(chHist) chHist.destroy();
+  chHist=new Chart($('#chHist'),{type:'bar',
+    data:{labels:rows.map(r=>r.anio),datasets:[
+      {label:'Factoria Feria',backgroundColor:COL.FACTORIA,borderRadius:5,maxBarThickness:26,data:rows.map(r=>r.FACTORIA||0)},
+      {label:'Exposofa Feria',backgroundColor:COL.EXPOSOFA,borderRadius:5,maxBarThickness:26,data:rows.map(r=>r.EXPOSOFA||0)}
+    ]},
+    options:baseOpts({money:true, legend:true})});
+}
+
+// ==================== COPIAS / CSV ====================
+function download(name, text, type='text/plain'){
+  const blob=new Blob([text],{type}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=name; a.click(); URL.revokeObjectURL(url);
+}
+$('#dSave').addEventListener('click', ()=>{
+  const stamp=new Date().toISOString().slice(0,10);
+  download(`copia_feria_${stamp}.json`, JSON.stringify(DB,null,2), 'application/json');
+  toast('💾 Copia descargada');
+});
+$('#dLoad').addEventListener('click', ()=> $('#dLoadFile').click());
+$('#dLoadFile').addEventListener('change', e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{ const obj=JSON.parse(r.result);
+      if(!obj.ventas) throw 0;
+      DB=obj; DB.vendedores=DB.vendedores||[]; DB.fabricas=DB.fabricas||[]; DB.historico=DB.historico||[];
+      DB.ventas.forEach(v=>{ if(v.modelo===undefined) v.modelo=v.notas||''; delete v.notas; });
+      save(); refrescarTodo(); cloudOverwriteAll(); toast('✅ Copia cargada correctamente');
+    }catch(err){ alert('Ese archivo no es una copia válida.'); } };
+  r.readAsText(f); e.target.value='';
+});
+
+// CSV export (formato Airtable)
+let csvStand='FACTORIA';
+$('#csvStand').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b)return; csvStand=b.dataset.stand; $$('#csvStand button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); });
+$('#csvExport').addEventListener('click', ()=>{
+  const anio=+$('#csvAnio').value;
+  const rows=DB.ventas.filter(v=>v.stand===csvStand && +v.anio===anio)
+    .sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  if(!rows.length){ toast('No hay ventas para ese año y stand'); return; }
+  const out=rows.map((v,i)=>({
+    'Operacion Numero':i+1,'Vendedor':v.vendedor,'IMPORTE':'$'+Math.round(v.importe),
+    'MODELO':v.modelo||'','FABRICA':v.fabrica,'FECHA':isoToES(v.fecha)
+  }));
+  download(`${anio}_${csvStand}_FERIA_${anio}.csv`, Papa.unparse(out), 'text/csv');
+  toast('⬇️ CSV exportado');
+});
+$('#csvImportBtn').addEventListener('click', ()=> $('#csvImportFile').click());
+$('#csvImportFile').addEventListener('change', e=>{
+  const f=e.target.files[0]; if(!f) return;
+  // detectar stand y año por nombre de archivo
+  const up=f.name.toUpperCase();
+  let stand = up.includes('EXPOSOFA')?'EXPOSOFA': up.includes('FACTORIA')?'FACTORIA': null;
+  let anioM = f.name.match(/(20\d{2})/); let anio = anioM?+anioM[1]:null;
+  if(!stand){ stand = prompt('¿De qué stand es este CSV? Escribe FACTORIA o EXPOSOFA','FACTORIA'); if(stand) stand=stand.trim().toUpperCase(); }
+  if(!['FACTORIA','EXPOSOFA'].includes(stand)){ toast('Stand no válido'); e.target.value=''; return; }
+  if(!anio){ anio=+prompt('¿De qué año es este CSV?', new Date().getFullYear()); }
+  Papa.parse(f,{header:true, skipEmptyLines:true, complete:res=>{
+    let n=0; const nuevas=[];
+    res.data.forEach(r=>{
+      const imp=parseFloat(String(r.IMPORTE||r.Importe||'').replace(/[^0-9.,]/g,'').replace(',','.'));
+      if(!imp) return;
+      let vend=(r.Vendedor||r.VENDEDOR||'').trim(); if(!vend) vend='SIN ASIGNAR';
+      vend=vend.toUpperCase();
+      const fab=(r.FABRICA||r.Fabrica||'SIN FABRICA').trim().toUpperCase();
+      const fecha=esToISO(r.FECHA||r.Fecha)|| (anio+'-08-01');
+      const nv={id:uid(),stand,anio,fecha,vendedor:vend,fabrica:fab,modelo:(r.MODELO||r.Modelo||r.NOTAS||r.Notas||'').trim().toUpperCase(),importe:imp};
+      DB.ventas.push(nv); nuevas.push(nv);
+      if(fab && !DB.fabricas.includes(fab)) DB.fabricas.push(fab);
+      if(vend!=='SIN ASIGNAR' && !DB.vendedores.some(v=>v.nombre===vend)) DB.vendedores.push({nombre:vend,provisional:true});
+      n++;
+    });
+    save(); refrescarTodo();
+    const fc=FC(); if(fc){ nuevas.forEach(nv=>fc.setVenta(nv)); fc.setMeta(metaObj()); }
+    toast(`✅ Importadas ${n} ventas (${STAND_NAME[stand]} ${anio})`);
+  }});
+  e.target.value='';
+});
+
+$('#dReset').addEventListener('click', ()=>{
+  if(confirm('Esto reemplaza TODO por los datos de ejemplo de 2025, también en la nube para todos los dispositivos. ¿Seguro?')){ DB=seed(); save(); refrescarTodo(); cloudOverwriteAll(); toast('Datos de ejemplo restaurados'); }
+});
+$('#dWipe').addEventListener('click', ()=>{
+  if(confirm('Esto borra TODAS las ventas, vendedores e histórico, también en la nube para todos los dispositivos. ¿Seguro?')){
+    DB={ventas:[],vendedores:[{nombre:'JOSE ANGEL',provisional:false}],fabricas:[],historico:[]}; save(); refrescarTodo(); cloudOverwriteAll(); toast('Todo borrado');
+  }
+});
+$('#cloudPush').addEventListener('click', ()=>{
+  const fc=FC();
+  if(!fc){ toast('⚠️ La nube no está conectada ahora mismo'); return; }
+  if(confirm('Se subirán a la nube las ventas de ESTE equipo y se combinarán con las de los demás (no se borra nada de los otros). ¿Continuar?')){
+    cloudMergeUp(); toast('☁️ Subiendo a la nube…');
+  }
+});
+
+// ==================== ARRANQUE ====================
+function refrescarTodo(){
+  poblarVendedoresSelect(); poblarFabricas(); poblarModelos();
+  poblarAnioSelect($('#stAnio'), anioDefectoConVentas());
+  poblarAnioSelect($('#csvAnio'), anioDefectoConVentas());
+  renderTabla();
+  if($('#panel-estadisticas').classList.contains('on')) renderStats();
+  if($('#panel-historico').classList.contains('on')) renderHistorico();
+  if($('#panel-vendedores').classList.contains('on')) renderVendedores();
+}
+poblarVendedoresSelect(); poblarFabricas(); poblarModelos();
+poblarAnioSelect($('#stAnio'), anioDefectoConVentas()); poblarAnioSelect($('#csvAnio'), anioDefectoConVentas());
+renderTabla();
+
+// aviso si el navegador no deja guardar (modo restringido)
+if(memFallback){
+  setTimeout(()=>toast('⚠️ Este entorno no permite guardar. Descarga el archivo y ábrelo en tu equipo/GitHub.'),600);
+}
+</script>
+
+<!-- ============ SINCRONIZACIÓN EN LA NUBE (Firebase Firestore) ============ -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, getDocs, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
+  authDomain: "muebles-presupuestos.firebaseapp.com",
+  projectId: "muebles-presupuestos",
+  storageBucket: "muebles-presupuestos.firebasestorage.app",
+  messagingSenderId: "37365883872",
+  appId: "1:37365883872:web:842ca4d318c01652684185"
+};
+
+const setStatus = (s,x)=>{ if(window.updateCloudBadge) window.updateCloudBadge(s,x); };
+let db, auth;
+try{
+  const app = initializeApp(firebaseConfig, 'feria-app');
+  db = getFirestore(app);
+  auth = getAuth(app);
+}catch(e){ setStatus('offline','no arrancó Firebase'); }
+
+const vdoc = id => doc(db,'feria_ventas', id);
+const METAREF = () => doc(db,'feria_meta','main');
+const strip = v => { const {id, ...rest}=v; return rest; };
+const fail = e => { const m=(e&&e.code)?e.code:((e&&e.message)||'error'); console.warn('[feria nube]', m, e); if(window.FeriaCloud) window.FeriaCloud.enabled=false; setStatus('offline', m); };
+const ok = ()=>{ if(window.FeriaCloud) window.FeriaCloud.enabled=true; setStatus('online'); };
+
+window.FeriaCloud = {
+  enabled:false,
+  async setVenta(v){ try{ await setDoc(vdoc(v.id), strip(v)); }catch(e){ fail(e);} },
+  async deleteVenta(id){ try{ await deleteDoc(vdoc(id)); }catch(e){ fail(e);} },
+  async setMeta(meta){ try{ await setDoc(METAREF(), meta, {merge:true}); }catch(e){ fail(e);} },
+  async mergeUp(DB){ try{
+      await setDoc(METAREF(), {vendedores:DB.vendedores,fabricas:DB.fabricas,historico:DB.historico}, {merge:true});
+      let b=writeBatch(db), n=0;
+      for(const v of (DB.ventas||[])){ b.set(vdoc(v.id), strip(v)); if(++n>=450){ await b.commit(); b=writeBatch(db); n=0; } }
+      if(n>0) await b.commit();
+      if(window.toastCloud) window.toastCloud('☁️ Datos de este equipo subidos');
+    }catch(e){ fail(e);} },
+  async overwriteAll(DB){ try{
+      await setDoc(METAREF(), {vendedores:DB.vendedores,fabricas:DB.fabricas,historico:DB.historico});
+      const snap = await getDocs(collection(db,'feria_ventas'));
+      const localIds = new Set((DB.ventas||[]).map(v=>v.id));
+      const ops=[];
+      snap.forEach(d=>{ if(!localIds.has(d.id)) ops.push(['del',d.ref]); });
+      (DB.ventas||[]).forEach(v=> ops.push(['set', vdoc(v.id), strip(v)]));
+      for(let i=0;i<ops.length;i+=450){
+        const b=writeBatch(db);
+        ops.slice(i,i+450).forEach(o=>{ o[0]==='del'? b.delete(o[1]) : b.set(o[1],o[2]); });
+        await b.commit();
+      }
+      if(window.toastCloud) window.toastCloud('☁️ Nube actualizada');
+    }catch(e){ fail(e);} }
+};
+
+let ventasSub=false, mergedOnce=false;
+const MERGE_FLAG='feria_cloud_merged_v1';
+
+if(auth){
+  onAuthStateChanged(auth, user=>{
+    if(!user){ if(window.FeriaCloud) window.FeriaCloud.enabled=false; setStatus('sinlogin'); return; }
+    ok();
+    onSnapshot(METAREF(), d=>{
+      ok();
+      if(d.exists()){
+        if(window.applyCloudMeta) window.applyCloudMeta(d.data());
+        if(!ventasSub) startVentas();
+      } else {
+        const DB = window.getLocalDB ? window.getLocalDB() : null;
+        if(DB){ window.FeriaCloud.mergeUp(DB).then(()=>{ if(!ventasSub) startVentas(); }); }
+        else if(!ventasSub) startVentas();
+      }
+    }, err=> fail(err));
+  });
+} else {
+  setStatus('offline','Firebase no disponible');
+}
+
+function startVentas(){
+  ventasSub=true;
+  onSnapshot(collection(db,'feria_ventas'), async snap=>{
+    ok();
+    const ventas=[]; snap.forEach(d=> ventas.push({id:d.id, ...d.data()}));
+    if(!mergedOnce){
+      mergedOnce=true;
+      let flag=false; try{ flag=localStorage.getItem(MERGE_FLAG)==='1'; }catch(e){}
+      if(!flag){
+        const DB = window.getLocalDB ? window.getLocalDB() : {ventas:[]};
+        const cloudIds=new Set(ventas.map(v=>v.id));
+        const localOnly=(DB.ventas||[]).filter(v=>!cloudIds.has(v.id));
+        try{ localStorage.setItem(MERGE_FLAG,'1'); }catch(e){}
+        if(localOnly.length){
+          try{
+            let b=writeBatch(db), n=0;
+            for(const v of localOnly){ b.set(vdoc(v.id), strip(v)); if(++n>=450){ await b.commit(); b=writeBatch(db); n=0; } }
+            if(n>0) await b.commit();
+          }catch(e){ fail(e); }
+          return; // el próximo snapshot ya traerá todo combinado
+        }
+      }
+    }
+    if(window.applyCloudVentas) window.applyCloudVentas(ventas);
+  }, err=> fail(err));
+}
+</script>
+</body>
+</html>
