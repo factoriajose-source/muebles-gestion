@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   :root{
@@ -133,6 +134,7 @@
   .chart-card h3{font-size:15px;margin-bottom:2px}
   .chart-box{position:relative;height:300px;margin-top:10px}
   .chart-box.tall{height:340px}
+  .chart-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
 
   /* vendedor chips manager */
   .vlist{display:flex;flex-direction:column;gap:8px}
@@ -291,30 +293,42 @@
         <div class="chart-box tall"><canvas id="chDia"></canvas></div>
       </div>
 
+      <div class="card chart-card">
+        <h3>📅 Ventas por día y stand</h3>
+        <div class="hint">Suma de cada jornada: Factoria y Exposofa, una al lado de otra, con el importe encima de cada barra. La feria son 16 días desde el sábado de apertura. En móvil, desliza la gráfica a los lados.</div>
+        <div class="chart-scroll"><div class="chart-box tall" id="chDiaStandBox" style="min-width:900px"><canvas id="chDiaStand"></canvas></div></div>
+      </div>
+
       <div class="grid2">
         <div class="card chart-card">
-          <h3>🏅 Ranking de vendedores</h3>
-          <div class="hint">Quién ha vendido más en el periodo elegido.</div>
+          <h3>🏅 Ranking de vendedores (importe)</h3>
+          <div class="hint">Quién ha vendido más (€) en el periodo elegido.</div>
           <div class="chart-box"><canvas id="chVend"></canvas></div>
         </div>
         <div class="card chart-card">
-          <h3>🏭 Importe por proveedor</h3>
-          <div class="hint">Proveedores que más facturan (€).</div>
-          <div class="chart-box"><canvas id="chFab"></canvas></div>
+          <h3>🏅 Nº de operaciones por vendedor</h3>
+          <div class="hint">Cuántas ventas (operaciones) hace cada vendedor.</div>
+          <div class="chart-box"><canvas id="chVendOps"></canvas></div>
         </div>
       </div>
 
       <div class="grid2">
         <div class="card chart-card">
+          <h3>🏭 Importe por proveedor</h3>
+          <div class="hint">Proveedores que más facturan (€).</div>
+          <div class="chart-box"><canvas id="chFab"></canvas></div>
+        </div>
+        <div class="card chart-card">
           <h3>📦 Artículos por proveedor</h3>
           <div class="hint">Cuántas ventas (artículos) de cada proveedor.</div>
           <div class="chart-box"><canvas id="chArt"></canvas></div>
         </div>
-        <div class="card chart-card">
-          <h3>🧩 Modelos distintos por proveedor</h3>
-          <div class="hint">Cuántos modelos diferentes vendemos de cada uno.</div>
-          <div class="chart-box"><canvas id="chModel"></canvas></div>
-        </div>
+      </div>
+
+      <div class="card chart-card">
+        <h3>🧩 Modelos distintos por proveedor</h3>
+        <div class="hint">Cuántos modelos diferentes vendemos de cada uno.</div>
+        <div class="chart-box"><canvas id="chModel"></canvas></div>
       </div>
 
       <div class="card">
@@ -796,6 +810,7 @@ function destroyChart(id){ if(charts[id]){ charts[id].destroy(); charts[id]=null
 Chart.defaults.font.family="'Inter',system-ui,sans-serif";
 Chart.defaults.color='#7A7267';
 Chart.defaults.font.size=12;
+try{ if(window.ChartDataLabels) Chart.register(window.ChartDataLabels); Chart.defaults.plugins.datalabels = {display:false}; }catch(e){}
 
 function renderStats(){
   if(!$('#stAnio').options.length) poblarAnioSelect($('#stAnio'));
@@ -818,7 +833,9 @@ function renderStats(){
     ${kpi('Mejor día', mejorDia==='—'?'—':isoToES(mejorDia), mejorDia==='—'?'':fmtEur(mejorImp))}`;
 
   chartDia(data);
+  chartDiaStand(data);
   chartVend(porVend);
+  chartVendOps(data);
   chartFab(agrupar(data,'fabrica'));
   chartArt(data);
   chartModel(data);
@@ -848,7 +865,59 @@ function chartVend(porVend){
   charts.chVend=new Chart($('#chVend'),{type:'bar',
     data:{labels:ent.map(e=>e[0]),datasets:[{data:ent.map(e=>e[1]),
       backgroundColor:'#B8892B', borderRadius:6, maxBarThickness:34}]},
-    options:baseOpts({horizontal:true, money:true, legend:false})});
+    options:baseOpts({horizontal:true, money:true, legend:false, labels:true})});
+}
+function chartVendOps(data){
+  destroyChart('chVendOps');
+  const m={}; data.forEach(v=> m[v.vendedor]=(m[v.vendedor]||0)+1);
+  const ent=Object.entries(m).sort((a,b)=>b[1]-a[1]);
+  charts.chVendOps=new Chart($('#chVendOps'),{type:'bar',
+    data:{labels:ent.map(e=>e[0]),datasets:[{data:ent.map(e=>e[1]),
+      backgroundColor:'#5f86a8', borderRadius:6, maxBarThickness:34}]},
+    options:baseOpts({horizontal:true, money:false, legend:false, labels:true})});
+}
+function fmtDiaLabel(d){
+  const wd=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][d.getDay()];
+  return wd+' '+d.getDate()+'/'+(d.getMonth()+1);
+}
+function isoLocal(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function chartDiaStand(data){
+  destroyChart('chDiaStand');
+  const anio=+$('#stAnio').value;
+  const delAnio=DB.ventas.filter(v=>+v.anio===anio && v.fecha);
+  let dias=[];
+  if(delAnio.length){
+    const fechas=delAnio.map(v=>v.fecha).sort();
+    const start=new Date(fechas[0]+'T00:00:00');
+    const last=new Date(fechas[fechas.length-1]+'T00:00:00');
+    const span=Math.round((last-start)/86400000)+1;
+    const n=Math.max(16, span);
+    for(let i=0;i<n;i++){ const d=new Date(start); d.setDate(start.getDate()+i); dias.push(d); }
+  }
+  const stands = stStand==='AMBOS'?['FACTORIA','EXPOSOFA']:[stStand];
+  const isos = dias.map(isoLocal);
+  const ds = stands.map(st=>({
+    label:STAND_NAME[st], backgroundColor:COL[st], borderRadius:5, maxBarThickness:40,
+    data: isos.map(iso=> data.filter(v=>v.stand===st && v.fecha===iso).reduce((s,v)=>s+v.importe,0))
+  }));
+  const box=$('#chDiaStandBox'); if(box) box.style.minWidth = Math.max(640, dias.length*66)+'px';
+  charts.chDiaStand=new Chart($('#chDiaStand'),{type:'bar',
+    data:{labels:dias.map(fmtDiaLabel), datasets:ds},
+    options:{responsive:true, maintainAspectRatio:false, layout:{padding:{top:26}},
+      plugins:{
+        legend:{display:stands.length>1, position:'bottom'},
+        tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtEur(c.parsed.y)}},
+        datalabels:{
+          display:ctx=> (ctx.dataset.data[ctx.dataIndex]||0)>0,
+          anchor:'end', align:'end', rotation:-90, clamp:true, offset:2,
+          font:{size:10, weight:'600', family:"'IBM Plex Mono',monospace"}, color:'#4a443b',
+          formatter:v=> v>0 ? new Intl.NumberFormat('es-ES').format(Math.round(v)) : ''
+        }
+      },
+      scales:{
+        x:{grid:{display:false}, ticks:{maxRotation:0, minRotation:0, autoSkip:false, font:{size:10}}},
+        y:{grid:{color:'#F0EBE0'}, ticks:{callback:v=>fmtEurK(v)}}
+      }}});
 }
 function chartFab(porFab){
   destroyChart('chFab');
@@ -857,7 +926,7 @@ function chartFab(porFab){
   charts.chFab=new Chart($('#chFab'),{type:'bar',
     data:{labels:ent.map(e=>e[0]),datasets:[{data:ent.map(e=>e[1]),
       backgroundColor:'#2E8B7F', borderRadius:6, maxBarThickness:34}]},
-    options:baseOpts({horizontal:true, money:true, legend:false})});
+    options:baseOpts({horizontal:true, money:true, legend:false, labels:true})});
 }
 function metricsPorProveedor(data){
   const m={};
@@ -873,7 +942,7 @@ function chartArt(data){
   charts.chArt=new Chart($('#chArt'),{type:'bar',
     data:{labels:ent.map(e=>e.fabrica),datasets:[{data:ent.map(e=>e.art),
       backgroundColor:'#8a5cb0', borderRadius:6, maxBarThickness:34}]},
-    options:baseOpts({horizontal:true, money:false, legend:false})});
+    options:baseOpts({horizontal:true, money:false, legend:false, labels:true})});
 }
 function chartModel(data){
   destroyChart('chModel');
@@ -881,7 +950,7 @@ function chartModel(data){
   charts.chModel=new Chart($('#chModel'),{type:'bar',
     data:{labels:ent.map(e=>e.fabrica),datasets:[{data:ent.map(e=>e.modelos),
       backgroundColor:'#C9852F', borderRadius:6, maxBarThickness:34}]},
-    options:baseOpts({horizontal:true, money:false, legend:false})});
+    options:baseOpts({horizontal:true, money:false, legend:false, labels:true})});
 }
 function renderModelosProv(data){
   const sel=$('#provModelSel');
@@ -933,7 +1002,8 @@ function chartStand(){
     data:{labels:['Factoria Feria','Exposofa Feria'],datasets:[{data:[f,e],
       backgroundColor:[COL.FACTORIA,COL.EXPOSOFA], borderWidth:3, borderColor:'#fff'}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
-      plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.label+': '+fmtEur(c.raw)}}}}});
+      plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.label+': '+fmtEur(c.raw)}},
+        datalabels:{ display:ctx=> (ctx.dataset.data[ctx.dataIndex]||0)>0, color:'#fff', font:{size:12, weight:'700', family:"'IBM Plex Mono',monospace"}, formatter:v=> fmtEur(v) }}}});
 }
 function chartVendStand(){
   destroyChart('chVendStand');
@@ -946,12 +1016,20 @@ function chartVendStand(){
     data:{labels:vendSet,datasets:ds},
     options:baseOpts({money:true, legend:stands.length>1, stacked:false})});
 }
-function baseOpts({horizontal=false,money=false,legend=false,stacked=false}={}){
+function baseOpts({horizontal=false,money=false,legend=false,stacked=false,labels=false}={}){
   const valTick = v => money?fmtEurK(v):v;
   return {responsive:true,maintainAspectRatio:false,
     indexAxis:horizontal?'y':'x',
+    layout: (labels&&horizontal) ? {padding:{right:54}} : {},
     plugins:{legend:{display:legend,position:'bottom'},
-      tooltip:{callbacks:{label:c=>{const val=horizontal?c.parsed.x:c.parsed.y; return (c.dataset.label?c.dataset.label+': ':'')+ (money?fmtEur(val):val);}}}},
+      tooltip:{callbacks:{label:c=>{const val=horizontal?c.parsed.x:c.parsed.y; return (c.dataset.label?c.dataset.label+': ':'')+ (money?fmtEur(val):val);}}},
+      datalabels: labels ? {
+        display:ctx=> (ctx.dataset.data[ctx.dataIndex]||0)>0,
+        anchor:'end', align:horizontal?'right':'end', clamp:true, offset:2,
+        font:{size:11, weight:'600', family:"'IBM Plex Mono',monospace"}, color:'#4a443b',
+        formatter:v=> money ? new Intl.NumberFormat('es-ES').format(Math.round(v)) : v
+      } : {display:false}
+    },
     scales:{
       x:{stacked, grid:{color:'#F0EBE0'}, ticks:{callback:function(v){return horizontal?valTick(v):this.getLabelForValue(v);}}},
       y:{stacked, grid:{color:'#F0EBE0'}, ticks:{callback:function(v){return horizontal?this.getLabelForValue(v):valTick(v);}}}
