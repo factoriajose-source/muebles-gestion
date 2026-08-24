@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- facturacion v1.3 - 24/08/2026 - los articulos del Selector de Tarifas ya SI se graban en presupuestos de menu.html + cache 4h compartida (meres_tarifas / meres_proveedores) -->
+<!-- facturacion v1.4 - 24/08/2026 - Modelo/Referencia se rellena con MOD / REF del selector + campo Cantidad solo enteros -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -800,7 +800,7 @@ function renderL(){
     if(l.tipo==="art"){
       h+="<div class='lr' data-idx='"+i+"'>";
       h+="<textarea class='ldesc' placeholder='Descripcion del producto...'>"+(l.desc||"")+"</textarea>";
-      h+="<input class='lcant' type='number' min='0' step='0.01' value='"+(l.cant||1)+"' title='Cantidad pedida'>";
+      h+="<input class='lcant' type='number' min='0' step='1' value='"+(l.cant||1)+"' title='Cantidad pedida (numeros enteros)'>";
       h+="<input class='lprecio' type='number' min='0' step='0.01' value='"+(l.precio||0)+"' title='Precio publico'>";
       h+="<select class='fi liva'>";
       h+="<option value='21'"+(l.iva==21?" selected":"")+" >21%</option>";
@@ -849,7 +849,12 @@ function renderL(){
     var modelo=row.querySelector(".lmodelo");
     var medidas=row.querySelector(".lmedidas");
     if(desc)desc.addEventListener("change",function(){upL(i,"desc",this.value);});
-    if(cant)cant.addEventListener("change",function(){upL(i,"cant",parseFloat(this.value)||0);});
+    if(cant)cant.addEventListener("change",function(){
+      var n=Math.round(parseFloat(this.value)||0);
+      if(n<0)n=0;
+      this.value=n;
+      upL(i,"cant",n);
+    });
     if(precio)precio.addEventListener("change",function(){upL(i,"precio",parseFloat(this.value)||0);});
     if(iva)iva.addEventListener("change",function(){upL(i,"iva",parseInt(this.value));});
     if(pct)pct.addEventListener("change",function(){upL(i,"pct",parseFloat(this.value)||0);});
@@ -1437,7 +1442,7 @@ function selAnadir(prv,ref){
     tipo:"art",
     desc:descCompleta,
     fabrica:pd.nombre||art.prvNom||prv||"",
-    modelo:art.mod||"",
+    modelo:[art.mod||"",art.ref||""].filter(Boolean).join(" / "),
     medidas:art.med||"",
     ref:art.ref||"",
     cant:1,
