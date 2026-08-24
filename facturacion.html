@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- facturacion v1.2 - 01/08/2026 - item de analisis renombrado a "Presupuestos" (icono barras) en menu lateral -->
+<!-- facturacion v1.3 - 24/08/2026 - los articulos del Selector de Tarifas ya SI se graban en presupuestos de menu.html + cache 4h compartida (meres_tarifas / meres_proveedores) -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -432,6 +432,7 @@ var T={
 };
 
 var CU=null,SEC="facturas",FT="all",TA="lafactoria",DOCS=[],LIN=[],EID=null;
+var ESMENU=false; // true cuando el documento abierto es un presupuesto creado en menu.html
 var ECLS={borrador:"eb",enviada:"ee",cobrada:"ec",vencida:"ev",pendiente:"ep",aceptado:"ea",pedido:"ea",rechazado:"er",entregado:"eet"};
 var PCLS={lafactoria:"plf",exposofa:"pes",merkamueble:"pmk"};
 
@@ -592,15 +593,16 @@ function normalizarPresupuesto(o){
   // Lineas de articulos (para ver el detalle y poder imprimir)
   o.lineas=lineasMenu.map(function(l){
     var precio=l.price||l.precio||0, cant=l.qty||1;
-    return {tipo:"art",desc:l.desc||"",fabrica:l.prv||"",modelo:l.mod||"",medidas:l.medidas||"",
-            cant:cant,precio:precio,iva:0,sub:cant*precio};
+    return {tipo:"art",desc:l.desc||"",fabrica:l.fabrica||l.prv||"",modelo:l.mod||l.modelo||"",
+            medidas:l.medidas||"",cant:cant,precio:precio,iva:0,sub:cant*precio,
+            _orig:l};   // guardamos la linea original de menu.html (id, color, img, cheslon...)
   });
   if(moPrecio){
-    o.lineas.push({tipo:"art",desc:(o._menu.mo&&o._menu.mo.desc)||"Transporte y montaje",
+    o.lineas.push({tipo:"art",_mo:true,desc:(o._menu.mo&&o._menu.mo.desc)||"Transporte y montaje",
                    fabrica:"",modelo:"",medidas:"",cant:1,precio:moPrecio,iva:0,sub:moPrecio});
   }
   if(descPct){
-    o.lineas.push({tipo:"dto",desc:"Descuento "+descPct+"%",pct:0,imp:descImp});
+    o.lineas.push({tipo:"dto",_dto:true,desc:"Descuento "+descPct+"%",pct:descPct,imp:0});
   }
   return o;
 }
@@ -713,8 +715,8 @@ function metricas(){
 }
 
 // FORMULARIO
-function nuevoDoc(){EID=null;LIN=[];abrirF(null,FT!=="all"?FT:TA);}
-function editD(id){EID=id;var doc=DOCS.find(function(d){return d.id===id;});if(doc){LIN=doc.lineas?doc.lineas.slice():[]; abrirF(doc,doc.tienda);}}
+function nuevoDoc(){EID=null;LIN=[];ESMENU=false;abrirF(null,FT!=="all"?FT:TA);}
+function editD(id){EID=id;var doc=DOCS.find(function(d){return d.id===id;});if(doc){LIN=doc.lineas?doc.lineas.slice():[];ESMENU=!!doc._esMenu; abrirF(doc,doc.tienda);}}
 
 function abrirF(doc,tie){
   var tipos={facturas:"Factura",presupuestos:"Presupuesto",albaranes:"Albaran"};
@@ -783,7 +785,7 @@ function abrirF(doc,tie){
 }
 
 function addL(t){
-  if(t==="art")LIN.push({tipo:"art",desc:"",fabrica:"",modelo:"",medidas:"",cant:1,precio:0,iva:21,sub:0});
+  if(t==="art")LIN.push({tipo:"art",desc:"",fabrica:"",modelo:"",medidas:"",cant:1,precio:0,iva:ESMENU?0:21,sub:0});
   else if(t==="dto")LIN.push({tipo:"dto",desc:"Descuento",pct:0,imp:0});
   else LIN.push({tipo:"txt",desc:""});
   renderL();
@@ -864,7 +866,7 @@ function renderL(){
 
 function calcT(){
   var b=0,iv=0,dto=0;
-  var sa=LIN.filter(function(l){return l.tipo==="art";}).reduce(function(s,l){return s+(l.sub||0);},0);
+  var sa=LIN.filter(function(l){return l.tipo==="art"&&!l._mo;}).reduce(function(s,l){return s+(l.sub||0);},0);
   LIN.forEach(function(l){
     if(l.tipo==="art"){b+=l.sub||0;iv+=(l.sub||0)*(l.iva||21)/100;}
     if(l.tipo==="dto"){if(l.pct)dto+=sa*l.pct/100;if(l.imp)dto+=l.imp;}
@@ -876,18 +878,67 @@ function calcT(){
   return{b:b,iv:iv,tot:tot};
 }
 
+// Traduce las lineas de la pantalla (LIN) al formato que usa menu.html.
+// Devuelve {lines:[], mo:{desc,precio}, descuento:%}
+function convertirLineasAMenu(m){
+  m=m||{};
+  var maxId=0;
+  (m.lines||[]).forEach(function(l){
+    var n=parseInt(l.id);
+    if(!isNaN(n)&&n>maxId)maxId=n;
+  });
+  var lines=[];
+  var mo={desc:"",precio:0};
+  var dtoPct=0, dtoEur=0;
+
+  LIN.forEach(function(l){
+    if(l.tipo==="dto"){
+      var p=parseFloat(l.pct)||0;
+      var e=parseFloat(l.imp)||0;
+      if(p>dtoPct)dtoPct=p;
+      if(e>dtoEur)dtoEur=e;
+      return;
+    }
+    if(l._mo){
+      mo={desc:l.desc||"Transporte y montaje",precio:parseFloat(l.precio)||0};
+      return;
+    }
+    // Linea de articulo (o texto libre, que se guarda como linea sin precio)
+    var o=l._orig?JSON.parse(JSON.stringify(l._orig)):{};
+    var idn=parseInt(o.id);
+    if(isNaN(idn)){maxId++;o.id=maxId;}
+    o.desc=l.desc||"";
+    o.fabrica=l.fabrica||"";
+    o.medidas=l.medidas||"";
+    o.qty=(l.tipo==="txt")?1:(parseFloat(l.cant)||0);
+    o.price=(l.tipo==="txt")?0:(parseFloat(l.precio)||0);
+    if(o.color===undefined||o.color===null)o.color="";
+    if(o.img===undefined||o.img===null)o.img="";
+    if(o.cheslon===undefined||o.cheslon===null)o.cheslon="";
+    lines.push(o);
+  });
+
+  // menu.html solo entiende descuento en %. Si se puso un importe en EUR, se convierte.
+  if(!dtoPct&&dtoEur>0){
+    var base=lines.reduce(function(s,l){return s+(l.qty||0)*(l.price||0);},0);
+    if(base>0)dtoPct=Math.round(dtoEur/base*10000)/100;
+  }
+  return {lines:lines,mo:mo,descuento:dtoPct};
+}
+
 function guardar(){
   if(!CU){toast("Inicia sesion primero");return;}
   var tie=gi("ftie")&&gi("ftie").value||TA;
   var cli=(gi("fcli")&&gi("fcli").value||"").trim();
   if(!cli){toast("El nombre del cliente es obligatorio");return;}
   // Si es un presupuesto creado en menu.html, lo guardamos en SU formato para no romperlo.
-  // Solo se actualizan los datos de cabecera (cliente, estado, fecha, tienda);
-  // los articulos del presupuesto se editan en menu.html.
+  // v1.3: ahora TAMBIEN se graban los articulos (traducidos al formato de menu.html),
+  // conservando id/color/img/cheslon de las lineas que ya existian.
   var origP=EID?DOCS.find(function(d){return d.id===EID;}):null;
   if(getCol()==="presupuestos"&&origP&&origP._esMenu){
     var m=origP._menu||{};
     var cliObj=(m.cliente&&typeof m.cliente==="object")?m.cliente:{};
+    var conv=convertirLineasAMenu(m);
     var datosMenu={
       num:m.num||origP.numero||"",
       fecha:gi("ffch")&&gi("ffch").value||origP.fecha||"",
@@ -902,7 +953,7 @@ function guardar(){
         dir:gi("fdir")&&gi("fdir").value||cliObj.dir||"",
         notas:gi("fobs")&&gi("fobs").value||cliObj.notas||""
       },
-      lines:m.lines||[],mo:m.mo||{desc:"",precio:0},descuento:m.descuento||0,
+      lines:conv.lines,mo:conv.mo,descuento:conv.descuento,
       validez:m.validez||"",pagos:m.pagos||[],fin:m.fin||{}
     };
     db.collection("presupuestos").doc(EID).update(datosMenu)
@@ -1050,6 +1101,30 @@ function crearAlbaran(id){
   });
 }
 
+// ── CACHE localStorage 4h — MISMO formato y MISMAS claves que selector-tarifas.html
+var SEL_CACHE_TTL=4*60*60*1000;
+function selCacheGet(key){
+  try{
+    var raw=localStorage.getItem(key);
+    if(!raw)return null;
+    var obj=JSON.parse(raw);
+    if(!obj||!obj.data)return null;
+    if(Date.now()-obj.ts>SEL_CACHE_TTL){localStorage.removeItem(key);return null;}
+    var d=obj.data;
+    if(key==="meres_tarifas"&&(!Array.isArray(d)||!d.length))return null;
+    if(key==="meres_proveedores"&&(typeof d!=="object"||!Object.keys(d).length))return null;
+    return d;
+  }catch(e){return null;}
+}
+function selCacheSet(key,data){
+  try{localStorage.setItem(key,JSON.stringify({ts:Date.now(),data:data}));}
+  catch(e){console.warn("Cache llena o no disponible:",e);}
+}
+function selCacheClear(){
+  localStorage.removeItem("meres_tarifas");
+  localStorage.removeItem("meres_proveedores");
+}
+
 function abrirSelectorModal(){
   var existing=document.getElementById("sel-modal");
   if(existing)existing.remove();
@@ -1068,11 +1143,20 @@ function abrirSelectorModal(){
   var tit=document.createElement("span");
   tit.style.cssText="font-size:14px;font-weight:700;letter-spacing:.03em;flex:1";
   tit.textContent="Selector de Tarifas — Añadir artículo";
+  var recBtn=document.createElement("button");
+  recBtn.textContent="🔄 Recargar tarifas";
+  recBtn.title="Borra la cache y vuelve a leer de Firebase";
+  recBtn.style.cssText="padding:5px 12px;border:1px solid rgba(255,255,255,.3);border-radius:6px;background:transparent;color:#fff;cursor:pointer;font-family:inherit;font-size:12px";
+  recBtn.addEventListener("click",function(){
+    selCacheClear();
+    overlay.remove();
+    abrirSelectorModal();
+  });
   var cerrarBtn=document.createElement("button");
   cerrarBtn.textContent="✕ Cerrar";
   cerrarBtn.style.cssText="padding:5px 12px;border:1px solid rgba(255,255,255,.3);border-radius:6px;background:transparent;color:#fff;cursor:pointer;font-family:inherit;font-size:12px";
   cerrarBtn.addEventListener("click",function(){overlay.remove();});
-  hdr.appendChild(tit);hdr.appendChild(cerrarBtn);
+  hdr.appendChild(tit);hdr.appendChild(recBtn);hdr.appendChild(cerrarBtn);
 
   // FILTROS
   var filtros=document.createElement("div");
@@ -1126,6 +1210,19 @@ function abrirSelectorModal(){
   box.appendChild(hdr);box.appendChild(filtros);box.appendChild(tableWrap);box.appendChild(status);
   overlay.appendChild(box);document.body.appendChild(overlay);
 
+  // ── CACHE 4h compartida con selector-tarifas.html ──────────────────────────
+  // Evita releer tarifas_modelos + proveedores en cada apertura del selector.
+  var cArts=selCacheGet("meres_tarifas");
+  var cPrvs=selCacheGet("meres_proveedores");
+  if(cArts&&cPrvs){
+    window._selArts=cArts;
+    window._selPrvMap=cPrvs;
+    status.textContent="Datos desde cache local (0 lecturas Firebase)";
+    iniciarFiltrosSel();
+    renderCatalogoSel();
+    return;
+  }
+
   // Cargar datos
   Promise.all([
     db.collection("tarifas_modelos").limit(2000).get(),
@@ -1164,6 +1261,8 @@ function abrirSelectorModal(){
     });
     window._selArts=arts;
     window._selPrvMap=prvMap;
+    selCacheSet("meres_tarifas",arts);
+    selCacheSet("meres_proveedores",prvMap);
     iniciarFiltrosSel();
     renderCatalogoSel();
   }).catch(function(e){
@@ -1183,6 +1282,7 @@ function abrirSelectorModal(){
       });
       window._selArts=arts2;
       window._selPrvMap={};
+      selCacheSet("meres_tarifas",arts2);
       iniciarFiltrosSel();
       renderCatalogoSel();
     }).catch(function(e2){
@@ -1342,7 +1442,7 @@ function selAnadir(prv,ref){
     ref:art.ref||"",
     cant:1,
     precio:precio,
-    iva:21,
+    iva:ESMENU?0:21,
     sub:precio
   });
   renderL();
