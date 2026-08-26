@@ -8,6 +8,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="catalogo_nati.js"></script>
+<script src="catalogo_alba.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{--lf:#7A9A01;--lfl:#EEF2DC;--es:#E8480A;--esl:#FEF0EA;--mk:#1B6B3A;--mkl:#E8F5ED;--sw:220px;--th:56px;--r:10px;--bg:#F5F6FA;--w:#fff;--bd:#E2E5EF;--tx:#1A1D2E;--tm:#6B7080;--tl:#9BA3AF;--acc:var(--lf);--acl:var(--lfl);--dan:#E53E3E;--suc:#38A169;--war:#D69E2E;}
@@ -754,6 +756,7 @@ function abrirF(doc,tie){
     "<button class='btn bo bsm' id='bsel'>Selector Tarifas</button>"+
     "<button class='btn bo bsm' id='bdto'>% Descuento</button>"+
     "<button class='btn bo bsm' id='btxt'>Texto libre</button>"+
+    "<button class='btn bo bsm' id='b8194' style='border-color:#C8A951;color:#8a5a00'>AÑADIR ITEMS PROV.8194</button>"+
     "</div>"+
     "<div class='tot' id='totbox'>"+
     "<div class='tr3'><span>Base imponible</span><span id='tb'>0,00 EUR</span></div>"+
@@ -767,17 +770,20 @@ function abrirF(doc,tie){
   gi("bsel").addEventListener("click",abrirSelectorModal);
   gi("bdto").addEventListener("click",function(){addL("dto");});
   gi("btxt").addEventListener("click",function(){addL("txt");});
+  gi("b8194").addEventListener("click",abrirModal8194);
 
   renderL();
 
   var pfot="<button class='btn bo' id='pcan'>Cancelar</button>";
   if(doc)pfot+="<button class='btn bo' id='pprt'>&#x1F5A8;&#xFE0F; Imprimir</button>";
+  pfot+="<button class='btn bo' id='pfab' style='border-color:#5a3a22;color:#5a3a22'>&#x1F3ED; Pedido a fabrica</button>";
   if(SEC==="presupuestos"&&doc&&doc.estado==="aceptado")pfot+="<button class='btn bo' id='pcvt'>&#x1F9FE; A Factura</button>";
   if(SEC==="facturas"&&doc)pfot+="<button class='btn bo' id='palbaran'>&#x1F69A; Crear Albaran</button>";
   pfot+="<button class='btn bp' id='pguard'>&#x1F4BE; Guardar</button>";
   gi("pfot").innerHTML=pfot;
   gi("pcan").addEventListener("click",cerrar);
   gi("pguard").addEventListener("click",guardar);
+  gi("pfab").addEventListener("click",function(){imprimirPedidoFabrica8194(gi("ftie")&&gi("ftie").value||TA);});
   if(gi("pprt"))gi("pprt").addEventListener("click",function(){if(doc)imprimirD(doc.id);});
   if(gi("pcvt"))gi("pcvt").addEventListener("click",function(){if(doc)cvt(doc.id);});
   if(gi("palbaran"))gi("palbaran").addEventListener("click",function(){if(doc)crearAlbaran(doc.id);});
@@ -1454,6 +1460,300 @@ function selAnadir(prv,ref){
   renderL();
   toast("Añadido: "+art.nom);
   // NO cerrar el modal — permite seguir añadiendo artículos
+}
+
+// =====================================================================
+// PROVEEDOR 8194 (NATI / ALBA) — Tarifa interactiva sobre las paginas
+// del PDF, con boton "AÑADIR ITEMS PROV.8194" y "Pedido a fabrica".
+// Los datos de las 20 paginas (NATI+ALBA) vienen de catalogo_nati.js
+// y catalogo_alba.js, cargados en la cabecera del documento.
+// =====================================================================
+
+var MODELO8194_ACTUAL="NATI";
+var PAGINA8194_ACTUAL=0;
+var CONFIG8194={precioPunto:3.34,dtoMax:20}; // valores por defecto si Firebase falla
+
+function calcularPrecio8194(puntos){
+  return Math.round(puntos*CONFIG8194.precioPunto*(1-CONFIG8194.dtoMax/100));
+}
+
+// Reutiliza la MISMA cache (meres_proveedores) que ya usa "Selector Tarifas".
+// Si no esta en cache, lee SOLO la coleccion proveedores (no tarifas_modelos),
+// para no gastar lecturas de mas.
+function cargarConfig8194(cb){
+  var cPrvs=selCacheGet("meres_proveedores");
+  if(cPrvs){
+    window._selPrvMap=window._selPrvMap||cPrvs;
+    aplicarConfig8194(cPrvs);
+    cb();
+    return;
+  }
+  db.collection("proveedores").get().then(function(snap){
+    var prvMap={};
+    snap.docs.forEach(function(d){
+      var o=d.data();
+      var cod=String(o.Codigo||o.codigo||d.id||"").trim();
+      if(!cod)return;
+      var pp=parseFloat(String(o.PUNTOS||o.puntos||o.precioPunto||"0").replace(",","."))||0;
+      var dto=parseFloat(String(o.MAX_DTO||o.dtoMax||"0").replace(",",".").replace("%",""))||0;
+      var nom=o.Nombre||o.nombre||cod;
+      prvMap[cod]={nombre:nom,precioPunto:pp,dtoMax:dto};
+      if(/^\d+$/.test(cod))prvMap[parseInt(cod)]={nombre:nom,precioPunto:pp,dtoMax:dto};
+    });
+    window._selPrvMap=window._selPrvMap||prvMap;
+    selCacheSet("meres_proveedores",prvMap);
+    aplicarConfig8194(prvMap);
+    cb();
+  }).catch(function(e){
+    toast("No se pudo leer Proveedores, uso valores por defecto");
+    cb();
+  });
+}
+function aplicarConfig8194(prvMap){
+  var pd=prvMap["8194"]||prvMap[8194];
+  if(pd){
+    if(pd.precioPunto)CONFIG8194.precioPunto=pd.precioPunto;
+    if(pd.dtoMax)CONFIG8194.dtoMax=pd.dtoMax;
+  }
+}
+
+function pintarSelectorModelo8194(){
+  var bn=gi("btn8194nati"),ba=gi("btn8194alba");
+  if(!bn||!ba)return;
+  bn.style.background=MODELO8194_ACTUAL==="NATI"?"#C8A951":"transparent";
+  bn.style.color=MODELO8194_ACTUAL==="NATI"?"#3a2212":"#fff";
+  ba.style.background=MODELO8194_ACTUAL==="ALBA"?"#C8A951":"transparent";
+  ba.style.color=MODELO8194_ACTUAL==="ALBA"?"#3a2212":"#fff";
+}
+
+function cambiarModelo8194(modelo){
+  MODELO8194_ACTUAL=modelo;
+  gi("tit8194").textContent="Proveedor 8194 — "+modelo;
+  pintarSelectorModelo8194();
+  construirTabs8194();
+  cargarPagina8194(0);
+}
+
+function abrirModal8194(){
+  var existing=document.getElementById("modal8194");
+  if(existing)existing.remove();
+  MODELO8194_ACTUAL="NATI";
+
+  var overlay=document.createElement("div");
+  overlay.id="modal8194";
+  overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto";
+  overlay.addEventListener("click",function(e){if(e.target===overlay)overlay.remove();});
+
+  var box=document.createElement("div");
+  box.style.cssText="background:#fff;border-radius:12px;width:100%;max-width:1100px;display:flex;flex-direction:column;max-height:92vh;overflow:hidden";
+
+  // CABECERA
+  var hdr=document.createElement("div");
+  hdr.style.cssText="padding:12px 16px;background:#1a1714;color:#fff;display:flex;align-items:center;gap:10px;border-radius:12px 12px 0 0;flex-shrink:0;flex-wrap:wrap";
+  var tit=document.createElement("span");
+  tit.id="tit8194";
+  tit.style.cssText="font-size:14px;font-weight:700;letter-spacing:.03em;flex:1";
+  tit.textContent="Proveedor 8194 — NATI";
+  var btnNati=document.createElement("button");
+  btnNati.id="btn8194nati";btnNati.textContent="NATI";
+  var btnAlba=document.createElement("button");
+  btnAlba.id="btn8194alba";btnAlba.textContent="ALBA";
+  [btnNati,btnAlba].forEach(function(b){
+    b.style.cssText="padding:6px 14px;border-radius:16px;border:2px solid #C8A951;background:transparent;color:#fff;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit";
+  });
+  btnNati.addEventListener("click",function(){cambiarModelo8194("NATI");});
+  btnAlba.addEventListener("click",function(){cambiarModelo8194("ALBA");});
+  var cerrarBtn=document.createElement("button");
+  cerrarBtn.textContent="✕ Cerrar";
+  cerrarBtn.style.cssText="padding:5px 12px;border:1px solid rgba(255,255,255,.3);border-radius:6px;background:transparent;color:#fff;cursor:pointer;font-family:inherit;font-size:12px";
+  cerrarBtn.addEventListener("click",function(){overlay.remove();});
+  hdr.appendChild(tit);hdr.appendChild(btnNati);hdr.appendChild(btnAlba);hdr.appendChild(cerrarBtn);
+
+  // CONFIG — valor punto / descuento (leido de Proveedores, editable)
+  var cfgRow=document.createElement("div");
+  cfgRow.style.cssText="padding:8px 14px;background:#fffdf6;border-bottom:1px solid #E2E5EF;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;flex-shrink:0";
+  cfgRow.innerHTML=
+    "<span style='color:#8a5a00;font-weight:700'>Valor punto:</span>"+
+    "<input id='inp8194pp' type='number' step='0.01' min='0' style='width:70px;padding:4px 6px;border:1px solid #C8A951;border-radius:5px;font-family:inherit'> €"+
+    "<span style='color:#8a5a00;font-weight:700;margin-left:10px'>Descuento:</span>"+
+    "<input id='inp8194dto' type='number' step='1' min='0' max='100' style='width:60px;padding:4px 6px;border:1px solid #C8A951;border-radius:5px;font-family:inherit'> %"+
+    "<span style='color:#999;font-size:11px;margin-left:auto'>Leido de Proveedores — puedes cambiarlo a mano</span>";
+
+  // TABS DE PAGINA
+  var tabsRow=document.createElement("div");
+  tabsRow.id="tabs8194";
+  tabsRow.style.cssText="display:flex;gap:6px;overflow-x:auto;padding:8px 14px;background:#e7ddc9;border-bottom:1px solid #d8cba9;flex-shrink:0";
+
+  // VISOR (imagen + estrellas)
+  var visorWrap=document.createElement("div");
+  visorWrap.style.cssText="flex:1;overflow-y:auto;background:#f2ede4";
+  var paginaWrap=document.createElement("div");
+  paginaWrap.id="paginaWrap8194";
+  paginaWrap.style.cssText="position:relative;width:100%;max-width:900px;margin:0 auto;background:#fff;line-height:0";
+  var img=document.createElement("img");
+  img.id="img8194actual";
+  img.style.cssText="width:100%;display:block";
+  paginaWrap.appendChild(img);
+  visorWrap.appendChild(paginaWrap);
+
+  box.appendChild(hdr);box.appendChild(cfgRow);box.appendChild(tabsRow);box.appendChild(visorWrap);
+  overlay.appendChild(box);document.body.appendChild(overlay);
+
+  pintarSelectorModelo8194();
+
+  gi("inp8194pp").addEventListener("input",function(){
+    var v=parseFloat(this.value);if(!isNaN(v)&&v>=0)CONFIG8194.precioPunto=v;
+    cargarPagina8194(PAGINA8194_ACTUAL);
+  });
+  gi("inp8194dto").addEventListener("input",function(){
+    var v=parseFloat(this.value);if(!isNaN(v)&&v>=0&&v<=100)CONFIG8194.dtoMax=v;
+    cargarPagina8194(PAGINA8194_ACTUAL);
+  });
+
+  cargarConfig8194(function(){
+    gi("inp8194pp").value=CONFIG8194.precioPunto.toFixed(2);
+    gi("inp8194dto").value=CONFIG8194.dtoMax;
+    construirTabs8194();
+    cargarPagina8194(0);
+  });
+}
+
+function construirTabs8194(){
+  var tabsEl=gi("tabs8194");
+  if(!tabsEl)return;
+  tabsEl.innerHTML="";
+  var cat=MODELO8194_ACTUAL==="NATI"?CATALOGO_NATI:CATALOGO_ALBA;
+  cat.pages.forEach(function(p,idx){
+    var t=document.createElement("div");
+    t.textContent=p.num+" · "+p.titulo;
+    t.className="tab8194";
+    t.style.cssText="flex:0 0 auto;padding:6px 12px;border-radius:16px;background:#fff;border:1px solid #ccc;font-size:12px;cursor:pointer;white-space:nowrap;color:#333";
+    t.addEventListener("click",function(){cargarPagina8194(idx);});
+    tabsEl.appendChild(t);
+  });
+}
+
+function cargarPagina8194(idx){
+  PAGINA8194_ACTUAL=idx;
+  var cat=MODELO8194_ACTUAL==="NATI"?CATALOGO_NATI:CATALOGO_ALBA;
+  var carpeta=MODELO8194_ACTUAL==="NATI"?"img8194":"imgALBA";
+  var p=cat.pages[idx];
+  if(!p)return;
+
+  var tabsEl=gi("tabs8194");
+  Array.prototype.forEach.call(tabsEl.children,function(el,i){
+    el.style.background=i===idx?"#1a1714":"#fff";
+    el.style.color=i===idx?"#fff":"#333";
+    el.style.borderColor=i===idx?"#1a1714":"#ccc";
+    el.style.fontWeight=i===idx?"700":"normal";
+  });
+
+  gi("img8194actual").src=carpeta+"/"+p.img;
+
+  var wrap=gi("paginaWrap8194");
+  wrap.querySelectorAll(".hs8194").forEach(function(h){h.remove();});
+
+  p.items.forEach(function(item){
+    var div=document.createElement("div");
+    div.className="hs8194";
+    div.style.cssText="position:absolute;cursor:pointer;border-radius:4px;border:2px solid transparent;"+
+      "left:"+(item.x0/cat.pageWidth*100)+"%;top:"+(item.y0/cat.pageHeight*100)+"%;"+
+      "width:"+((item.x1-item.x0)/cat.pageWidth*100)+"%;height:"+((item.y1-item.y0)/cat.pageHeight*100)+"%";
+    div.title=item.seccion+" — "+item.etiqueta+" ("+calcularPrecio8194(item.puntos)+" EUR)";
+    div.addEventListener("mouseenter",function(){div.style.background="rgba(200,169,81,.28)";div.style.borderColor="#C8A951";});
+    div.addEventListener("mouseleave",function(){div.style.background="transparent";div.style.borderColor="transparent";});
+    div.addEventListener("click",function(){anadir8194(item);});
+    wrap.appendChild(div);
+  });
+}
+
+// Al pinchar una estrella: se añade DIRECTAMENTE como linea del presupuesto,
+// igual que hace "Selector Tarifas". El modal NO se cierra, para poder
+// seguir añadiendo mas articulos.
+// IMPORTANTE: nunca se pone "NATI"/"ALBA" en el campo "modelo" porque ese
+// campo SI se imprime en el presupuesto del cliente (ver imprimirD). Toda
+// la trazabilidad (modelo + puntos) se guarda en "fabrica", que nunca se
+// imprime al cliente, con el formato "PROV.8194 | NATI | 545pts".
+function anadir8194(item){
+  var precio=calcularPrecio8194(item.puntos);
+  LIN.push({
+    tipo:"art",
+    desc:item.seccion+" - "+item.etiqueta,
+    fabrica:"PROV.8194 | "+MODELO8194_ACTUAL+" | "+item.puntos+"pts",
+    modelo:"",
+    medidas:"",
+    cant:1,
+    precio:precio,
+    iva:ESMENU?0:21,
+    sub:precio
+  });
+  renderL();
+  toast("Añadido: "+item.etiqueta);
+}
+
+// ---------------------------------------------------------------------
+// PEDIDO A FABRICA — al contrario que el presupuesto del cliente: aqui
+// SI debe verse el modelo y los puntos (la fabrica trabaja en puntos),
+// pero NUNCA debe verse ningun precio en €. Incluye tambien las lineas
+// manuales (fabrica vacia) por si hay notas o cargos que comunicar,
+// pero NUNCA lineas de otros proveedores distintos de 8194.
+// Trabaja sobre el LIN que se esta editando en pantalla en ese momento.
+// ---------------------------------------------------------------------
+function imprimirPedidoFabrica8194(tiendaKey){
+  var ti=T[tiendaKey]||T[TA];
+  var logo=LG[ti.lk];
+
+  var candidatas=LIN.filter(function(l){
+    if(l.tipo!=="art")return false;
+    var fab=(l.fabrica||"").trim();
+    return fab.indexOf("PROV.8194")===0||fab==="";
+  });
+  if(!candidatas.length){toast("No hay articulos de fabrica en esta lista");return;}
+
+  var totalPuntos=0;
+  var lh="";
+  candidatas.forEach(function(l){
+    var fab=(l.fabrica||"").trim();
+    var esProv=fab.indexOf("PROV.8194")===0;
+    var modeloTxt="—",ptsTxt="—";
+    if(esProv){
+      var partes=fab.split("|").map(function(s){return s.trim();});
+      modeloTxt=partes[1]||"—";
+      var pts=parseInt(partes[2])||0;
+      var ptsTotal=pts*(l.cant||1);
+      totalPuntos+=ptsTotal;
+      ptsTxt=pts+" / "+ptsTotal;
+    }
+    var tagColor=esProv?(modeloTxt==="NATI"?"#1a6b2a":"#003580"):"#8a5a00";
+    var tagTxt=esProv?modeloTxt:"Manual";
+    lh+="<tr>"
+      +"<td style='padding:8px 6px;border-bottom:1px solid #EEE;text-align:center'><span style='display:inline-block;font-size:10px;font-weight:700;color:#fff;background:"+tagColor+";border-radius:6px;padding:2px 8px'>"+tagTxt+"</span></td>"
+      +"<td style='padding:8px 6px;border-bottom:1px solid #EEE'>"+(l.desc||"")+"</td>"
+      +"<td style='text-align:center;padding:8px 6px;border-bottom:1px solid #EEE'>"+(l.cant||1)+"</td>"
+      +"<td style='text-align:right;padding:8px 6px;border-bottom:1px solid #EEE'>"+ptsTxt+"</td>"
+      +"</tr>";
+  });
+
+  var w=window.open("","_blank");
+  var imgStyle="max-height:55px;max-width:200px;object-fit:contain";
+  w.document.write("<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Pedido a fabrica</title>");
+  w.document.write("<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;color:#222;padding:40px;font-size:13px}");
+  w.document.write(".hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid "+ti.col+"}");
+  w.document.write(".ei{text-align:right;font-size:11.5px;color:#555;line-height:1.7}.ei strong{font-size:13px;color:#222;display:block;margin-bottom:2px}");
+  w.document.write("table.l{width:100%;border-collapse:collapse;margin:24px 0}");
+  w.document.write("table.l thead th{padding:10px 6px;text-align:left;font-size:11px;text-transform:uppercase;color:#fff;background:"+ti.col+"}");
+  w.document.write(".tots{float:right;width:280px;margin-top:10px}.tots table{width:100%;border-collapse:collapse}");
+  w.document.write(".tots td{padding:5px 8px;font-size:13px}.tots tr.tt td{font-size:16px;font-weight:700;color:"+ti.col+";border-top:2px solid "+ti.col+";padding-top:8px}");
+  w.document.write("@media print{body{padding:20px}}</style></head><body>");
+  w.document.write("<div class='hdr'><div><img src='"+logo+"' alt='"+ti.n+"' style='"+imgStyle+"'></div>");
+  w.document.write("<div class='ei'><strong>"+ti.soc+"</strong>"+ti.dir+"<br>"+ti.cp+"<br>Tel: "+ti.tel+"<br>"+ti.email+"</div></div>");
+  w.document.write("<div style='margin-bottom:28px'><div style='font-size:22px;font-weight:700;color:"+ti.col+"'>Pedido a fabrica — Proveedor 8194</div><div style='font-size:12px;color:#777;margin-top:4px'>Fecha: "+new Date().toLocaleDateString("es-ES")+"</div></div>");
+  w.document.write("<table class='l'><thead><tr><th style='text-align:center'>Modelo</th><th>Articulo</th><th style='text-align:center'>Cant.</th><th style='text-align:right'>Pts/ud · Pts total</th></tr></thead><tbody>"+lh+"</tbody></table>");
+  w.document.write("<div style='overflow:hidden'><div class='tots'><table><tr class='tt'><td>TOTAL PUNTOS</td><td style='text-align:right'>"+totalPuntos+"</td></tr></table></div></div>");
+  w.document.write("<div style='clear:both;margin-top:60px;padding-top:14px;border-top:1px solid #DDD;font-size:11px;color:#888;text-align:center'>Documento interno — no incluye precios de venta al publico</div>");
+  w.document.write("<scr"+"ipt>window.onload=function(){setTimeout(function(){window.print();},400);};<"+"/scr"+"ipt>");
+  w.document.write("</body></html>");
+  w.document.close();
 }
 
 
