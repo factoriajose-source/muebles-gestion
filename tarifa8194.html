@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tarifa interactiva — Proveedor 8194</title>
+<style>
+  :root{
+    --dorado:#C8A951;
+    --dorado-suave:rgba(200,169,81,0.28);
+    --verde:#1a6b2a;
+    --verde-suave:rgba(26,107,42,0.22);
+    --marron:#4A2C17;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background:#f2ede4;
+    color:#2b2b2b;
+  }
+  header{
+    background:var(--marron);
+    color:#fff;
+    padding:12px 18px;
+  }
+  header h1{margin:0;font-size:17px;}
+  header p{margin:4px 0 0;font-size:12.5px;opacity:.85;}
+
+  .selector-modelo{
+    display:flex;
+    gap:8px;
+    padding:12px 14px;
+    background:#3a2212;
+    align-items:center;
+  }
+  .selector-modelo label{color:#fff;font-size:13px;font-weight:700;margin-right:4px;}
+  .btn-modelo{
+    padding:8px 18px;
+    border-radius:20px;
+    border:2px solid transparent;
+    background:#5a3a22;
+    color:#fff;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .btn-modelo.activo{
+    background:var(--dorado);
+    color:#3a2212;
+  }
+
+  .tabs{
+    display:flex;
+    gap:6px;
+    overflow-x:auto;
+    padding:10px 14px;
+    background:#e7ddc9;
+    border-bottom:1px solid #d8cba9;
+  }
+  .tab{
+    flex:0 0 auto;
+    padding:7px 12px;
+    border-radius:20px;
+    background:#fff;
+    border:1px solid #ccc;
+    font-size:12.5px;
+    cursor:pointer;
+    white-space:nowrap;
+    color:#333;
+  }
+  .tab.activa{
+    background:var(--marron);
+    color:#fff;
+    border-color:var(--marron);
+    font-weight:700;
+  }
+  .tab .n{opacity:.6;margin-right:4px;}
+
+  .layout{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    padding:16px;
+    max-width:1450px;
+    margin:0 auto;
+  }
+  @media(min-width:980px){
+    .layout{flex-direction:row;align-items:flex-start;}
+  }
+
+  .visor{
+    flex:1 1 auto;
+    background:#fff;
+    border-radius:10px;
+    box-shadow:0 2px 10px rgba(0,0,0,.12);
+    overflow:hidden;
+  }
+  .titulo-pagina{
+    padding:10px 16px;
+    font-size:14px;
+    font-weight:700;
+    color:var(--marron);
+    border-bottom:1px solid #eee;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .titulo-pagina .nav-btns{display:flex;gap:6px;}
+  .titulo-pagina button{
+    border:1px solid #ccc;background:#fafafa;border-radius:6px;
+    padding:4px 10px;cursor:pointer;font-size:12px;
+  }
+  .nota-pagina{
+    background:#fff7e0;border-bottom:1px solid #f0d98c;color:#7a5c00;
+    font-size:12.5px;padding:8px 16px;
+  }
+  .pagina-wrap{
+    position:relative;
+    width:100%;
+    line-height:0;
+  }
+  .pagina-wrap img{
+    width:100%;
+    display:block;
+  }
+  .hotspot{
+    position:absolute;
+    cursor:pointer;
+    border-radius:4px;
+    border:2px solid transparent;
+    transition:background .12s, border-color .12s;
+  }
+  .hotspot:hover{
+    background:var(--dorado-suave);
+    border-color:var(--dorado);
+  }
+  .hotspot.added{
+    background:var(--verde-suave);
+    border-color:var(--verde);
+  }
+  .hotspot .badge{
+    position:absolute;
+    top:-9px;
+    right:-9px;
+    background:var(--verde);
+    color:#fff;
+    font-size:11px;
+    font-weight:700;
+    min-width:18px;
+    height:18px;
+    border-radius:9px;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:0 4px;
+  }
+  .hotspot.added .badge{display:flex;}
+
+  .panel{
+    flex:0 0 380px;
+    background:#fff;
+    border-radius:10px;
+    box-shadow:0 2px 10px rgba(0,0,0,.12);
+    padding:16px;
+    position:sticky;
+    top:16px;
+    max-height:90vh;
+    display:flex;
+    flex-direction:column;
+  }
+  .panel h2{margin:0 0 4px;font-size:16px;color:var(--marron);}
+  .panel .sub{font-size:12px;color:#777;margin-bottom:12px;}
+  .config-precio{
+    display:flex;gap:10px;margin-bottom:6px;
+  }
+  .campo-config{flex:1;}
+  .campo-config label{
+    display:block;font-size:10.5px;font-weight:700;color:#8a5a00;
+    text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px;
+  }
+  .campo-config-input{
+    display:flex;align-items:center;gap:5px;
+    border:1.5px solid var(--dorado);border-radius:7px;
+    padding:5px 9px;background:#fffdf6;
+  }
+  .campo-config-input input{
+    border:none;background:transparent;width:100%;font-size:13px;
+    font-weight:700;font-family:inherit;padding:0;color:#2b2b2b;
+  }
+  .campo-config-input input:focus{outline:none;}
+  .campo-config-input span{font-size:12px;color:#8a5a00;font-weight:700;}
+  .cart-list{
+    overflow-y:auto;
+    flex:1 1 auto;
+    margin-bottom:12px;
+    border-top:1px solid #eee;
+  }
+  .cart-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:9px 0;
+    border-bottom:1px solid #eee;
+    font-size:13px;
+  }
+  .cart-item .desc{flex:1;min-width:0;}
+  .cart-item .desc input.desc-edit{
+    width:100%;
+    border:1px solid transparent;
+    background:transparent;
+    font-size:12.5px;
+    font-weight:700;
+    padding:2px 4px;
+    border-radius:4px;
+    font-family:inherit;
+    color:#2b2b2b;
+  }
+  .cart-item .desc input.desc-edit:hover{border-color:#ddd;background:#fafafa;}
+  .cart-item .desc input.desc-edit:focus{border-color:var(--dorado);background:#fffdf6;outline:none;}
+  .cart-item .desc span{color:#888;font-size:11.5px;padding:0 4px;}
+  .cart-item .desc span{display:block;}
+  .cart-item .modelo-tag{
+    display:inline-block;font-size:10px;font-weight:700;
+    padding:1px 6px;border-radius:8px;margin:0 4px 2px 0;color:#fff;
+  }
+  .tag-nati{background:#1a6b2a;}
+  .tag-alba{background:#003580;}
+  .tag-manual{background:#8a5a00;}
+
+  .manual-box{
+    border:1px dashed #C8A951;
+    border-radius:8px;
+    padding:10px;
+    margin-bottom:12px;
+    background:#fffdf6;
+  }
+  .manual-box.oculto{display:none;}
+  .manual-box input{
+    width:100%;
+    padding:7px 8px;
+    margin-bottom:6px;
+    border:1px solid #ddd;
+    border-radius:6px;
+    font-size:12.5px;
+    font-family:inherit;
+    box-sizing:border-box;
+  }
+  .manual-box .fila-precio{display:flex;gap:6px;}
+  .manual-box .fila-precio input{margin-bottom:0;}
+  .btn-manual-toggle{
+    background:#fff;border:1px solid var(--dorado);color:#8a5a00;
+  }
+  .qty-ctrl{
+    display:flex;
+    align-items:center;
+    border:1px solid #ddd;
+    border-radius:6px;
+    overflow:hidden;
+  }
+  .qty-ctrl button{
+    border:none;background:#f5f5f5;width:22px;height:22px;cursor:pointer;font-size:14px;
+  }
+  .qty-ctrl span{width:22px;text-align:center;font-size:12px;}
+  .cart-item .precio{width:60px;text-align:right;font-weight:700;font-size:12.5px;}
+  .cart-item .del{
+    color:#c0392b;cursor:pointer;font-size:16px;line-height:1;padding:2px 4px;
+  }
+  .vacio{color:#999;font-size:13px;padding:16px 0;text-align:center;}
+
+  .total-row{
+    display:flex;justify-content:space-between;font-size:15px;font-weight:700;
+    padding-top:8px;border-top:2px solid var(--marron);margin-bottom:10px;
+  }
+  .btn{
+    display:block;width:100%;padding:11px;border:none;border-radius:8px;
+    font-size:14px;font-weight:700;cursor:pointer;margin-top:6px;
+  }
+  .btn-primary{background:var(--verde);color:#fff;}
+  .btn-secondary{background:#eee;color:#333;}
+  textarea#salida{
+    width:100%;margin-top:10px;font-size:11.5px;padding:8px;border-radius:6px;
+    border:1px solid #ddd;resize:vertical;min-height:110px;display:none;
+  }
+  .aviso{
+    font-size:11.5px;background:#eef5ff;border:1px solid #b8d6f5;color:#1a4a7a;
+    padding:8px 10px;border-radius:6px;margin-bottom:10px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧪 PRUEBA — Tarifa interactiva Proveedor 8194</h1>
+  <p>Elige el modelo (NATI o ALBA) y pulsa sobre una fila para añadirla al presupuesto</p>
+</header>
+
+<div class="selector-modelo">
+  <label>MODELO:</label>
+  <button class="btn-modelo activo" id="btnNati" onclick="cambiarModelo('NATI')">NATI</button>
+  <button class="btn-modelo" id="btnAlba" onclick="cambiarModelo('ALBA')">ALBA</button>
+</div>
+
+<div class="tabs" id="tabs"></div>
+
+<div class="layout">
+
+  <div class="visor">
+    <div class="titulo-pagina">
+      <span id="tituloPagina">—</span>
+      <div class="nav-btns">
+        <button onclick="irPagina(-1)">◀ Anterior</button>
+        <button onclick="irPagina(1)">Siguiente ▶</button>
+      </div>
+    </div>
+    <div class="nota-pagina" id="notaPagina" style="display:none;"></div>
+    <div class="pagina-wrap" id="paginaWrap">
+      <img src="" alt="Página tarifa" id="imgPagina">
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Presupuesto (prueba)</h2>
+    <div class="config-precio">
+      <div class="campo-config">
+        <label for="inputValorPunto">Valor punto</label>
+        <div class="campo-config-input">
+          <input type="number" id="inputValorPunto" step="0.01" min="0" oninput="cambiarConfigPrecio()">
+          <span>€</span>
+        </div>
+      </div>
+      <div class="campo-config">
+        <label for="inputDescuento">Descuento</label>
+        <div class="campo-config-input">
+          <input type="number" id="inputDescuento" step="1" min="0" max="100" oninput="cambiarConfigPrecio()">
+          <span>%</span>
+        </div>
+      </div>
+    </div>
+    <div class="sub" style="margin-top:-4px">De momento se ajustan aquí a mano — más adelante se leerán solos de Proveedores.</div>
+
+    <div class="aviso">La lista se mantiene aunque cambies de modelo o de página — puedes mezclar artículos NATI y ALBA en el mismo presupuesto. El texto de cada línea es editable, por si necesitas añadir detalles (medida exacta, color, izquierda/derecha...).</div>
+
+    <button class="btn btn-manual-toggle" onclick="toggleManual()">➕ Añadir línea manual (en €)</button>
+    <div class="manual-box oculto" id="manualBox">
+      <input type="text" id="manualDesc" placeholder="Descripción del artículo o cargo">
+      <div class="fila-precio">
+        <input type="number" id="manualPrecio" placeholder="Precio en €" step="1" min="0" style="flex:1;">
+        <button class="btn btn-primary" style="width:auto;margin:0;padding:7px 16px;" onclick="agregarManual()">Añadir</button>
+      </div>
+    </div>
+
+    <div class="cart-list" id="cartList"></div>
+
+    <div class="total-row">
+      <span>TOTAL</span>
+      <span id="totalTxt">0 €</span>
+    </div>
+
+    <button class="btn btn-primary" onclick="mostrarTexto()">📋 Ver líneas para el presupuesto</button>
+    <button class="btn btn-secondary" onclick="vaciarCarrito()">🗑️ Vaciar lista</button>
+    <button class="btn btn-secondary" style="background:#1a1714;color:#fff;" onclick="imprimirPresupuesto()">🖨️ Imprimir presupuesto</button>
+    <button class="btn btn-secondary" style="background:#5a3a22;color:#fff;" onclick="imprimirPedidoFabrica()">🏭 Imprimir pedido a fábrica</button>
+    <textarea id="salida" readonly></textarea>
+  </div>
+
+</div>
+
+<!-- MODAL SELECCIÓN TIENDA PARA IMPRIMIR -->
+<div id="modalTienda" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;align-items:center;justify-content:center">
+  <div style="background:white;border-radius:14px;padding:28px;max-width:420px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+    <div style="font-size:16px;font-weight:800;margin-bottom:6px" id="modalTituloImpresion">🖨️ Imprimir presupuesto</div>
+    <div style="font-size:13px;color:#888;margin-bottom:14px">Selecciona la tienda:</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+      <button onclick="selTiendaImpresion('Muebles La Factoría')" style="padding:12px;border:2px solid #1a6b2a;border-radius:10px;background:white;cursor:pointer;font-size:13px;font-weight:700;color:#1a6b2a;text-align:left;display:flex;align-items:center;gap:10px">
+        <img src="https://www.muebleslafactoria.info/img/logo-1686043424.jpg" style="height:28px;object-fit:contain"> Muebles La Factoría
+      </button>
+      <button onclick="selTiendaImpresion('Merkamueble')" style="padding:12px;border:2px solid #003580;border-radius:10px;background:white;cursor:pointer;font-size:13px;font-weight:700;color:#003580;text-align:left;display:flex;align-items:center;gap:10px">
+        <img src="https://merkamueble.com/img/merkamueble-logo-16970183001.jpg" style="height:28px;object-fit:contain"> Merkamueble
+      </button>
+      <button onclick="selTiendaImpresion('ExpoSofá')" style="padding:12px;border:2px solid #E8470A;border-radius:10px;background:white;cursor:pointer;font-size:13px;font-weight:700;color:#E8470A;text-align:left;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">🛋️</span> ExpoSofá
+      </button>
+    </div>
+    <!-- Datos del cliente (aparece tras elegir tienda) -->
+    <div id="modal-cliente" style="display:none;border-top:1px solid #eee;padding-top:14px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:10px" id="modalClienteLabel">Datos del cliente (opcional)</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+        <input type="text" id="cli-nombre" placeholder="Nombre del cliente" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
+        <input type="text" id="cli-tel" placeholder="Teléfono" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
+        <input type="text" id="cli-poblacion" placeholder="Población" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
+        <input type="text" id="cli-vendedor" placeholder="Vendedor" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
+      </div>
+      <button onclick="ejecutarImpresionModal()" style="width:100%;padding:11px;background:#1a1714;color:white;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>
+    </div>
+    <button onclick="cerrarModalTienda()" style="width:100%;padding:9px;border:1.5px solid #ddd;border-radius:8px;background:white;font-family:inherit;font-size:13px;cursor:pointer;color:#888;margin-top:8px">Cancelar</button>
+  </div>
+</div>
+
+<script src="catalogo_nati.js"></script>
+<script src="catalogo_alba.js"></script>
+<script>
+/* ============================================================
+   CONFIGURACIÓN — estos son los dos únicos números que cambian
+   si el proveedor actualiza el valor del punto o el descuento
+   ============================================================ */
+let VALOR_PUNTO = 3.34;   // € por punto (por ahora a mano; en el futuro vendrá de proveedores.html)
+let DESCUENTO   = 0.20;   // 20% (por ahora a mano; en el futuro vendrá de proveedores.html)
+
+const MODELOS = {
+  NATI: { catalogo: CATALOGO_NATI, carpeta: "img8194", tag: "tag-nati" },
+  ALBA: { catalogo: CATALOGO_ALBA, carpeta: "imgALBA", tag: "tag-alba" }
+};
+
+let modeloActual = "NATI";
+let paginaActual = 0;
+const carrito = {}; // id único (modelo+item.id) -> {item, cantidad, modelo}
+
+function calcularPrecio(puntos){
+  return Math.round(puntos * VALOR_PUNTO * (1 - DESCUENTO));
+}
+
+document.getElementById("inputValorPunto").value = VALOR_PUNTO.toFixed(2);
+document.getElementById("inputDescuento").value = (DESCUENTO*100).toFixed(0);
+
+function cambiarConfigPrecio(){
+  const vp = parseFloat(document.getElementById("inputValorPunto").value);
+  const dto = parseFloat(document.getElementById("inputDescuento").value);
+  if(!isNaN(vp) && vp >= 0) VALOR_PUNTO = vp;
+  if(!isNaN(dto) && dto >= 0 && dto <= 100) DESCUENTO = dto / 100;
+  // Recalcular precios de la página visible (tooltips) y del presupuesto
+  cargarPagina(paginaActual);
+  pintarCarrito();
+}
+
+function cambiarModelo(nombre){
+  modeloActual = nombre;
+  document.getElementById("btnNati").classList.toggle("activo", nombre==="NATI");
+  document.getElementById("btnAlba").classList.toggle("activo", nombre==="ALBA");
+  construirTabs();
+  cargarPagina(0);
+}
+
+function construirTabs(){
+  const tabsEl = document.getElementById("tabs");
+  tabsEl.innerHTML = "";
+  const paginas = MODELOS[modeloActual].catalogo.pages;
+  paginas.forEach((p, idx) => {
+    const t = document.createElement("div");
+    t.className = "tab" + (idx===0 ? " activa" : "");
+    t.id = "tab_" + idx;
+    t.innerHTML = `<span class="n">${p.num}</span>${p.titulo}`;
+    t.onclick = () => cargarPagina(idx);
+    tabsEl.appendChild(t);
+  });
+}
+
+function irPagina(delta){
+  const nueva = paginaActual + delta;
+  const paginas = MODELOS[modeloActual].catalogo.pages;
+  if(nueva >= 0 && nueva < paginas.length) cargarPagina(nueva);
+}
+
+function cargarPagina(idx){
+  paginaActual = idx;
+  const cat = MODELOS[modeloActual].catalogo;
+  const carpeta = MODELOS[modeloActual].carpeta;
+  const p = cat.pages[idx];
+
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("activa"));
+  const tabEl = document.getElementById("tab_"+idx);
+  if(tabEl) tabEl.classList.add("activa");
+
+  document.getElementById("tituloPagina").textContent = modeloActual + " — Página " + p.num + " — " + p.titulo;
+  document.getElementById("imgPagina").src = carpeta + "/" + p.img;
+
+  const notaEl = document.getElementById("notaPagina");
+  if(p.nota){
+    notaEl.style.display = "block";
+    notaEl.textContent = "⚠️ " + p.nota;
+  } else {
+    notaEl.style.display = "none";
+  }
+
+  const wrap = document.getElementById("paginaWrap");
+  wrap.querySelectorAll(".hotspot").forEach(h => h.remove());
+
+  p.items.forEach(item => {
+    const uid = modeloActual + "_" + item.id;
+    const div = document.createElement("div");
+    div.className = "hotspot";
+    div.id = "hs_" + uid;
+    div.style.left   = (item.x0 / cat.pageWidth * 100) + "%";
+    div.style.top    = (item.y0 / cat.pageHeight * 100) + "%";
+    div.style.width  = ((item.x1 - item.x0) / cat.pageWidth * 100) + "%";
+    div.style.height = ((item.y1 - item.y0) / cat.pageHeight * 100) + "%";
+    div.title = item.seccion + " — " + item.etiqueta + " (" + calcularPrecio(item.puntos) + " €)";
+    div.innerHTML = '<span class="badge"></span>';
+    div.onclick = () => añadirAlCarrito(item, modeloActual);
+    wrap.appendChild(div);
+    if(carrito[uid]){
+      div.classList.add("added");
+      div.querySelector(".badge").textContent = carrito[uid].cantidad;
+    }
+  });
+}
+
+function añadirAlCarrito(item, modelo){
+  const uid = modelo + "_" + item.id;
+  if(!carrito[uid]){
+    carrito[uid] = {
+      item, cantidad: 0, modelo,
+      descripcion: item.seccion + " - " + item.etiqueta
+    };
+  }
+  carrito[uid].cantidad++;
+  pintarCarrito();
+}
+
+function editarDescripcion(uid, valor){
+  if(!carrito[uid]) return;
+  carrito[uid].descripcion = valor;
+  // No repintamos toda la lista aquí para no perder el foco del campo mientras se escribe
+}
+
+let manualContador = 0;
+
+function toggleManual(){
+  document.getElementById("manualBox").classList.toggle("oculto");
+}
+
+function agregarManual(){
+  const descInput = document.getElementById("manualDesc");
+  const precioInput = document.getElementById("manualPrecio");
+  const desc = descInput.value.trim();
+  const precio = parseFloat(precioInput.value);
+
+  if(!desc){ descInput.focus(); return; }
+  if(isNaN(precio) || precio < 0){ precioInput.focus(); return; }
+
+  manualContador++;
+  const uid = "MANUAL_" + Date.now() + "_" + manualContador;
+  carrito[uid] = {
+    item: { seccion: "Cargo manual", etiqueta: desc, puntos: null },
+    cantidad: 1,
+    modelo: "MANUAL",
+    descripcion: desc,
+    precioManual: precio
+  };
+
+  descInput.value = "";
+  precioInput.value = "";
+  descInput.focus();
+  pintarCarrito();
+}
+
+function editarPrecioManual(uid, valor){
+  if(!carrito[uid]) return;
+  const p = parseFloat(valor);
+  carrito[uid].precioManual = isNaN(p) ? 0 : p;
+  actualizarTotales();
+}
+
+function cambiarCantidad(uid, delta){
+  if(!carrito[uid]) return;
+  carrito[uid].cantidad += delta;
+  if(carrito[uid].cantidad <= 0) delete carrito[uid];
+  pintarCarrito();
+}
+
+function quitarDelCarrito(uid){
+  delete carrito[uid];
+  pintarCarrito();
+}
+
+function vaciarCarrito(){
+  Object.keys(carrito).forEach(k => delete carrito[k]);
+  pintarCarrito();
+}
+
+function precioUnidad(en){
+  return en.modelo === "MANUAL" ? (en.precioManual || 0) : calcularPrecio(en.item.puntos);
+}
+
+function pintarCarrito(){
+  document.querySelectorAll(".hotspot").forEach(hs => {
+    const uid = hs.id.replace("hs_","");
+    const en = carrito[uid];
+    if(en){
+      hs.classList.add("added");
+      hs.querySelector(".badge").textContent = en.cantidad;
+    } else {
+      hs.classList.remove("added");
+    }
+  });
+
+  const lista = document.getElementById("cartList");
+  const ids = Object.keys(carrito);
+  if(ids.length === 0){
+    lista.innerHTML = '<div class="vacio">Todavía no has añadido ningún artículo.<br>Pulsa sobre una fila de la tabla, o usa "Añadir línea manual".</div>';
+    document.getElementById("totalTxt").textContent = "0 €";
+    return;
+  }
+
+  lista.innerHTML = "";
+  ids.forEach(uid => {
+    const en = carrito[uid];
+    const esManual = en.modelo === "MANUAL";
+    const tagClass = esManual ? "tag-manual" : MODELOS[en.modelo].tag;
+    const subInfo = esManual ? "" : `<span>${en.item.puntos} pts</span>`;
+    const precioCelda = esManual
+      ? `<input type="number" class="desc-edit" style="width:56px;text-align:right;border:1px solid #ddd;" value="${en.precioManual}" step="1" min="0" oninput="editarPrecioManual('${uid}', this.value)">€`
+      : `<div class="precio" id="subtotal_${uid}">${precioUnidad(en)*en.cantidad} €</div>`;
+
+    const row = document.createElement("div");
+    row.className = "cart-item";
+    row.innerHTML = `
+      <div class="desc">
+        <span class="modelo-tag ${tagClass}">${en.modelo}</span>
+        <input type="text" class="desc-edit" value="${en.descripcion}" oninput="editarDescripcion('${uid}', this.value)">
+        ${subInfo}
+      </div>
+      <div class="qty-ctrl">
+        <button onclick="cambiarCantidad('${uid}',-1)">−</button>
+        <span>${en.cantidad}</span>
+        <button onclick="cambiarCantidad('${uid}',1)">+</button>
+      </div>
+      ${esManual ? `<div class="precio">${precioCelda}</div>` : precioCelda}
+      <div class="del" onclick="quitarDelCarrito('${uid}')">✕</div>
+    `;
+    lista.appendChild(row);
+  });
+
+  actualizarTotales();
+}
+
+function actualizarTotales(){
+  let total = 0;
+  Object.keys(carrito).forEach(uid => {
+    const en = carrito[uid];
+    const subtotal = precioUnidad(en) * en.cantidad;
+    total += subtotal;
+    const celda = document.getElementById("subtotal_" + uid);
+    if(celda) celda.textContent = subtotal + " €";
+  });
+  document.getElementById("totalTxt").textContent = total + " €";
+}
+
+function mostrarTexto(){
+  const ta = document.getElementById("salida");
+  const ids = Object.keys(carrito);
+  if(ids.length === 0){
+    ta.style.display = "block";
+    ta.value = "(la lista está vacía)";
+    return;
+  }
+  let lineas = [];
+  ids.forEach(uid => {
+    const en = carrito[uid];
+    const pu = precioUnidad(en);
+    lineas.push(`[${en.modelo}] ${en.descripcion}\tCant: ${en.cantidad}\tPrecio: ${pu} €\tSubtotal: ${pu*en.cantidad} €`);
+  });
+  ta.style.display = "block";
+  ta.value = lineas.join("\n");
+  ta.select();
+}
+
+/* ============================================================
+   IMPRESIÓN DEL PRESUPUESTO — misma cabecera de tienda que
+   selector-tarifas.html (mismo diseño para las 3 tiendas)
+   ============================================================ */
+const STORES_IMPRESION = {
+  "Muebles La Factoría": {logo:"https://www.muebleslafactoria.info/img/logo-1686043424.jpg", address:"Carretera General de Oviedo a Santander Km.8, 33199 Meres, Siero - Asturias", tel:"985 792 670", whatsapp:"687 476 389", email:"factoria.asturias@gmail.com", web:"www.muebleslafactoria.info", color:"#1a6b2a"},
+  "Merkamueble": {logo:"https://merkamueble.com/img/merkamueble-logo-16970183001.jpg", address:"Crta. Oviedo-Santander, Km.5, 33199 Granda - Asturias", tel:"985 793 496", email:"merkamuebleasturias@gmail.com", web:"www.merkamueble.com", color:"#003580"},
+  "ExpoSofá": {logo:"", address:"Carretera Oviedo-Santander Km.4, 33199 Granda, Siero - Asturias", tel:"984 103 883", whatsapp:"673 857 323", email:"exposofa.ventas@gmail.com", web:"www.exposofa.info", color:"#E8470A"}
+};
+let PRES_TIENDA_SEL = "";
+let TIPO_IMPRESION_ACTUAL = "cliente"; // "cliente" (presupuesto, sin modelo/puntos) | "fabrica" (pedido, sin €)
+
+function abrirModalImpresion(){
+  PRES_TIENDA_SEL = "";
+  document.getElementById("modal-cliente").style.display = "none";
+  document.getElementById("cli-nombre").value = "";
+  document.getElementById("cli-tel").value = "";
+  document.getElementById("cli-poblacion").value = "";
+  document.getElementById("cli-vendedor").value = "";
+  document.getElementById("modalTituloImpresion").textContent =
+    TIPO_IMPRESION_ACTUAL === "fabrica" ? "🏭 Imprimir pedido a fábrica" : "🖨️ Imprimir presupuesto";
+  document.getElementById("modalClienteLabel").textContent =
+    TIPO_IMPRESION_ACTUAL === "fabrica" ? "Referencia del pedido (opcional)" : "Datos del cliente (opcional)";
+  const esFabrica = TIPO_IMPRESION_ACTUAL === "fabrica";
+  document.getElementById("cli-nombre").placeholder = esFabrica ? "Referencia (ej: nº de expediente)" : "Nombre del cliente";
+  document.getElementById("cli-tel").style.display = esFabrica ? "none" : "block";
+  document.getElementById("cli-poblacion").style.display = esFabrica ? "none" : "block";
+  document.getElementById("cli-vendedor").style.display = esFabrica ? "none" : "block";
+  document.getElementById("modalTienda").style.display = "flex";
+}
+
+function imprimirPresupuesto(){
+  const ids = Object.keys(carrito);
+  if(ids.length === 0){ alert("No hay artículos en el presupuesto todavía."); return; }
+  TIPO_IMPRESION_ACTUAL = "cliente";
+  abrirModalImpresion();
+}
+
+function imprimirPedidoFabrica(){
+  if(Object.keys(carrito).length === 0){ alert("No hay artículos en la lista todavía."); return; }
+  TIPO_IMPRESION_ACTUAL = "fabrica";
+  abrirModalImpresion();
+}
+
+function selTiendaImpresion(tienda){
+  PRES_TIENDA_SEL = tienda;
+  document.getElementById("cli-vendedor").value = "";
+  document.getElementById("modal-cliente").style.display = "block";
+}
+
+function cerrarModalTienda(){
+  document.getElementById("modalTienda").style.display = "none";
+  PRES_TIENDA_SEL = "";
+}
+
+function ejecutarImpresionModal(){
+  if(TIPO_IMPRESION_ACTUAL === "fabrica") ejecutarImpresionFabrica();
+  else ejecutarImpresionPresupuesto();
+}
+
+function mkCabeceraTienda(st, tienda){
+  return "<div style='display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:3px solid "+st.color+";margin-bottom:16px'>"
+    +"<div>"+(st.logo?"<img src='"+st.logo+"' style='height:50px;object-fit:contain'>":"<div style='font-size:20px;font-weight:900;color:"+st.color+"'>"+tienda+"</div>")+"</div>"
+    +"<div style='text-align:right;font-size:11px;color:#555;line-height:1.7'>"
+      +"<div style='font-weight:700;color:"+st.color+"'>"+tienda+"</div>"
+      +"<div>"+st.address+"</div>"
+      +"<div>Tel: "+st.tel+(st.whatsapp?" | WhatsApp: "+st.whatsapp:"")+"</div>"
+      +"<div>"+st.email+" | "+st.web+"</div>"
+    +"</div></div>";
+}
+
+function abrirVentanaImpresion(pagina){
+  const win = window.open("", "_blank", "width=900,height=750");
+  win.document.write("<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Documento</title>"
+    +"<style>body{margin:0;font-family:system-ui,sans-serif;color:#1a1714}@media print{.np{display:none}@page{size:A4;margin:8mm}}</style>"
+    +"</head><body>"+pagina
+    +"<div class='np' style='text-align:center;padding:16px;border-top:1px solid #eee'>"
+    +"<button onclick='window.print()' style='padding:10px 28px;background:#1a1714;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer'>Imprimir</button>"
+    +" <button onclick='window.close()' style='padding:10px 20px;background:#eee;border:none;border-radius:8px;font-size:14px;cursor:pointer;margin-left:8px'>Cerrar</button></div>"
+    +"<script>window.onload=function(){window.print();};<\/script></body></html>");
+  win.document.close();
+}
+
+/* ---------- 1) PRESUPUESTO PARA EL CLIENTE ----------
+   No debe llevar ni el modelo (NATI/ALBA) ni los puntos:
+   es información interna que no le interesa dar a conocer
+   a la competencia. Solo descripción, cantidad y precio. */
+function ejecutarImpresionPresupuesto(){
+  if(!PRES_TIENDA_SEL){ alert("Elige una tienda primero"); return; }
+  document.getElementById("modalTienda").style.display = "none";
+
+  const tienda = PRES_TIENDA_SEL;
+  const st = STORES_IMPRESION[tienda] || STORES_IMPRESION["Muebles La Factoría"];
+  const cliNombre = document.getElementById("cli-nombre").value.trim();
+  const cliTel = document.getElementById("cli-tel").value.trim();
+  const cliPob = document.getElementById("cli-poblacion").value.trim();
+  const cliVendedor = document.getElementById("cli-vendedor").value.trim();
+  const fecha = new Date().toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric"});
+
+  let bloqueCliente = "";
+  if(cliNombre || cliTel || cliPob || cliVendedor){
+    bloqueCliente = "<div style='background:#f8f6f2;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;display:flex;gap:24px;flex-wrap:wrap'>"
+      +(cliNombre?"<div><span style='color:#888;font-size:10px;text-transform:uppercase'>Cliente</span><br><strong>"+cliNombre+"</strong></div>":"")
+      +(cliTel?"<div><span style='color:#888;font-size:10px;text-transform:uppercase'>Teléfono</span><br><strong>"+cliTel+"</strong></div>":"")
+      +(cliPob?"<div><span style='color:#888;font-size:10px;text-transform:uppercase'>Población</span><br><strong>"+cliPob+"</strong></div>":"")
+      +(cliVendedor?"<div><span style='color:#888;font-size:10px;text-transform:uppercase'>Vendedor</span><br><strong>"+cliVendedor+"</strong></div>":"")
+      +"</div>";
+  }
+
+  let total = 0;
+  const filas = Object.keys(carrito).map(function(uid){
+    const en = carrito[uid];
+    const pu = precioUnidad(en);
+    const sub = pu * en.cantidad;
+    total += sub;
+    // Sin etiqueta de modelo y sin puntos — el cliente no debe verlos
+    return "<tr>"
+      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;font-size:12px'><strong>"+en.descripcion+"</strong></td>"
+      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center'>"+en.cantidad+"</td>"
+      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700'>"+pu+" €</td>"
+      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700'>"+sub+" €</td>"
+      +"</tr>";
+  }).join("");
+
+  const pagina = "<div style='padding:20px'>"+mkCabeceraTienda(st, tienda)
+    +"<div style='display:flex;justify-content:space-between;margin-bottom:10px'>"
+      +"<div style='font-size:15px;font-weight:800'>Presupuesto</div>"
+      +"<div style='font-size:12px;color:#888'>"+fecha+"</div>"
+    +"</div>"+bloqueCliente
+    +"<table style='width:100%;border-collapse:collapse'><thead><tr>"
+    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:left'>Artículo</th>"
+    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:center;width:60px'>Cant.</th>"
+    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:right;width:90px'>P.Unit.</th>"
+    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:right;width:90px'>Total</th>"
+    +"</tr></thead><tbody>"+filas+"</tbody>"
+    +"<tfoot><tr><td colspan='3' style='padding:10px 8px;text-align:right;font-weight:700;font-size:14px;border-top:2px solid #1a1714'>TOTAL</td>"
+    +"<td style='padding:10px 8px;text-align:right;font-weight:800;font-size:18px;color:"+st.color+";border-top:2px solid #1a1714'>"+Math.round(total)+" €</td></tr></tfoot></table>"
+    +"<div style='margin-top:10px;font-size:11px;color:#aaa;text-align:center'>Precios orientativos · Documento de prueba</div></div>";
+
+  abrirVentanaImpresion(pagina);
+}
+
+/* ---------- 2) PEDIDO A FÁBRICA ----------
+   Al contrario que el presupuesto: aquí SÍ debe verse el modelo
+   (NATI/ALBA) y los puntos de cada artículo, porque la fábrica
+   trabaja en puntos. Pero NUNCA debe verse ningún precio en €:
+   no le interesa saber a cuánto lo vendemos al público.
+   Las líneas manuales (cargos que no son artículos de fábrica)
+   se excluyen de este documento. */
+function ejecutarImpresionFabrica(){
+  if(!PRES_TIENDA_SEL){ alert("Elige una tienda primero"); return; }
+  document.getElementById("modalTienda").style.display = "none";
+
+  const tienda = PRES_TIENDA_SEL;
+  const st = STORES_IMPRESION[tienda] || STORES_IMPRESION["Muebles La Factoría"];
+  const refPedido = document.getElementById("cli-nombre").value.trim();
+  const fecha = new Date().toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric"});
+
+  const idsFabrica = Object.keys(carrito);
+
+  let totalPuntos = 0;
+  const filas = idsFabrica.map(function(uid){
+    const en = carrito[uid];
+    const esManual = en.modelo === "MANUAL";
+    const pts = esManual ? null : en.item.puntos;
+    const ptsTotal = esManual ? null : pts * en.cantidad;
+    if(!esManual) totalPuntos += ptsTotal;
+    const tagColor = esManual ? "#8a5a00" : (en.modelo === "NATI" ? "#1a6b2a" : "#003580");
+    const tagTxt = esManual ? "Manual" : en.modelo;
+    return "<tr>"
+      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center'>"
+        +"<span style='display:inline-block;font-size:10px;font-weight:700;color:#fff;background:"+tagColor+";border-radius:6px;padding:2px 8px'>"+tagTxt+"</span>"
+      +"</td>"
+      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;font-size:12px'><strong>"+en.descripcion+"</strong></td>"
+      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center'>"+en.cantidad+"</td>"
+      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;color:"+(esManual?"#ccc":"#1a1714")+"'>"+(esManual?"—":pts)+"</td>"
+      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700;color:"+(esManual?"#ccc":"#1a1714")+"'>"+(esManual?"—":ptsTotal)+"</td>"
+      +"</tr>";
+  }).join("");
+
+  const pagina = "<div style='padding:20px'>"+mkCabeceraTienda(st, tienda)
+    +"<div style='display:flex;justify-content:space-between;margin-bottom:10px'>"
+      +"<div style='font-size:15px;font-weight:800'>Pedido a fábrica — Proveedor 8194</div>"
+      +"<div style='font-size:12px;color:#888'>"+fecha+"</div>"
+    +"</div>"
+    +(refPedido?"<div style='margin-bottom:14px;font-size:12px'><span style='color:#888;font-size:10px;text-transform:uppercase'>Referencia</span><br><strong>"+refPedido+"</strong></div>":"")
+    +"<table style='width:100%;border-collapse:collapse'><thead><tr>"
+    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:center;width:70px'>Modelo</th>"
+    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:left'>Artículo</th>"
+    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:center;width:60px'>Cant.</th>"
+    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:right;width:80px'>Pts/ud</th>"
+    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:right;width:90px'>Pts total</th>"
+    +"</tr></thead><tbody>"+filas+"</tbody>"
+    +"<tfoot><tr><td colspan='4' style='padding:10px 8px;text-align:right;font-weight:700;font-size:14px;border-top:2px solid #1a1714'>TOTAL PUNTOS</td>"
+    +"<td style='padding:10px 8px;text-align:right;font-weight:800;font-size:18px;color:"+st.color+";border-top:2px solid #1a1714'>"+totalPuntos+"</td></tr></tfoot></table>"
+    +"<div style='margin-top:6px;font-size:11px;color:#aaa;text-align:center'>Documento de prueba</div></div>";
+
+  abrirVentanaImpresion(pagina);
+}
+
+/* Iniciar con NATI, página 1 */
+construirTabs();
+cargarPagina(0);
+pintarCarrito();
+</script>
+
+</body>
+</html>
