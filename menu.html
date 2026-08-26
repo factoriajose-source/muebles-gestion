@@ -329,7 +329,7 @@ tr:last-child td{border-bottom:none}
     </div>
 
     <div class="sb-section">Ventas</div>
-    <div class="sb-item active" id="mn-presupuesto" onclick="navegarNuevoPresupuesto()"><span class="ico">📝</span> Nuevo presupuesto</div>
+    <div class="sb-item" id="mn-8194ext" onclick="abrirTarifa8194()"><span class="ico">🏷️</span> Presupuestos Prov.8194</div>
     <div class="sb-item" id="mn-lista" onclick="navegar('lista','Presupuestos')"><span class="ico">📋</span> Presupuestos</div>
     <div class="sb-item" id="mn-visitas" onclick="navegar('visitas','Visitas')"><span class="ico">👥</span> Visitas</div>
     <div class="sb-item" id="mn-selector" onclick="abrirSelector()"><span class="ico">🚀</span> Selector de Tarifas</div>
@@ -474,6 +474,11 @@ tr:last-child td{border-bottom:none}
 
     <!-- LISTA -->
     <div id="tab-lista" class="section">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+        <button id="btn-nuevo-presupuesto-lista" class="btn btn-primary" style="font-size:13px">
+          📝 Nuevo presupuesto
+        </button>
+      </div>
       <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
         <select id="fil-estado" style="padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:#fff;-webkit-appearance:none">
           <option value="all">Todos los estados</option>
@@ -813,6 +818,7 @@ function login(name) {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("app-shell").style.display = "flex";
   actualizarSidebar(name);
+  navegar('lista','Presupuestos');
   const sel = document.getElementById("c-vendedor");
   sel.value = name;
   sel.disabled = false;
@@ -959,6 +965,15 @@ function abrirERP(){
   cerrarSidebar();
 }
 window.abrirERP = abrirERP;
+
+function abrirTarifa8194(){
+  if(!currentUser){ showToast("Identifícate primero"); return; }
+  var a=document.createElement("a");
+  a.href="tarifa8194.html"; a.target="_blank"; a.rel="noopener";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  cerrarSidebar();
+}
+window.abrirTarifa8194 = abrirTarifa8194;
 
 function abrirRegistroJornada(){
   var a=document.createElement("a");
@@ -1139,6 +1154,7 @@ document.getElementById("tab-btn-presupuesto").addEventListener("click", () => {
   showTab("presupuesto");
 });
 document.getElementById("tab-btn-lista").addEventListener("click", () => showTab("lista"));
+document.getElementById("btn-nuevo-presupuesto-lista").addEventListener("click", navegarNuevoPresupuesto);
 document.getElementById("tab-btn-visitas").addEventListener("click", () => showTab("visitas"));
 document.getElementById("tab-btn-stats").addEventListener("click", () => showTab("stats"));
 document.getElementById("tab-btn-repartos").addEventListener("click", () => showTab("repartos"));
@@ -5767,8 +5783,8 @@ async function initApp() {
   }
   window._appInitialized = true;
 
-  // Cargar presupuestos (lee de Firebase y rellena la lista)
-  try { await cargarYMostrarLista(); } catch(e) { console.log("Error cargando presupuestos en initApp:", e); }
+  // La lista de presupuestos ya se carga desde login() al llamar a
+  // navegar('lista','Presupuestos') — evitamos leerla dos veces de Firebase.
 
   document.getElementById("btn-addline").addEventListener("click", addLine);
   document.getElementById("btn-save").addEventListener("click", savePresupuesto);
