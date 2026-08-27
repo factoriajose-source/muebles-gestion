@@ -348,7 +348,7 @@
     <div class="manual-box oculto" id="manualBox">
       <input type="text" id="manualDesc" placeholder="Descripción del artículo o cargo">
       <div class="fila-precio">
-        <input type="number" id="manualPrecio" placeholder="Precio en €" step="1" min="0" style="flex:1;">
+        <input type="number" id="manualPrecio" placeholder="Precio en € (usa - para descuentos)" step="1" style="flex:1;">
         <button class="btn btn-primary" style="width:auto;margin:0;padding:7px 16px;" onclick="agregarManual()">Añadir</button>
       </div>
     </div>
@@ -392,7 +392,7 @@
         <input type="text" id="cli-nombre" placeholder="Nombre del cliente" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
         <input type="text" id="cli-tel" placeholder="Teléfono" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
         <input type="text" id="cli-poblacion" placeholder="Población" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
-        <input type="text" id="cli-vendedor" placeholder="Vendedor" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px" readonly>
+        <input type="text" id="cli-vendedor" placeholder="Vendedor" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
       </div>
       <div id="saveStatusMsg" style="font-size:11px;color:#999;margin-bottom:10px"></div>
       <div style="display:flex;gap:8px">
@@ -543,7 +543,7 @@ function agregarManual(){
   const precio = parseFloat(precioInput.value);
 
   if(!desc){ descInput.focus(); return; }
-  if(isNaN(precio) || precio < 0){ precioInput.focus(); return; }
+  if(isNaN(precio)){ precioInput.focus(); return; }
 
   manualContador++;
   const uid = "MANUAL_" + Date.now() + "_" + manualContador;
@@ -616,7 +616,7 @@ function pintarCarrito(){
     const tagClass = esManual ? "tag-manual" : MODELOS[en.modelo].tag;
     const subInfo = esManual ? "" : `<span>${en.item.puntos} pts</span>`;
     const precioCelda = esManual
-      ? `<input type="number" class="desc-edit" style="width:56px;text-align:right;border:1px solid #ddd;" value="${en.precioManual}" step="1" min="0" oninput="editarPrecioManual('${uid}', this.value)">€`
+      ? `<input type="number" class="desc-edit" style="width:56px;text-align:right;border:1px solid #ddd;" value="${en.precioManual}" step="1" oninput="editarPrecioManual('${uid}', this.value)">€`
       : `<div class="precio" id="subtotal_${uid}">${precioUnidad(en)*en.cantidad} €</div>`;
 
     const row = document.createElement("div");
@@ -957,7 +957,7 @@ async function guardarEImprimir(){
       notas: "Presupuesto rápido — Proveedor 8194"
     },
     tienda: PRES_TIENDA_SEL,
-    vendedor: VENDEDOR_ACTUAL || "Jose Angel",
+    vendedor: document.getElementById("cli-vendedor").value.trim() || VENDEDOR_ACTUAL || "Jose Angel",
     lines: lines,
     mo: { desc: "", precio: 0 },
     descuento: 0,
