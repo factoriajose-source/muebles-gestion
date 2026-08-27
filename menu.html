@@ -969,7 +969,7 @@ window.abrirERP = abrirERP;
 function abrirTarifa8194(){
   if(!currentUser){ showToast("Identifícate primero"); return; }
   var a=document.createElement("a");
-  a.href="tarifa8194.html"; a.target="_blank"; a.rel="noopener";
+  a.href="tarifa8194.html?usuario="+encodeURIComponent(currentUser); a.target="_blank"; a.rel="noopener";
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   cerrarSidebar();
 }

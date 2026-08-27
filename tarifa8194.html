@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tarifa interactiva — Proveedor 8194</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --dorado:#C8A951;
@@ -389,9 +392,13 @@
         <input type="text" id="cli-nombre" placeholder="Nombre del cliente" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
         <input type="text" id="cli-tel" placeholder="Teléfono" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
         <input type="text" id="cli-poblacion" placeholder="Población" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
-        <input type="text" id="cli-vendedor" placeholder="Vendedor" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px">
+        <input type="text" id="cli-vendedor" placeholder="Vendedor" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:7px;font-family:inherit;font-size:13px" readonly>
       </div>
-      <button onclick="ejecutarImpresionModal()" style="width:100%;padding:11px;background:#1a1714;color:white;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>
+      <div id="saveStatusMsg" style="font-size:11px;color:#999;margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px">
+        <button onclick="ejecutarImpresionModal()" style="flex:1;padding:11px;background:#1a1714;color:white;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>
+        <button id="btnGuardarImprimir" onclick="guardarEImprimir()" style="flex:1;padding:11px;background:#1a6b2a;color:white;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">💾 Guardar + Imprimir</button>
+      </div>
     </div>
     <button onclick="cerrarModalTienda()" style="width:100%;padding:9px;border:1.5px solid #ddd;border-radius:8px;background:white;font-family:inherit;font-size:13px;cursor:pointer;color:#888;margin-top:8px">Cancelar</button>
   </div>
@@ -683,7 +690,7 @@ function abrirModalImpresion(){
   document.getElementById("cli-nombre").value = "";
   document.getElementById("cli-tel").value = "";
   document.getElementById("cli-poblacion").value = "";
-  document.getElementById("cli-vendedor").value = "";
+  document.getElementById("cli-vendedor").value = VENDEDOR_ACTUAL || "";
   document.getElementById("modalTituloImpresion").textContent =
     TIPO_IMPRESION_ACTUAL === "fabrica" ? "🏭 Imprimir pedido a fábrica" : "🖨️ Imprimir presupuesto";
   document.getElementById("modalClienteLabel").textContent =
@@ -693,6 +700,24 @@ function abrirModalImpresion(){
   document.getElementById("cli-tel").style.display = esFabrica ? "none" : "block";
   document.getElementById("cli-poblacion").style.display = esFabrica ? "none" : "block";
   document.getElementById("cli-vendedor").style.display = esFabrica ? "none" : "block";
+
+  const btnG = document.getElementById("btnGuardarImprimir");
+  const msg = document.getElementById("saveStatusMsg");
+  if(esFabrica){
+    btnG.style.display = "none";
+    msg.textContent = "";
+  } else {
+    btnG.style.display = "block";
+    if(FIREBASE_AUTH_OK){
+      btnG.disabled = false; btnG.style.opacity = "1";
+      msg.textContent = "Conectado como " + (VENDEDOR_ACTUAL || "vendedor") + " — se guardará en Presupuestos.";
+      msg.style.color = "#1a6b2a";
+    } else {
+      btnG.disabled = true; btnG.style.opacity = ".5";
+      msg.textContent = "Sin sesión detectada — abre esta página desde menu.html o facturacion.html para poder guardar. De momento solo puedes imprimir.";
+      msg.style.color = "#a33";
+    }
+  }
   document.getElementById("modalTienda").style.display = "flex";
 }
 
@@ -865,7 +890,97 @@ function ejecutarImpresionFabrica(){
   abrirVentanaImpresion(pagina);
 }
 
-/* Iniciar con NATI, página 1 */
+/* ============================================================
+   CONEXIÓN A FIREBASE — mismo proyecto que menu.html/facturacion.html.
+   Si esta página se abre desde alguno de esos dos (misma sesión de
+   navegador), la sesión de Firebase ya iniciada se detecta sola aquí,
+   sin pedir login otra vez.
+   ============================================================ */
+firebase.initializeApp({apiKey:"AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",authDomain:"muebles-presupuestos.firebaseapp.com",projectId:"muebles-presupuestos",storageBucket:"muebles-presupuestos.firebasestorage.app",messagingSenderId:"37365883872",appId:"1:37365883872:web:842ca4d318c01652684185"});
+const db8194 = firebase.firestore();
+const auth8194 = firebase.auth();
+let FIREBASE_AUTH_OK = false;
+let VENDEDOR_ACTUAL = new URLSearchParams(window.location.search).get("usuario") || "";
+
+auth8194.onAuthStateChanged(function(u){
+  FIREBASE_AUTH_OK = !!u;
+});
+
+function uid8194(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function today8194(){ return new Date().toISOString().split("T")[0]; }
+
+/* Guarda el presupuesto en la MISMA colección y con el MISMO formato
+   que usa menu.html (campo "lines", desc/fabrica/medidas/color/qty/price),
+   para que aparezca correctamente en "Presupuestos" de menu.html.
+   El modelo (NATI/ALBA) y los puntos van dentro de "fabrica" (campo
+   que menu.html no imprime al cliente), nunca en "desc". */
+async function guardarEImprimir(){
+  if(!PRES_TIENDA_SEL){ alert("Elige una tienda primero"); return; }
+  if(!FIREBASE_AUTH_OK){ alert("Sin sesión de Firebase detectada. Abre esta página desde menu.html o facturacion.html."); return; }
+  const nombre = document.getElementById("cli-nombre").value.trim();
+  if(!nombre){ alert("Introduce el nombre del cliente para poder guardar"); return; }
+  const ids = Object.keys(carrito);
+  if(ids.length === 0){ alert("No hay artículos en el presupuesto todavía."); return; }
+
+  const btnG = document.getElementById("btnGuardarImprimir");
+  const textoOriginal = btnG.textContent;
+  btnG.disabled = true; btnG.textContent = "Guardando...";
+
+  const lines = ids.map(function(uidKey, idx){
+    const en = carrito[uidKey];
+    const esManual = en.modelo === "MANUAL";
+    const precio = precioUnidad(en);
+    return {
+      id: idx + 1,
+      desc: en.descripcion,
+      fabrica: esManual ? "" : ("PROV.8194 | " + en.modelo + " | " + en.item.puntos + "pts"),
+      medidas: "",
+      color: "",
+      qty: en.cantidad,
+      price: precio,
+      img: "",
+      cheslon: ""
+    };
+  });
+
+  const data = {
+    id: uid8194(),
+    num: "8194-" + Date.now().toString(36).toUpperCase().slice(-6),
+    fecha: today8194(),
+    estado: "pendiente",
+    cliente: {
+      nombre: nombre,
+      tel: document.getElementById("cli-tel").value.trim(),
+      email: "",
+      dni: "",
+      dir: document.getElementById("cli-poblacion").value.trim(),
+      notas: "Presupuesto rápido — Proveedor 8194"
+    },
+    tienda: PRES_TIENDA_SEL,
+    vendedor: VENDEDOR_ACTUAL || "Jose Angel",
+    lines: lines,
+    mo: { desc: "", precio: 0 },
+    descuento: 0,
+    validez: "14",
+    pagos: [],
+    fin: { entidad: "", cuota: "", meses: "" }
+  };
+
+  try{
+    await db8194.collection("presupuestos").doc(data.id).set(data);
+    btnG.textContent = "✓ Guardado";
+    ejecutarImpresionPresupuesto();
+    vaciarCarrito();
+    setTimeout(function(){
+      btnG.disabled = false; btnG.textContent = textoOriginal;
+    }, 1500);
+  }catch(e){
+    alert("Error al guardar: " + e.message);
+    btnG.disabled = false; btnG.textContent = textoOriginal;
+  }
+}
+
+
 construirTabs();
 cargarPagina(0);
 pintarCarrito();
