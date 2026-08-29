@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- v3.6 — 29/08/2026 -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -307,7 +308,7 @@ tr:last-child td{border-bottom:none}
     </div>
 
   </div>
-  <div style="position:fixed;bottom:10px;left:12px;font-size:11px;color:#888;font-family:monospace;pointer-events:none;font-weight:700">v3.5 — 11/08/2026</div>
+  <div style="position:fixed;bottom:10px;left:12px;font-size:11px;color:#888;font-family:monospace;pointer-events:none;font-weight:700">v3.6 — 29/08/2026</div>
   <!-- BOTÓN FLOTANTE FICHAJE en pantalla de selección -->
   <button onclick="window._abrirFichajeRapido&&window._abrirFichajeRapido()" style="position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:#1a6b2a;color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(26,107,42,.4);z-index:500;display:flex;align-items:center;justify-content:center;touch-action:manipulation" title="Fichar">⏱️</button>
 </div>
@@ -2243,11 +2244,41 @@ async function pedCargarProveedores() {
   return { data: slim, origen: "firebase" };
 }
 
+// Extrae el codigo de proveedor que va escondido dentro del texto de fabrica.
+// Ej: "PROV.8194 | ALBA | 19pts" -> "8194"
+function pedCodigoEnTexto(txt) {
+  const s = String(txt == null ? "" : txt);
+  let m = s.match(/PROV\s*[.:\-]?\s*(\d{2,6})/i);
+  if (m) return m[1];
+  m = s.match(/(?:^|[^0-9A-Za-z])(\d{3,6})(?![0-9])/);
+  if (m) return m[1];
+  return "";
+}
+
+// Devuelve modelo y puntos que van en el texto de fabrica, SIN el "PROV.xxxx".
+// Ej: "PROV.8194 | ALBA | 19pts" -> "ALBA · 19pts"
+function pedModeloPuntos(txt) {
+  const s = String(txt == null ? "" : txt).trim();
+  if (!s) return "";
+  const partes = s.split("|").map(function(x) { return x.trim(); }).filter(function(x) {
+    if (!x) return false;
+    if (/^PROV\s*[.:\-]?\s*\d+$/i.test(x)) return false;
+    if (/^\d{2,6}$/.test(x)) return false;
+    return true;
+  });
+  return partes.join(" · ");
+}
+
 function pedBuscarProveedor(txt, provs) {
   const t = pedNorm(txt);
   if (!t) return null;
   let m = provs.find(function(p) { return p.cod && pedNorm(p.cod) === t; });
   if (m) return m;
+  const cod = pedCodigoEnTexto(txt);
+  if (cod) {
+    m = provs.find(function(p) { return p.cod && pedNorm(p.cod) === pedNorm(cod); });
+    if (m) return m;
+  }
   m = provs.find(function(p) { return pedNorm(p.nom) === t; });
   if (m) return m;
   m = provs.find(function(p) { const n = pedNorm(p.nom); return n.length >= 4 && n.indexOf(t) >= 0; });
@@ -2355,8 +2386,30 @@ async function abrirDialogoPedir(p) {
 
   const tit = document.createElement("div");
   tit.style.cssText = "font-size:12px;font-weight:700;color:#4A2C17;text-transform:uppercase;letter-spacing:.04em;border-top:1px solid #eee;padding-top:12px;margin-bottom:10px";
-  tit.textContent = "Fabricas detectadas — una hoja por fabrica";
+  tit.textContent = "Fabricas detectadas — se junta una hoja por proveedor";
   box.appendChild(tit);
+
+  const resumen = document.createElement("div");
+  resumen.style.cssText = "font-size:12px;font-weight:700;color:#1a6b2a;background:#f0f6f0;border:1px solid #cfe3cf;border-radius:8px;padding:8px 10px;margin-bottom:10px";
+  box.appendChild(resumen);
+
+  function pedResumen() {
+    const claves = [];
+    let marcados = 0;
+    grupos.forEach(function(g, i) {
+      const cb = document.getElementById("ped-cb-" + i);
+      if (!cb || !cb.checked) return;
+      marcados++;
+      const s = document.getElementById("ped-sel-" + i);
+      const idx = s ? parseInt(s.value, 10) : -1;
+      const k = idx >= 0 ? ("P:" + provs[idx].cod + "|" + provs[idx].nom) : ("X:" + i);
+      if (claves.indexOf(k) < 0) claves.push(k);
+    });
+    if (!marcados) { resumen.textContent = "⚠ No hay ningun grupo marcado"; resumen.style.color = "#a32d2d"; return; }
+    resumen.style.color = "#1a6b2a";
+    resumen.textContent = "Se imprimira " + claves.length + " hoja" + (claves.length > 1 ? "s" : "")
+      + " (de " + marcados + " grupo" + (marcados > 1 ? "s" : "") + " del presupuesto)";
+  }
 
   grupos.forEach(function(g, i) {
     const row = document.createElement("div");
@@ -2421,11 +2474,13 @@ async function abrirDialogoPedir(p) {
         info.appendChild(bmail);
       }
     }
-    sel.addEventListener("change", pintaInfo);
+    sel.addEventListener("change", function() { pintaInfo(); pedResumen(); });
+    cb.addEventListener("change", pedResumen);
     pintaInfo();
 
     box.appendChild(row);
   });
+  pedResumen();
 
   const btns = document.createElement("div");
   btns.style.cssText = "display:flex;gap:8px;margin-top:14px";
@@ -2440,14 +2495,28 @@ async function abrirDialogoPedir(p) {
   bOk.textContent = "🖨️ Generar hoja de pedido";
   bOk.addEventListener("click", function() {
     const sel = [];
+    let marcados = 0;
     grupos.forEach(function(g, i) {
       const cb = document.getElementById("ped-cb-" + i);
       if (!cb || !cb.checked) return;
+      marcados++;
       const s = document.getElementById("ped-sel-" + i);
       const idx = s ? parseInt(s.value, 10) : -1;
-      sel.push({ etiqueta: g.etiqueta, lines: g.lines, prv: (idx >= 0 ? provs[idx] : null) });
+      const prv = (idx >= 0 ? provs[idx] : null);
+
+      // FUSION: si ya hay una hoja para este mismo proveedor, se le anaden
+      // las lineas en vez de crear otra hoja. Los grupos sin proveedor
+      // asignado siguen cada uno en su hoja.
+      if (prv) {
+        const ya = sel.find(function(x) { return x.prv && x.prv.cod === prv.cod && x.prv.nom === prv.nom; });
+        if (ya) { ya.lines = ya.lines.concat(g.lines); return; }
+      }
+      sel.push({ etiqueta: prv ? prv.nom : g.etiqueta, lines: g.lines.slice(), prv: prv });
     });
     if (!sel.length) { showToast("Marca al menos una fabrica"); return; }
+    if (marcados > sel.length) {
+      showToast(marcados + " grupos → " + sel.length + " hoja" + (sel.length > 1 ? "s" : "") + " (mismo proveedor)");
+    }
     const ref = inpRef.value.trim() || ("#" + (p.num || ""));
     pedCerrarDialogo();
     pedGenerarPDF(p, sel, ref, inpFec.value, inpObs.value.trim());
@@ -2472,11 +2541,14 @@ function pedGenerarPDF(p, grupos, ref, fechaEnt, obs) {
   let paginas = "";
   grupos.forEach(function(g, gi) {
     let bultos = 0;
+    const prvNom = g.prv ? g.prv.nom : g.etiqueta;
     const filas = g.lines.map(function(l) {
       const q = +l.qty || 1;
       bultos += q;
       const foto = l.img ? "<img src='" + l.img + "' style='width:70px;height:54px;object-fit:cover;border-radius:4px;border:1px solid #ddd'>" : "<span style='font-size:9px;color:#ccc'>sin foto</span>";
       const extras = [];
+      const mp = pedModeloPuntos(l.fabrica);
+      if (mp && pedNorm(mp) !== pedNorm(prvNom)) extras.push("<strong>Modelo:</strong> " + pedEsc(mp));
       if (l.medidas) extras.push("<strong>Medidas:</strong> " + pedEsc(l.medidas));
       if (l.color) extras.push("<strong>Color / Acabado:</strong> " + pedEsc(l.color));
       if (l.cheslon) extras.push("<strong style='color:#a32d2d'>CHAISE A LA " + (l.cheslon === "izq" ? "IZQUIERDA" : "DERECHA") + "</strong> (visto de frente)");
@@ -2489,7 +2561,6 @@ function pedGenerarPDF(p, grupos, ref, fechaEnt, obs) {
         + "</tr>";
     }).join("");
 
-    const prvNom = g.prv ? g.prv.nom : g.etiqueta;
     const prvCod = g.prv && g.prv.cod ? g.prv.cod : "";
     const prvMail = g.prv && g.prv.email ? g.prv.email : "";
     const prvTel = g.prv && g.prv.tel ? g.prv.tel : "";
@@ -2514,7 +2585,7 @@ function pedGenerarPDF(p, grupos, ref, fechaEnt, obs) {
       + (prvCod ? "<p>Codigo: <strong>" + pedEsc(prvCod) + "</strong></p>" : "")
       + "<p>Email: " + (prvMail ? "<strong>" + pedEsc(prvMail) + "</strong>" : "<span style='color:#a32d2d'>____________________</span>") + "</p>"
       + (prvTel ? "<p>Tel: " + pedEsc(prvTel) + "</p>" : "")
-      + (g.prv && pedNorm(g.prv.nom) !== pedNorm(g.etiqueta) ? "<p style='font-size:10px;color:#999;font-style:italic'>Indicado en presupuesto: " + pedEsc(g.etiqueta) + "</p>" : "")
+
       + "</div>"
       + "<div class='box' style='border-top-color:#4A2C17'><h3 style='color:#4A2C17'>Entregar la mercancia en</h3>"
       + "<p style='font-weight:700'>Meres Central de Compras S.L.</p>"
