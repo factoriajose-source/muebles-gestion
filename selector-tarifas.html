@@ -1574,50 +1574,7 @@ function sincModelosImg(){
   Object.keys(mods).sort().forEach(function(m){ sel.innerHTML+="<option>"+m+"</option>"; });
 }
 
-function mostrarEspacio(){
-  var total=0;
-  var imgTotal=0;
-  var imgClaves=[];
-  var tarifaSize=0;
-  for(var i=0;i<localStorage.length;i++){
-    var k=localStorage.key(i);
-    var v=localStorage.getItem(k)||"";
-    var kb=Math.round((k.length+v.length)*2/1024);
-    total+=kb;
-    if(k&&k.indexOf("img_")===0){ imgTotal+=kb; imgClaves.push({k:k,kb:kb}); }
-    if(k===STORAGE_KEY) tarifaSize=kb;
-  }
-  var MAX=5120; // ~5MB
-  var pct=Math.min(100,Math.round(total/MAX*100));
-  var color=pct>80?"#c0392b":pct>60?"#e67e22":"#2d7a4f";
-  var infoEl=document.getElementById("espacio-info");
-  var detEl=document.getElementById("espacio-detalle");
-  if(!infoEl)return;
-  infoEl.innerHTML="<div style='background:#f0ece6;border-radius:8px;overflow:hidden;margin-bottom:6px'>"
-    +"<div style='background:"+color+";height:10px;width:"+pct+"%'></div></div>"
-    +"<strong style='color:"+color+"'>"+total+" KB usados de ~5.120 KB ("+pct+"%)</strong>"
-    +(pct>80?" &nbsp;<span style='color:#c0392b;font-weight:700'>⚠️ CASI LLENO — recomprime o borra imágenes</span>":"");
-  var det="<div>📦 Tarifas: "+tarifaSize+" KB</div>"
-    +"<div>🖼️ Imágenes totales: "+imgTotal+" KB en "+imgClaves.length+" modelo(s)</div>";
-  imgClaves.sort(function(a,b){return b.kb-a.kb;}).slice(0,5).forEach(function(x){
-    var parts=x.k.replace("img_","").split("_");
-    det+="<div style='margin-left:12px'>· "+x.k.replace("img_","prv:")+" → "+x.kb+" KB</div>";
-  });
-  detEl.innerHTML=det;
-}
-
-function borrarTodasImagenes(){
-  if(!confirm("¿Borrar TODAS las imágenes guardadas de todos los modelos?\nLas tarifas NO se borran."))return;
-  var claves=[];
-  for(var i=0;i<localStorage.length;i++){
-    var k=localStorage.key(i);
-    if(k&&k.indexOf("img_")===0) claves.push(k);
-  }
-  claves.forEach(function(k){ localStorage.removeItem(k); });
-  toast("✅ "+claves.length+" modelos de imágenes borrados","ok");
-  mostrarEspacio();
-  actualizarBtnVerImgs();
-}
+// (mostrarEspacio y borrarTodasImagenes viven más abajo, versión Firebase)
 
 function poblarSelectoresImg(){
   var prvs={};
