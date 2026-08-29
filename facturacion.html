@@ -1023,6 +1023,8 @@ function elimD(id){
   }).catch(function(e){toast("Error: "+e.message);});
 }
 
+var CONDICIONES_GENERALES_8194 = "<strong>Condiciones generales:</strong> Presupuesto válido por 10 días. En nuestra empresa no existe el derecho de desistimiento de compra. El transporte y montaje no está incluido salvo advertencia contraria. Si su compra no entra por los medios naturales de escalera o ascensor, los servicios de grúa externos no están incluidos en este presupuesto, así como los artículos/muebles viejos que estén en su casa no se retiran salvo que se paguen los correspondientes gastos por recogerlos. Sacar las llaves de luz e instalaciones eléctricas no están incluidas en los presupuestos. La mano de los cheslón siempre se mira de pie y frente a ellas.";
+
 function imprimirD(id){
   var doc=DOCS.find(function(d){return d.id===id;});if(!doc)return;
   var ti=T[doc.tienda];var logo=LG[ti.lk];var esES=doc.tienda==="exposofa";
@@ -1062,6 +1064,9 @@ function imprimirD(id){
   w.document.write("<tr><td>IVA</td><td style='text-align:right'>"+fE(doc.iva||0)+"</td></tr>");
   w.document.write("<tr class='tt'><td>TOTAL</td><td style='text-align:right'>"+fE(doc.total||0)+"</td></tr>");
   w.document.write("</table></div></div>");
+  if(SEC==="presupuestos"){
+    w.document.write("<div style='margin-top:16px;padding-top:12px;border-top:1px solid #ddd;font-size:9px;color:#888;line-height:1.5;text-align:justify'>"+CONDICIONES_GENERALES_8194+"</div>");
+  }
   w.document.write("<div class='fot'>Banco: "+ti.iban+" | "+ti.web+" | "+ti.email+"<br>"+ti.soc+" - CIF: "+ti.cif+" - "+ti.cp+"</div>");
   w.document.write("<scr"+"ipt>window.onload=function(){setTimeout(function(){window.print();},400);};<"+"/scr"+"ipt>");
   w.document.write("</body></html>");
