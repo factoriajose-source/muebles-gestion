@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- v3.7 — 29/08/2026 -->
+<!-- v3.8 — 29/08/2026 -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -308,7 +308,7 @@ tr:last-child td{border-bottom:none}
     </div>
 
   </div>
-  <div style="position:fixed;bottom:10px;left:12px;font-size:11px;color:#888;font-family:monospace;pointer-events:none;font-weight:700">v3.7 — 29/08/2026</div>
+  <div style="position:fixed;bottom:10px;left:12px;font-size:11px;color:#888;font-family:monospace;pointer-events:none;font-weight:700">v3.8 — 29/08/2026</div>
   <!-- BOTÓN FLOTANTE FICHAJE en pantalla de selección -->
   <button onclick="window._abrirFichajeRapido&&window._abrirFichajeRapido()" style="position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:#1a6b2a;color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(26,107,42,.4);z-index:500;display:flex;align-items:center;justify-content:center;touch-action:manipulation" title="Fichar">⏱️</button>
 </div>
@@ -356,7 +356,7 @@ tr:last-child td{border-bottom:none}
     <div class="sb-item" id="mn-erp" style="display:none" onclick="abrirERP()"><span class="ico">🧾</span> ERP</div>
     <div class="sb-item" id="mn-registro-jornada" style="display:none" onclick="abrirRegistroJornada()"><span class="ico">🖊️</span> Fichas Manuales Jornada</div>
     <div class="sb-item" id="mn-backup" style="display:none" onclick="ejecutarBackupFirebase()"><span class="ico">💾</span> Backup Firebase (datos)</div>
-    <div class="sb-item" id="mn-backup-git" style="display:none" onclick="ejecutarBackupGitHub()"><span class="ico">📦</span> Backup GitHub (programas)</div>
+    <div class="sb-item" id="mn-backup-git" style="display:none" onclick="ejecutarBackupGitHub()"><span class="ico">📦</span> Backup GitHub (3 repos)</div>
 
     <div class="sb-logout"><button onclick="logout()">Cerrar sesión</button></div>
   </nav>
@@ -2668,7 +2668,14 @@ const BKP_COLECCIONES = [
   "carteles_articulos_varios"
 ];
 
-const BKP_REPO_ZIP = "https://codeload.github.com/factoriajose-source/muebles-gestion/zip/refs/heads/main";
+const BKP_REPOS = [
+  { nombre: "muebles-gestion",     desc: "el ERP" },
+  { nombre: "catalogos-factoria",  desc: "los catalogos" },
+  { nombre: "los40principales",    desc: "los 40 principales" }
+];
+function bkpUrlZip(repo) {
+  return "https://codeload.github.com/factoriajose-source/" + repo + "/zip/refs/heads/main";
+}
 
 function bkpDescargar(contenido, nombre, tipo) {
   const blob = new Blob([contenido], { type: tipo });
@@ -2717,19 +2724,31 @@ async function ejecutarBackupFirebase() {
 }
 
 // BACKUP GITHUB — descarga el ZIP del repositorio. No usa Firebase: 0 lecturas.
-function ejecutarBackupGitHub() {
+async function ejecutarBackupGitHub() {
   if (currentUser !== "Jose Angel") { showToast("Solo disponible para Jose Angel"); return; }
   cerrarSidebar();
-  const a = document.createElement("a");
-  a.href = BKP_REPO_ZIP;
-  a.target = "_blank";
-  a.rel = "noopener";
-  document.body.appendChild(a); a.click();
-  setTimeout(function() { document.body.removeChild(a); }, 1500);
-  showToast("Descargando copia de los programas...");
+  if (!confirm("Se van a descargar " + BKP_REPOS.length + " archivos ZIP, uno por repositorio:\n\n"
+    + BKP_REPOS.map(function(r){return "   - " + r.nombre;}).join("\n")
+    + "\n\nSi el navegador pregunta si permites descargas multiples, di que SI.\n\nContinuar?")) return;
+
+  for (let i = 0; i < BKP_REPOS.length; i++) {
+    const r = BKP_REPOS[i];
+    showToast("Descargando " + r.nombre + " (" + (i + 1) + "/" + BKP_REPOS.length + ")...");
+    const a = document.createElement("a");
+    a.href = bkpUrlZip(r.nombre);
+    a.target = "_blank";
+    a.rel = "noopener";
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    if (i < BKP_REPOS.length - 1) await new Promise(function(res) { setTimeout(res, 1800); });
+  }
+
+  const lista = BKP_REPOS.map(function(r) { return "   - " + r.nombre + "-main.zip   (" + r.desc + ")"; }).join("\n");
   setTimeout(function() {
-    alert("Se esta descargando muebles-gestion-main.zip con todos los programas.\n\nRenombralo poniendole la fecha, por ejemplo:\n   muebles-gestion-" + bkpFechaHoy() + ".zip\n\nY guardalo en Google Drive o en un pendrive.");
-  }, 800);
+    alert("Descargados " + BKP_REPOS.length + " archivos:\n\n" + lista
+      + "\n\nPonles la fecha en el nombre, por ejemplo:\n   muebles-gestion-" + bkpFechaHoy() + ".zip"
+      + "\n\nY guardalos en OneDrive o en un pendrive.");
+  }, 1500);
 }
 
 window.ejecutarBackupFirebase = ejecutarBackupFirebase;
