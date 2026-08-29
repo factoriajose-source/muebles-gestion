@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- v3.6 — 29/08/2026 -->
+<!-- v3.7 — 29/08/2026 -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -308,7 +308,7 @@ tr:last-child td{border-bottom:none}
     </div>
 
   </div>
-  <div style="position:fixed;bottom:10px;left:12px;font-size:11px;color:#888;font-family:monospace;pointer-events:none;font-weight:700">v3.6 — 29/08/2026</div>
+  <div style="position:fixed;bottom:10px;left:12px;font-size:11px;color:#888;font-family:monospace;pointer-events:none;font-weight:700">v3.7 — 29/08/2026</div>
   <!-- BOTÓN FLOTANTE FICHAJE en pantalla de selección -->
   <button onclick="window._abrirFichajeRapido&&window._abrirFichajeRapido()" style="position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:#1a6b2a;color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(26,107,42,.4);z-index:500;display:flex;align-items:center;justify-content:center;touch-action:manipulation" title="Fichar">⏱️</button>
 </div>
@@ -355,6 +355,8 @@ tr:last-child td{border-bottom:none}
     <div class="sb-item" id="mn-vendedores" style="display:none" onclick="abrirVendedores()"><span class="ico">👤</span> Vendedores</div>
     <div class="sb-item" id="mn-erp" style="display:none" onclick="abrirERP()"><span class="ico">🧾</span> ERP</div>
     <div class="sb-item" id="mn-registro-jornada" style="display:none" onclick="abrirRegistroJornada()"><span class="ico">🖊️</span> Fichas Manuales Jornada</div>
+    <div class="sb-item" id="mn-backup" style="display:none" onclick="ejecutarBackupFirebase()"><span class="ico">💾</span> Backup Firebase (datos)</div>
+    <div class="sb-item" id="mn-backup-git" style="display:none" onclick="ejecutarBackupGitHub()"><span class="ico">📦</span> Backup GitHub (programas)</div>
 
     <div class="sb-logout"><button onclick="logout()">Cerrar sesión</button></div>
   </nav>
@@ -949,6 +951,11 @@ function actualizarSidebar(name){
   // ERP (facturacion.html) SOLO Jose Angel
   var mnERP = document.getElementById("mn-erp");
   if(mnERP) mnERP.style.display = (name==="Jose Angel") ? "" : "none";
+  // Backups SOLO Jose Angel
+  ["mn-backup","mn-backup-git"].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.style.display = (name==="Jose Angel") ? "" : "none";
+  });
 }
 
 function abrirFallos(){
@@ -2636,6 +2643,97 @@ function pedGenerarPDF(p, grupos, ref, fechaEnt, obs) {
 
 window.abrirDialogoPedir = abrirDialogoPedir;
 window.pedCerrarDialogo = pedCerrarDialogo;
+
+// ===== COPIAS DE SEGURIDAD =====
+// BKP_COLECCIONES: lista de colecciones que se descargan en el backup de datos.
+// Si algun dia se crea una coleccion nueva, hay que añadirla AQUI.
+const BKP_COLECCIONES = [
+  "vendedores",
+  "fichajes",
+  "presupuestos",
+  "vacaciones_bajas",
+  "proveedores",
+  "tarifas_modelos",
+  "imagenes_modelos",
+  "fiestas_anuales",
+  "fallos",
+  "repartos",
+  "incidencias",
+  "visitas",
+  "mensajes",
+  "alertas_geo",
+  "carteles_colchones_bd",
+  "carteles_colchones_simple",
+  "carteles_generales",
+  "carteles_articulos_varios"
+];
+
+const BKP_REPO_ZIP = "https://codeload.github.com/factoriajose-source/muebles-gestion/zip/refs/heads/main";
+
+function bkpDescargar(contenido, nombre, tipo) {
+  const blob = new Blob([contenido], { type: tipo });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = nombre;
+  document.body.appendChild(a); a.click();
+  setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+}
+
+function bkpFechaHoy() {
+  const d = new Date();
+  const p = function(n) { return (n < 10 ? "0" : "") + n; };
+  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+}
+
+// BACKUP FIREBASE — lee TODAS las colecciones. Consume muchas lecturas,
+// por eso pide confirmacion y solo se ejecuta cuando Jose Angel lo pulsa.
+async function ejecutarBackupFirebase() {
+  if (currentUser !== "Jose Angel") { showToast("Solo disponible para Jose Angel"); return; }
+  if (!confirm("Copia de seguridad de TODOS los datos de Firebase.\n\nEsto lee la base de datos entera y gasta lecturas.\nHazlo una vez al mes, no a diario.\n\nContinuar?")) return;
+
+  cerrarSidebar();
+  const backup = { fecha: new Date().toISOString(), generado_por: currentUser, colecciones: {} };
+  let totalDocs = 0, errores = [];
+
+  for (let i = 0; i < BKP_COLECCIONES.length; i++) {
+    const nom = BKP_COLECCIONES[i];
+    showToast("Copiando " + nom + " (" + (i + 1) + "/" + BKP_COLECCIONES.length + ")...");
+    try {
+      const sn = await getDocs(collection(db, nom));
+      const arr = [];
+      sn.forEach(function(d) { arr.push(Object.assign({ _id: d.id }, d.data())); });
+      backup.colecciones[nom] = arr;
+      totalDocs += arr.length;
+    } catch (e) {
+      backup.colecciones[nom] = [];
+      errores.push(nom);
+    }
+  }
+
+  backup.resumen = { total_documentos: totalDocs, colecciones_con_error: errores };
+  bkpDescargar(JSON.stringify(backup, null, 2), "meres-backup-" + bkpFechaHoy() + ".json", "application/json");
+  showToast("Backup listo: " + totalDocs + " registros" + (errores.length ? " (" + errores.length + " col. con error)" : ""));
+  alert("Copia de datos descargada.\n\n" + totalDocs + " registros de " + (BKP_COLECCIONES.length - errores.length) + " colecciones.\n\nIMPORTANTE: guarda este archivo en Google Drive o en un pendrive.\nSi se queda en Descargas NO es una copia de seguridad.");
+}
+
+// BACKUP GITHUB — descarga el ZIP del repositorio. No usa Firebase: 0 lecturas.
+function ejecutarBackupGitHub() {
+  if (currentUser !== "Jose Angel") { showToast("Solo disponible para Jose Angel"); return; }
+  cerrarSidebar();
+  const a = document.createElement("a");
+  a.href = BKP_REPO_ZIP;
+  a.target = "_blank";
+  a.rel = "noopener";
+  document.body.appendChild(a); a.click();
+  setTimeout(function() { document.body.removeChild(a); }, 1500);
+  showToast("Descargando copia de los programas...");
+  setTimeout(function() {
+    alert("Se esta descargando muebles-gestion-main.zip con todos los programas.\n\nRenombralo poniendole la fecha, por ejemplo:\n   muebles-gestion-" + bkpFechaHoy() + ".zip\n\nY guardalo en Google Drive o en un pendrive.");
+  }, 800);
+}
+
+window.ejecutarBackupFirebase = ejecutarBackupFirebase;
+window.ejecutarBackupGitHub = ejecutarBackupGitHub;
 
 // ===== WHATSAPP =====
 function whatsappPresupuesto() {
