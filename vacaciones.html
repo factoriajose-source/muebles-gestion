@@ -1,5 +1,9 @@
 <!DOCTYPE html>
-<!-- vacaciones.html — v2.1 — 24/07/2026
+<!-- vacaciones.html — v2.2 — 07/10/2026
+     NUEVO v2.2: botón "🚦 Semáforo vendedores" → abre vacaciones-consulta.html
+     (calendario anual de solo consulta para todos los vendedores).
+     Al guardar/editar/borrar, se borra también la caché de esa página.
+     ---- v2.1 — 24/07/2026
      CAMBIO: las fiestas ya NO están grabadas en el código.
      Los calendarios (individual y general) y los chips de festivos
      leen SIEMPRE de Firebase (colección fiestas_anuales), lo mismo
@@ -160,6 +164,7 @@ header { background: #1a1714; color: white; padding: 0 24px; height: 54px; displ
     <button class="btn btn-green no-print" style="margin-bottom:1px" onclick="abrirModal()">+ Añadir vacaciones / baja</button>
     <button class="btn no-print" style="margin-bottom:1px;background:#6b4fc8;color:white" onclick="abrirCalendarioGeneral()">📆 Ver todos juntos</button>
     <button class="btn no-print" style="margin-bottom:1px;background:#c4571a;color:white" onclick="abrirGestionFiestas()">📅 Gestionar Fiestas</button>
+    <button class="btn no-print" style="margin-bottom:1px;background:#c0392b;color:white" onclick="abrirSemaforo()">🚦 Semáforo vendedores</button>
   </div>
 
   <div class="app">
@@ -443,7 +448,20 @@ var VAC_CACHE = {
 };
 function vacCacheSet(col,data){ try{ var c=VAC_CACHE[col]; if(!c) return; localStorage.setItem(c.key,JSON.stringify({ts:Date.now(),data})); }catch(e){} }
 function vacCacheGet(col){ try{ var c=VAC_CACHE[col]; if(!c) return null; var r=localStorage.getItem(c.key); if(!r) return null; var o=JSON.parse(r); if(Date.now()-o.ts>c.ttl){localStorage.removeItem(c.key);return null;} return o.data; }catch(e){return null;} }
-function vacCacheClear(col){ try{ var c=VAC_CACHE[col]; if(c) localStorage.removeItem(c.key); }catch(e){} }
+function vacCacheClear(col){
+  try{
+    var c=VAC_CACHE[col]; if(c) localStorage.removeItem(c.key);
+    // Si cambian las vacaciones, borrar también la caché de la página de consulta (vacaciones-consulta.html)
+    if(col==="vacaciones_bajas"){
+      Object.keys(localStorage).forEach(function(k){ if(k.indexOf("cvac_regs_")===0) localStorage.removeItem(k); });
+    }
+  }catch(e){}
+}
+// Abre la página de consulta (semáforo) del año seleccionado — 0 lecturas extra si ya está en caché
+function abrirSemaforo(){
+  var y=parseInt(document.getElementById("selYear").value)||new Date().getFullYear();
+  window.open("vacaciones-consulta.html?anio="+y,"_blank","noopener");
+}
 
 function fsGetCached(col){
   var cached = vacCacheGet(col);

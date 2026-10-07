@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<!-- vacaciones-consulta.html — v1.0 — 07/10/2026
+     Página de SOLO CONSULTA para todos los vendedores.
+     Semáforo anual: ROJO = vacaciones de algún vendedor
+                     VERDE = vacaciones de Angel / Marisa / Kike / Javi
+     No se puede modificar nada desde aquí.
+     AHORRO FIREBASE:
+       - Login anónimo (sin contraseña), igual que index.html
+       - Vacaciones: SOLO las del año consultado (where año) + caché 1h
+       - Vendedores: caché 24h (solo alias/tipo/activo)
+       - Fiestas: comparte caché con vacaciones.html (vac_fiestas_AAAA, 30 días)
+       - Las bajas laborales NO se leen ni se muestran -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🚦 Consulta Vacaciones · Meres</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:system-ui,sans-serif; background:#f4f1ec; color:#1a1714; font-size:14px; }
+header { background:#1a1714; color:white; padding:0 16px; height:54px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; gap:10px; }
+.brand { font-weight:800; font-size:15px; letter-spacing:.04em; white-space:nowrap; }
+.brand span { color:#e8793e; }
+.anio-box { display:flex; align-items:center; gap:6px; }
+.anio-box button { background:#333; color:white; border:none; border-radius:6px; width:32px; height:32px; font-size:16px; cursor:pointer; }
+.anio-box b { font-size:17px; min-width:48px; text-align:center; }
+.app { max-width:1100px; margin:0 auto; padding:16px; }
+.card { background:white; border-radius:12px; padding:18px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,.07); }
+.card-title { font-size:15px; font-weight:700; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+.aviso { background:#fff7e0; border:1px solid #f0d890; border-radius:8px; padding:8px 12px; font-size:12px; color:#7a5a00; margin-bottom:14px; }
+.leyenda { display:flex; gap:16px; flex-wrap:wrap; font-size:13px; align-items:center; }
+.ley-item { display:flex; align-items:center; gap:6px; }
+.ley-dot { width:18px; height:18px; border-radius:4px; flex-shrink:0; }
+.cal-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
+@media(max-width:820px){ .cal-grid{ grid-template-columns:repeat(3,1fr); } }
+@media(max-width:620px){ .cal-grid{ grid-template-columns:repeat(2,1fr); gap:12px; } .app{padding:10px;} .card{padding:12px;} .brand{font-size:13px;} }
+.mes-nombre { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#888; margin-bottom:5px; text-align:center; }
+.dias-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+.dia-cab { font-size:9px; font-weight:700; text-align:center; color:#bbb; padding:2px 0; }
+.dia { font-size:11px; text-align:center; padding:3px 1px; border-radius:4px; line-height:1.5; cursor:pointer; user-select:none; }
+.dia.vacio { visibility:hidden; cursor:default; }
+.dia.normal { color:#1a1714; }
+.dia.finde  { color:#ccc; }
+.dia.festivo{ background:#f0f0f0; color:#999; font-weight:600; }
+.dia.rojo   { background:#c0392b; color:white; font-weight:700; }
+.dia.verde  { background:#2d7a4f; color:white; font-weight:700; }
+.dia.mixto  { background:linear-gradient(135deg,#c0392b 50%,#2d7a4f 50%); color:white; font-weight:700; }
+.dia.hoy    { box-shadow:0 0 0 2px #c4571a; }
+.dia.sel    { outline:2px solid #1a1714; outline-offset:1px; }
+#detalle { font-size:14px; line-height:1.7; min-height:24px; color:#555; }
+.chip { display:inline-flex; align-items:center; gap:5px; border-radius:20px; padding:3px 10px; font-size:13px; font-weight:700; margin:3px 4px 3px 0; color:white; }
+.chip.r { background:#c0392b; } .chip.v { background:#2d7a4f; }
+.per { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; border:1px solid #eee; margin-bottom:6px; font-size:13px; }
+.per .dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+.per .q { font-weight:700; min-width:90px; }
+.per .f { color:#666; }
+.btn-ref { background:#f0ece6; color:#555; border:none; border-radius:8px; padding:7px 12px; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+.estado { font-size:11px; color:#999; }
+#cargando { text-align:center; padding:40px; color:#888; }
+</style>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="brand">🚦 MERES · <span>Vacaciones</span></div>
+  <div class="anio-box">
+    <button id="bAnt" title="Año anterior">◀</button>
+    <b id="tAnio">2026</b>
+    <button id="bSig" title="Año siguiente">▶</button>
+  </div>
+</header>
+
+<div class="app">
+  <div class="aviso">👀 Página solo de consulta. Para pedir vacaciones habla con Javi o Marisa.</div>
+
+  <div class="card">
+    <div class="leyenda">
+      <div class="ley-item"><div class="ley-dot" style="background:#c0392b"></div><b>Rojo</b>&nbsp;= ya hay un vendedor de vacaciones</div>
+      <div class="ley-item"><div class="ley-dot" style="background:#2d7a4f"></div><b>Verde</b>&nbsp;= vacaciones de Angel, Marisa, Kike o Javi</div>
+      <div class="ley-item"><div class="ley-dot" style="background:linear-gradient(135deg,#c0392b 50%,#2d7a4f 50%)"></div>Las dos cosas</div>
+      <div class="ley-item"><div class="ley-dot" style="background:#f0f0f0;border:1px solid #ddd"></div>Festivo</div>
+      <div class="ley-item"><div class="ley-dot" style="background:white;border:1px solid #ddd"></div>Libre</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span id="calTit">Calendario</span>
+      <span style="display:flex;align-items:center;gap:10px">
+        <span class="estado" id="estado"></span>
+        <button class="btn-ref" id="bRef" title="Volver a leer los datos de Firebase">🔄 Actualizar</button>
+      </span>
+    </div>
+    <div id="cargando">Cargando calendario…</div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📌 Día seleccionado</div>
+    <div id="detalle">Toca un día del calendario para ver quién está de vacaciones.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" id="perTit">🗓️ Vacaciones del año</div>
+    <div id="perList"></div>
+  </div>
+</div>
+
+<script>
+// ═════════════════════════════════════════════════════════════════════════
+// CONFIGURACIÓN
+// ═════════════════════════════════════════════════════════════════════════
+// Estos 4 salen en VERDE (no cuentan como vendedores para el semáforo)
+var ADMINISTRATIVOS = ["angel","marisa","kike","javi"];
+// Jose Angel no aparece nunca
+var EXCLUIDOS = ["jose angel"];
+
+var TTL_VEND  = 24*60*60*1000;     // vendedores: 24 h
+var TTL_REGS  =  1*60*60*1000;     // vacaciones del año: 1 h
+var TTL_FIEST = 30*24*60*60*1000;  // fiestas: 30 días (misma caché que vacaciones.html)
+
+firebase.initializeApp({
+  apiKey:"AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
+  authDomain:"muebles-presupuestos.firebaseapp.com",
+  projectId:"muebles-presupuestos",
+  storageBucket:"muebles-presupuestos.firebasestorage.app",
+  messagingSenderId:"37365883872",
+  appId:"1:37365883872:web:842ca4d318c01652684185"
+});
+var db = firebase.firestore();
+var auth = firebase.auth();
+
+var anioActual = new Date().getFullYear();
+var personas = {};      // alias → "rojo" | "verde"   (solo los que cuentan)
+var diasMap = {};       // "AAAA-MM-DD" → {rojo:[alias], verde:[alias]}
+var fiestas = {};       // "AAAA-MM-DD" → nombre
+var periodos = [];      // lista para el listado de abajo
+var celdaSel = null;
+var autenticado = null; // promesa del login anónimo (solo se hace si hace falta leer)
+
+// ═════════════════════════════════════════════════════════════════════════
+// UTILIDADES
+// ═════════════════════════════════════════════════════════════════════════
+function p2(n){ return ("0"+n).slice(-2); }
+function fStr(d){ return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()); }
+function fCorta(s){ var p=s.split("-"); return p[2]+"/"+p[1]; }
+function diasRango(ini,fin){
+  var out=[]; if(!ini||!fin) return out;
+  var cur=new Date(ini+"T12:00:00"), d2=new Date(fin+"T12:00:00");
+  while(cur<=d2){ out.push(fStr(cur)); cur.setDate(cur.getDate()+1); }
+  return out;
+}
+function cacheGet(key,ttl){
+  try{
+    var r=localStorage.getItem(key); if(!r) return null;
+    var o=JSON.parse(r);
+    if(Date.now()-o.ts>ttl) return null;
+    return o;
+  }catch(e){ return null; }
+}
+function cacheSet(key,data){
+  try{ localStorage.setItem(key,JSON.stringify({ts:Date.now(),data:data})); }catch(e){}
+}
+function hace(ts){
+  var min=Math.round((Date.now()-ts)/60000);
+  if(min<1) return "ahora mismo";
+  if(min<60) return "hace "+min+" min";
+  return "hace "+Math.round(min/60)+" h";
+}
+// El login anónimo solo se hace cuando de verdad hay que leer de Firebase
+function asegurarLogin(){
+  if(!autenticado){
+    autenticado = auth.signInAnonymously().catch(function(e){ console.warn("Auth anónimo:",e.code); });
+  }
+  return autenticado;
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// CARGA DE DATOS (caché primero, Firebase solo si hace falta)
+// ═════════════════════════════════════════════════════════════════════════
+function cargarVendedores(forzar){
+  var c = forzar ? null : cacheGet("cvac_vendedores",TTL_VEND);
+  if(c) return Promise.resolve(c.data);
+  return asegurarLogin().then(function(){
+    return db.collection("vendedores").get();
+  }).then(function(sn){
+    var lista=[];
+    // Guardamos solo lo imprescindible (sin fotos ni DNI)
+    sn.forEach(function(d){
+      var v=d.data();
+      lista.push({alias:v.alias||d.id, tipo:v.tipo||"Vendedor", activo:v.activo!==false});
+    });
+    cacheSet("cvac_vendedores",lista);
+    return lista;
+  });
+}
+
+function cargarVacaciones(anio,forzar){
+  var key="cvac_regs_"+anio;
+  var c = forzar ? null : cacheGet(key,TTL_REGS);
+  if(c) return Promise.resolve(c);
+  return asegurarLogin().then(function(){
+    // Solo los registros de ESE año (el año se guarda como número; por si acaso también como texto)
+    return db.collection("vacaciones_bajas").where("año","in",[anio,String(anio)]).get();
+  }).then(function(sn){
+    var lista=[];
+    sn.forEach(function(d){
+      var r=d.data();
+      if(r.tipo!=="vacacion") return;      // las bajas no se muestran
+      lista.push({alias:r.alias, ini:r.fechaIni, fin:r.fechaFin});
+    });
+    cacheSet(key,lista);
+    return {ts:Date.now(), data:lista};
+  });
+}
+
+function cargarFiestas(anio,forzar){
+  var key="vac_fiestas_"+anio;   // misma clave que vacaciones.html → caché compartida
+  var c = forzar ? null : cacheGet(key,TTL_FIEST);
+  if(c) return Promise.resolve(c.data);
+  return asegurarLogin().then(function(){
+    return db.collection("fiestas_anuales").where("anio","==",anio).get();
+  }).then(function(sn){
+    var lista=[];
+    sn.forEach(function(d){ lista.push(Object.assign({_id:d.id},d.data())); });
+    lista.sort(function(a,b){ return (a.fecha||"").localeCompare(b.fecha||""); });
+    cacheSet(key,lista);
+    return lista;
+  }).catch(function(e){ console.warn("Fiestas:",e); return []; });
+}
+
+function cargarTodo(forzar){
+  document.getElementById("tAnio").textContent=anioActual;
+  document.getElementById("cargando").style.display="block";
+  document.getElementById("cargando").textContent="Cargando calendario…";
+  document.getElementById("calGrid").innerHTML="";
+  var anio=anioActual;
+  var vends, vac;
+  cargarVendedores(false)
+    .then(function(v){ vends=v; return cargarVacaciones(anio,forzar); })
+    .then(function(r){ vac=r; return cargarFiestas(anio,false); })
+    .then(function(f){
+      if(anio!==anioActual) return; // el usuario cambió de año mientras cargaba
+      prepararDatos(vends,vac.data,f);
+      document.getElementById("estado").textContent="Datos "+hace(vac.ts);
+      document.getElementById("cargando").style.display="none";
+      pintarCalendario();
+      pintarPeriodos();
+    })
+    .catch(function(e){
+      console.error(e);
+      document.getElementById("cargando").textContent="⚠️ No se pudieron cargar los datos. Revisa la conexión y pulsa 🔄 Actualizar.";
+    });
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// PREPARAR: quién es rojo, quién es verde, y qué días está cada uno
+// ═════════════════════════════════════════════════════════════════════════
+function prepararDatos(vends,regs,listaFiestas){
+  personas={}; diasMap={}; fiestas={}; periodos=[];
+  vends.forEach(function(v){
+    if(!v.activo) return;
+    var a=(v.alias||"").toLowerCase().trim();
+    if(EXCLUIDOS.indexOf(a)>=0) return;
+    if(ADMINISTRATIVOS.indexOf(a)>=0) personas[v.alias]="verde";
+    else if(v.tipo==="Vendedor") personas[v.alias]="rojo";
+    // Repartidores / almacén / limpieza no cuentan para este calendario
+  });
+  regs.forEach(function(r){
+    var color=personas[r.alias];
+    if(!color) return;
+    periodos.push({alias:r.alias, ini:r.ini, fin:r.fin, color:color});
+    diasRango(r.ini,r.fin).forEach(function(d){
+      if(!diasMap[d]) diasMap[d]={rojo:[],verde:[]};
+      if(diasMap[d][color].indexOf(r.alias)<0) diasMap[d][color].push(r.alias);
+    });
+  });
+  (listaFiestas||[]).forEach(function(f){ if(f&&f.fecha) fiestas[f.fecha]=f.nombre||"Festivo"; });
+  periodos.sort(function(a,b){ return (a.ini||"").localeCompare(b.ini||""); });
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// PINTAR CALENDARIO ANUAL
+// ═════════════════════════════════════════════════════════════════════════
+var MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+var DIAS_SEM=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+
+function pintarCalendario(){
+  var year=anioActual;
+  var grid=document.getElementById("calGrid");
+  var hoy=fStr(new Date());
+  grid.innerHTML="";
+  celdaSel=null;
+  document.getElementById("calTit").textContent="Calendario "+year;
+  for(var m=0;m<12;m++){
+    var caja=document.createElement("div");
+    var tit=document.createElement("div");
+    tit.className="mes-nombre"; tit.textContent=MESES[m];
+    caja.appendChild(tit);
+    var dg=document.createElement("div");
+    dg.className="dias-grid";
+    ["L","M","X","J","V","S","D"].forEach(function(c){
+      var h=document.createElement("div"); h.className="dia-cab"; h.textContent=c; dg.appendChild(h);
+    });
+    var dow1=new Date(year,m,1).getDay();
+    var offset=dow1===0?6:dow1-1;
+    for(var o=0;o<offset;o++){ var v=document.createElement("div"); v.className="dia vacio"; dg.appendChild(v); }
+    var ultimo=new Date(year,m+1,0).getDate();
+    for(var dia=1;dia<=ultimo;dia++){
+      var fs=year+"-"+p2(m+1)+"-"+p2(dia);
+      var dow=new Date(year,m,dia).getDay();
+      var info=diasMap[fs];
+      var r=info&&info.rojo.length, g=info&&info.verde.length;
+      var cls="dia";
+      if(r&&g)            cls+=" mixto";
+      else if(r)          cls+=" rojo";
+      else if(g)          cls+=" verde";
+      else if(fiestas[fs])cls+=" festivo";
+      else if(dow===0)    cls+=" finde";
+      else                cls+=" normal";
+      if(fs===hoy) cls+=" hoy";
+      var cel=document.createElement("div");
+      cel.className=cls;
+      cel.textContent=dia;
+      cel.setAttribute("data-f",fs);
+      var tt=[];
+      if(info){ tt=tt.concat(info.rojo,info.verde); }
+      if(fiestas[fs]) tt.push(fiestas[fs]);
+      if(tt.length) cel.title=tt.join(", ");
+      cel.addEventListener("click",clickDia);
+      dg.appendChild(cel);
+    }
+    caja.appendChild(dg);
+    grid.appendChild(caja);
+  }
+}
+
+function clickDia(ev){
+  var cel=ev.currentTarget;
+  if(celdaSel) celdaSel.classList.remove("sel");
+  cel.classList.add("sel"); celdaSel=cel;
+  var fs=cel.getAttribute("data-f");
+  var d=new Date(fs+"T12:00:00");
+  var cont=document.getElementById("detalle");
+  cont.innerHTML="";
+  var cab=document.createElement("div");
+  cab.style.fontWeight="700"; cab.style.color="#1a1714"; cab.style.marginBottom="4px";
+  cab.textContent=DIAS_SEM[d.getDay()].charAt(0).toUpperCase()+DIAS_SEM[d.getDay()].slice(1)+" "+d.getDate()+" de "+MESES[d.getMonth()].toLowerCase()+" de "+d.getFullYear();
+  cont.appendChild(cab);
+  if(fiestas[fs]){
+    var f=document.createElement("div"); f.textContent="🎉 Festivo: "+fiestas[fs]; cont.appendChild(f);
+  }
+  var info=diasMap[fs];
+  if(!info||(!info.rojo.length&&!info.verde.length)){
+    var l=document.createElement("div"); l.textContent="✅ Nadie de vacaciones este día."; l.style.color="#2d7a4f"; l.style.fontWeight="700";
+    cont.appendChild(l); return;
+  }
+  var linea=document.createElement("div");
+  info.rojo.forEach(function(a){ var c=document.createElement("span"); c.className="chip r"; c.textContent="🔴 "+a; linea.appendChild(c); });
+  info.verde.forEach(function(a){ var c=document.createElement("span"); c.className="chip v"; c.textContent="🟢 "+a; linea.appendChild(c); });
+  cont.appendChild(linea);
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// LISTADO DE PERIODOS DEL AÑO
+// ═════════════════════════════════════════════════════════════════════════
+function pintarPeriodos(){
+  var cont=document.getElementById("perList");
+  document.getElementById("perTit").textContent="🗓️ Vacaciones "+anioActual;
+  cont.innerHTML="";
+  if(!periodos.length){
+    var n=document.createElement("div");
+    n.style.cssText="color:#888;text-align:center;padding:16px";
+    n.textContent="No hay vacaciones registradas en "+anioActual+".";
+    cont.appendChild(n); return;
+  }
+  var hoy=fStr(new Date());
+  periodos.forEach(function(p){
+    var fila=document.createElement("div");
+    fila.className="per";
+    if(p.fin<hoy) fila.style.opacity=".45";   // ya pasadas, en gris
+    var dot=document.createElement("div"); dot.className="dot"; dot.style.background=p.color==="rojo"?"#c0392b":"#2d7a4f";
+    var q=document.createElement("div"); q.className="q"; q.textContent=p.alias;
+    var f=document.createElement("div"); f.className="f";
+    var n=diasRango(p.ini,p.fin).length;
+    f.textContent=(p.ini===p.fin?fCorta(p.ini):"del "+fCorta(p.ini)+" al "+fCorta(p.fin))+" · "+n+(n===1?" día":" días");
+    fila.appendChild(dot); fila.appendChild(q); fila.appendChild(f);
+    cont.appendChild(fila);
+  });
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// BOTONES
+// ═════════════════════════════════════════════════════════════════════════
+document.getElementById("bAnt").addEventListener("click",function(){ anioActual--; cargarTodo(false); });
+document.getElementById("bSig").addEventListener("click",function(){ anioActual++; cargarTodo(false); });
+document.getElementById("bRef").addEventListener("click",function(){ cargarTodo(true); });
+
+// Si viene ?anio=2027 en la dirección, abre ese año
+(function(){
+  var m=location.search.match(/[?&]anio=(\d{4})/);
+  if(m) anioActual=parseInt(m[1]);
+  cargarTodo(false);
+})();
+</script>
+</body>
+</html>
