@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- v3.8 — 29/08/2026 -->
+<!-- v3.9 — 07/10/2026 — NUEVO: botón "🚦 Calendario vacaciones" en PERSONAL (todos) → vacaciones-consulta.html -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -308,7 +308,7 @@ tr:last-child td{border-bottom:none}
     </div>
 
   </div>
-  <div style="position:fixed;bottom:10px;left:12px;font-size:11px;color:#888;font-family:monospace;pointer-events:none;font-weight:700">v3.8 — 29/08/2026</div>
+  <div style="position:fixed;bottom:10px;left:12px;font-size:11px;color:#888;font-family:monospace;pointer-events:none;font-weight:700">v3.9 — 07/10/2026</div>
   <!-- BOTÓN FLOTANTE FICHAJE en pantalla de selección -->
   <button onclick="window._abrirFichajeRapido&&window._abrirFichajeRapido()" style="position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:#1a6b2a;color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(26,107,42,.4);z-index:500;display:flex;align-items:center;justify-content:center;touch-action:manipulation" title="Fichar">⏱️</button>
 </div>
@@ -340,6 +340,7 @@ tr:last-child td{border-bottom:none}
     <div class="sb-section">Personal</div>
     <div class="sb-item" id="mn-fichajes" onclick="navegar('fichajes','Fichajes')"><span class="ico">⏱️</span> Fichajes</div>
     <div class="sb-item" id="mn-vacaciones" onclick="abrirVacaciones()"><span class="ico">🏖️</span> Vacaciones &amp; Bajas</div>
+    <div class="sb-item" id="mn-vac-consulta" onclick="abrirVacConsulta()"><span class="ico">🚦</span> Calendario vacaciones</div>
 
     <div class="sb-divider"></div>
     <div class="sb-section">Gestión</div>
@@ -906,6 +907,15 @@ function abrirVacaciones(){
   cerrarSidebar();
 }
 window.abrirVacaciones = abrirVacaciones;
+
+// Calendario de vacaciones (solo consulta) — visible para TODOS
+function abrirVacConsulta(){
+  var a=document.createElement("a");
+  a.href="vacaciones-consulta.html"; a.target="_blank"; a.rel="noopener";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  cerrarSidebar();
+}
+window.abrirVacConsulta = abrirVacConsulta;
 
 function abrirEditor(){
   var a=document.createElement("a");
