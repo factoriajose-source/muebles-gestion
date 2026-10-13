@@ -1,12 +1,25 @@
 <!DOCTYPE html>
-<!-- vacaciones-consulta.html — v1.1 — 07/10/2026 (cambiado texto del aviso)
+<!-- vacaciones-consulta.html — v1.2 — 13/10/2026
+     NUEVO v1.2: DÍAS DE FERIA
+       - Candado 🔒 (solo factoria.jose@gmail.com) → panel para apuntar
+         días TRABAJADOS en feria y días DEVUELTOS (que el vendedor libra).
+       - Saldo por vendedor (trabajados − devueltos) SOLO en el panel.
+       - En el calendario público solo salen los días DEVUELTOS, en MORADO.
+       - Se guardan en una colección aparte: dias_feria
+         (no toca vacaciones_bajas → no afecta al contador de 30 días,
+          ni a las bajas, ni a las hojas de fichaje).
+       - El login del candado va en una "conexión aparte" que se borra al
+         cerrar la pestaña: no se guarda la contraseña y no interfiere
+         con la sesión de menu.html.
+     CORREGIDO v1.2: si el navegador ya tenía sesión abierta (menu.html),
+       ya no la sustituye por el acceso anónimo.
+     ---- v1.1 — 07/10/2026 (cambiado texto del aviso)
      Página de SOLO CONSULTA para todos los vendedores.
      Semáforo anual: ROJO = vacaciones de algún vendedor
                      VERDE = vacaciones de Angel / Marisa / Kike / Javi
-     No se puede modificar nada desde aquí.
      AHORRO FIREBASE:
-       - Login anónimo (sin contraseña), igual que index.html
        - Vacaciones: SOLO las del año consultado (where año) + caché 1h
+       - Días de feria: SOLO los del año consultado + caché 1h
        - Vendedores: caché 24h (solo alias/tipo/activo)
        - Fiestas: comparte caché con vacaciones.html (vac_fiestas_AAAA, 30 días)
        - Las bajas laborales NO se leen ni se muestran -->
@@ -21,9 +34,12 @@ body { font-family:system-ui,sans-serif; background:#f4f1ec; color:#1a1714; font
 header { background:#1a1714; color:white; padding:0 16px; height:54px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; gap:10px; }
 .brand { font-weight:800; font-size:15px; letter-spacing:.04em; white-space:nowrap; }
 .brand span { color:#e8793e; }
+.hdr-der { display:flex; align-items:center; gap:10px; }
 .anio-box { display:flex; align-items:center; gap:6px; }
 .anio-box button { background:#333; color:white; border:none; border-radius:6px; width:32px; height:32px; font-size:16px; cursor:pointer; }
 .anio-box b { font-size:17px; min-width:48px; text-align:center; }
+.btn-lock { background:transparent; border:1px solid #444; color:#888; border-radius:6px; height:32px; padding:0 9px; font-size:14px; cursor:pointer; }
+.btn-lock.on { background:#7b3fa0; border-color:#7b3fa0; color:white; font-size:12px; font-weight:700; }
 .app { max-width:1100px; margin:0 auto; padding:16px; }
 .card { background:white; border-radius:12px; padding:18px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,.07); }
 .card-title { font-size:15px; font-weight:700; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
@@ -42,21 +58,58 @@ header { background:#1a1714; color:white; padding:0 16px; height:54px; display:f
 .dia.normal { color:#1a1714; }
 .dia.finde  { color:#ccc; }
 .dia.festivo{ background:#f0f0f0; color:#999; font-weight:600; }
-.dia.rojo   { background:#c0392b; color:white; font-weight:700; }
-.dia.verde  { background:#2d7a4f; color:white; font-weight:700; }
-.dia.mixto  { background:linear-gradient(135deg,#c0392b 50%,#2d7a4f 50%); color:white; font-weight:700; }
+.dia.ocupado{ color:white; font-weight:700; }
 .dia.hoy    { box-shadow:0 0 0 2px #c4571a; }
 .dia.sel    { outline:2px solid #1a1714; outline-offset:1px; }
 #detalle { font-size:14px; line-height:1.7; min-height:24px; color:#555; }
 .chip { display:inline-flex; align-items:center; gap:5px; border-radius:20px; padding:3px 10px; font-size:13px; font-weight:700; margin:3px 4px 3px 0; color:white; }
-.chip.r { background:#c0392b; } .chip.v { background:#2d7a4f; }
+.chip.r { background:#c0392b; } .chip.v { background:#2d7a4f; } .chip.m { background:#7b3fa0; }
 .per { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; border:1px solid #eee; margin-bottom:6px; font-size:13px; }
 .per .dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
 .per .q { font-weight:700; min-width:90px; }
-.per .f { color:#666; }
+.per .f { color:#666; flex:1; }
 .btn-ref { background:#f0ece6; color:#555; border:none; border-radius:8px; padding:7px 12px; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; }
 .estado { font-size:11px; color:#999; }
 #cargando { text-align:center; padding:40px; color:#888; }
+/* PANEL FERIA (solo José Ángel) */
+.panel-feria { border:2px solid #7b3fa0; }
+.panel-feria .card-title { color:#7b3fa0; }
+.pf-grid { display:grid; grid-template-columns:1.3fr 1fr 1fr 1.6fr; gap:10px; align-items:end; }
+@media(max-width:720px){ .pf-grid{ grid-template-columns:1fr 1fr; } }
+.pf-lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#888; display:block; margin-bottom:4px; }
+.pf-in { padding:9px 10px; border:1.5px solid #ddd; border-radius:7px; font-family:inherit; font-size:14px; width:100%; background:white; }
+.pf-in:focus { outline:none; border-color:#7b3fa0; }
+.pf-tipos { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+.pf-tipo { flex:1; min-width:150px; padding:10px; border:2px solid #ddd; border-radius:8px; background:white; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; color:#555; }
+.pf-tipo.sel-t { border-color:#c4571a; background:#fff0e8; color:#c4571a; }
+.pf-tipo.sel-d { border-color:#7b3fa0; background:#f4ecf8; color:#7b3fa0; }
+.pf-btn { padding:10px 18px; border:none; border-radius:8px; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; background:#7b3fa0; color:white; }
+.pf-btn:disabled { opacity:.5; cursor:not-allowed; }
+.pf-btn.gris { background:#f0ece6; color:#555; }
+.pf-err { display:none; background:#fdecea; color:#c0392b; border-radius:8px; padding:8px 12px; font-size:13px; margin-top:10px; }
+.pf-ok  { display:none; background:#e8f5ee; color:#2d7a4f; border-radius:8px; padding:8px 12px; font-size:13px; margin-top:10px; }
+.pf-sub { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:#888; margin:18px 0 8px; }
+.saldo-tab { width:100%; border-collapse:collapse; font-size:13px; }
+.saldo-tab th { text-align:left; font-size:11px; text-transform:uppercase; color:#888; padding:6px 8px; border-bottom:2px solid #eee; }
+.saldo-tab td { padding:7px 8px; border-bottom:1px solid #f0f0f0; }
+.saldo-tab td.n { text-align:center; font-weight:700; }
+.saldo-tab th.n { text-align:center; }
+.pend-pos { background:#f4ecf8; color:#7b3fa0; border-radius:12px; padding:2px 10px; }
+.pend-neg { background:#fdecea; color:#c0392b; border-radius:12px; padding:2px 10px; }
+.pend-cero{ color:#aaa; }
+.reg-f { display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:8px; border:1px solid #eee; margin-bottom:5px; font-size:13px; }
+.reg-f.t { border-left:4px solid #c4571a; }
+.reg-f.d { border-left:4px solid #7b3fa0; }
+.reg-f .q { font-weight:700; min-width:80px; }
+.reg-f .f { color:#666; flex:1; }
+.btn-del { background:none; border:1px solid #eee; border-radius:6px; padding:3px 8px; cursor:pointer; font-size:13px; }
+.btn-del:hover { background:#fdecea; border-color:#c0392b; }
+/* LOGIN CANDADO */
+.ov { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:300; display:none; align-items:center; justify-content:center; padding:16px; }
+.ov.open { display:flex; }
+.ov-box { background:white; border-radius:14px; padding:24px; width:100%; max-width:360px; }
+.ov-box h3 { font-size:17px; font-weight:800; margin-bottom:6px; }
+.ov-box p { font-size:12px; color:#888; margin-bottom:14px; }
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -66,21 +119,55 @@ header { background:#1a1714; color:white; padding:0 16px; height:54px; display:f
 
 <header>
   <div class="brand">🚦 MERES · <span>Vacaciones</span></div>
-  <div class="anio-box">
-    <button id="bAnt" title="Año anterior">◀</button>
-    <b id="tAnio">2026</b>
-    <button id="bSig" title="Año siguiente">▶</button>
+  <div class="hdr-der">
+    <div class="anio-box">
+      <button id="bAnt" title="Año anterior">◀</button>
+      <b id="tAnio">2026</b>
+      <button id="bSig" title="Año siguiente">▶</button>
+    </div>
+    <button class="btn-lock" id="bLock" title="Acceso administración">🔒</button>
   </div>
 </header>
 
 <div class="app">
   <div class="aviso">👀 Página solo de consulta. Para pedir vacaciones mandar email para solicitar desde el email de la empresa</div>
 
+  <!-- PANEL DÍAS DE FERIA (solo visible tras el candado) -->
+  <div class="card panel-feria" id="panelFeria" style="display:none">
+    <div class="card-title">
+      <span>🎡 Días de feria — panel privado</span>
+      <button class="btn-ref" id="bSalir">🔒 Cerrar sesión</button>
+    </div>
+    <div class="pf-tipos">
+      <button class="pf-tipo sel-t" id="tTrab">🎪 Trabajado en feria</button>
+      <button class="pf-tipo" id="tDev">🟣 Devuelto (lo libra)</button>
+    </div>
+    <div class="pf-grid">
+      <div><label class="pf-lbl">Vendedor</label><select class="pf-in" id="fAlias"></select></div>
+      <div><label class="pf-lbl">Desde</label><input class="pf-in" type="date" id="fIni"></div>
+      <div><label class="pf-lbl">Hasta</label><input class="pf-in" type="date" id="fFin"></div>
+      <div><label class="pf-lbl">Nota</label><input class="pf-in" type="text" id="fNota" placeholder="Ej: FIDMA Gijón 2026"></div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap">
+      <button class="pf-btn" id="bGuardarF">💾 Guardar</button>
+      <span id="fDias" style="font-size:13px;color:#666"></span>
+    </div>
+    <div class="pf-err" id="fErr"></div>
+    <div class="pf-ok" id="fOk"></div>
+
+    <div class="pf-sub">Saldo por vendedor (todos los años)</div>
+    <div id="saldoBox"></div>
+
+    <div class="pf-sub">Registros</div>
+    <div id="regFeria"></div>
+  </div>
+
   <div class="card">
     <div class="leyenda">
       <div class="ley-item"><div class="ley-dot" style="background:#c0392b"></div><b>Rojo</b>&nbsp;= ya hay un vendedor de vacaciones</div>
       <div class="ley-item"><div class="ley-dot" style="background:#2d7a4f"></div><b>Verde</b>&nbsp;= vacaciones de Angel, Marisa, Kike o Javi</div>
-      <div class="ley-item"><div class="ley-dot" style="background:linear-gradient(135deg,#c0392b 50%,#2d7a4f 50%)"></div>Las dos cosas</div>
+      <div class="ley-item"><div class="ley-dot" style="background:#7b3fa0"></div><b>Morado</b>&nbsp;= vendedor librando día de feria</div>
+      <div class="ley-item"><div class="ley-dot" style="background:linear-gradient(135deg,#c0392b 50%,#7b3fa0 50%)"></div>Varias cosas a la vez</div>
       <div class="ley-item"><div class="ley-dot" style="background:#f0f0f0;border:1px solid #ddd"></div>Festivo</div>
       <div class="ley-item"><div class="ley-dot" style="background:white;border:1px solid #ddd"></div>Libre</div>
     </div>
@@ -109,6 +196,23 @@ header { background:#1a1714; color:white; padding:0 16px; height:54px; display:f
   </div>
 </div>
 
+<!-- LOGIN DEL CANDADO -->
+<div class="ov" id="ovLogin">
+  <div class="ov-box">
+    <h3>🔒 Acceso administración</h3>
+    <p>Solo José Ángel. La sesión se cierra sola al cerrar la pestaña.</p>
+    <label class="pf-lbl">Email</label>
+    <input class="pf-in" type="email" id="aEmail" value="factoria.jose@gmail.com" autocomplete="off" style="margin-bottom:10px">
+    <label class="pf-lbl">Contraseña</label>
+    <input class="pf-in" type="password" id="aPass" autocomplete="off" placeholder="••••••••">
+    <div class="pf-err" id="aErr"></div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="pf-btn" id="bEntrar" style="flex:1">Entrar</button>
+      <button class="pf-btn gris" id="bCancelar">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═════════════════════════════════════════════════════════════════════════
 // CONFIGURACIÓN
@@ -117,29 +221,46 @@ header { background:#1a1714; color:white; padding:0 16px; height:54px; display:f
 var ADMINISTRATIVOS = ["angel","marisa","kike","javi"];
 // Jose Angel no aparece nunca
 var EXCLUIDOS = ["jose angel"];
+// Único email que puede abrir el panel de días de feria
+var ADMIN_EMAIL = "factoria.jose@gmail.com";
+
+var COL_ROJO="#c0392b", COL_VERDE="#2d7a4f", COL_MORADO="#7b3fa0";
 
 var TTL_VEND  = 24*60*60*1000;     // vendedores: 24 h
 var TTL_REGS  =  1*60*60*1000;     // vacaciones del año: 1 h
+var TTL_FERIA =  1*60*60*1000;     // días de feria del año: 1 h
 var TTL_FIEST = 30*24*60*60*1000;  // fiestas: 30 días (misma caché que vacaciones.html)
 
-firebase.initializeApp({
+var FB_CONFIG = {
   apiKey:"AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
   authDomain:"muebles-presupuestos.firebaseapp.com",
   projectId:"muebles-presupuestos",
   storageBucket:"muebles-presupuestos.firebasestorage.app",
   messagingSenderId:"37365883872",
   appId:"1:37365883872:web:842ca4d318c01652684185"
-});
+};
+// Conexión normal (solo lectura)
+firebase.initializeApp(FB_CONFIG);
 var db = firebase.firestore();
 var auth = firebase.auth();
+// Conexión APARTE para el candado: no pisa la sesión de menu.html
+// y se borra al cerrar la pestaña (no queda la contraseña guardada)
+var adminApp = firebase.initializeApp(FB_CONFIG, "feriaAdmin");
+var adminAuth = adminApp.auth();
+var adminDb = adminApp.firestore();
+adminAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(function(){});
 
 var anioActual = new Date().getFullYear();
+var vendsGlobal = [];   // lista de vendedores (para el desplegable del panel)
 var personas = {};      // alias → "rojo" | "verde"   (solo los que cuentan)
-var diasMap = {};       // "AAAA-MM-DD" → {rojo:[alias], verde:[alias]}
+var diasMap = {};       // "AAAA-MM-DD" → {rojo:[alias], verde:[alias], morado:[alias]}
 var fiestas = {};       // "AAAA-MM-DD" → nombre
 var periodos = [];      // lista para el listado de abajo
 var celdaSel = null;
-var autenticado = null; // promesa del login anónimo (solo se hace si hace falta leer)
+var autenticado = null; // promesa del acceso de lectura
+var esAdmin = false;
+var feriaTodos = [];    // todos los registros de feria (solo en el panel)
+var tipoFeria = "trabajado";
 
 // ═════════════════════════════════════════════════════════════════════════
 // UTILIDADES
@@ -147,6 +268,7 @@ var autenticado = null; // promesa del login anónimo (solo se hace si hace falt
 function p2(n){ return ("0"+n).slice(-2); }
 function fStr(d){ return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()); }
 function fCorta(s){ var p=s.split("-"); return p[2]+"/"+p[1]; }
+function fLarga(s){ var p=s.split("-"); return p[2]+"/"+p[1]+"/"+p[0]; }
 function diasRango(ini,fin){
   var out=[]; if(!ini||!fin) return out;
   var cur=new Date(ini+"T12:00:00"), d2=new Date(fin+"T12:00:00");
@@ -164,16 +286,27 @@ function cacheGet(key,ttl){
 function cacheSet(key,data){
   try{ localStorage.setItem(key,JSON.stringify({ts:Date.now(),data:data})); }catch(e){}
 }
+function cacheBorrarFeria(){
+  try{ Object.keys(localStorage).forEach(function(k){ if(k.indexOf("cvac_feria_")===0) localStorage.removeItem(k); }); }catch(e){}
+}
 function hace(ts){
   var min=Math.round((Date.now()-ts)/60000);
   if(min<1) return "ahora mismo";
   if(min<60) return "hace "+min+" min";
   return "hace "+Math.round(min/60)+" h";
 }
-// El login anónimo solo se hace cuando de verdad hay que leer de Firebase
+// Acceso de lectura: si el navegador ya tiene una sesión abierta (por ejemplo
+// de menu.html) se usa esa; si no, se entra como anónimo. Solo se hace cuando
+// de verdad hay que leer de Firebase.
 function asegurarLogin(){
   if(!autenticado){
-    autenticado = auth.signInAnonymously().catch(function(e){ console.warn("Auth anónimo:",e.code); });
+    autenticado = new Promise(function(resolve){
+      var parar = auth.onAuthStateChanged(function(u){
+        parar();
+        if(u){ resolve(); return; }
+        auth.signInAnonymously().then(resolve).catch(function(e){ console.warn("Auth anónimo:",e.code); resolve(); });
+      });
+    });
   }
   return autenticado;
 }
@@ -217,6 +350,25 @@ function cargarVacaciones(anio,forzar){
   });
 }
 
+// Días de feria DEVUELTOS de ese año (lo único que ve el público)
+function cargarFeriaPublica(anio,forzar){
+  var key="cvac_feria_"+anio;
+  var c = forzar ? null : cacheGet(key,TTL_FERIA);
+  if(c) return Promise.resolve(c.data);
+  return asegurarLogin().then(function(){
+    return db.collection("dias_feria").where("anios","array-contains",anio).get();
+  }).then(function(sn){
+    var lista=[];
+    sn.forEach(function(d){
+      var r=d.data();
+      if(r.tipo!=="devuelto") return;      // los trabajados solo salen en el panel
+      lista.push({alias:r.alias, ini:r.fechaIni, fin:r.fechaFin});
+    });
+    cacheSet(key,lista);
+    return lista;
+  }).catch(function(e){ console.warn("Feria:",e); return []; });
+}
+
 function cargarFiestas(anio,forzar){
   var key="vac_fiestas_"+anio;   // misma clave que vacaciones.html → caché compartida
   var c = forzar ? null : cacheGet(key,TTL_FIEST);
@@ -238,17 +390,19 @@ function cargarTodo(forzar){
   document.getElementById("cargando").textContent="Cargando calendario…";
   document.getElementById("calGrid").innerHTML="";
   var anio=anioActual;
-  var vends, vac;
+  var vends, vac, feria;
   cargarVendedores(false)
-    .then(function(v){ vends=v; return cargarVacaciones(anio,forzar); })
-    .then(function(r){ vac=r; return cargarFiestas(anio,false); })
+    .then(function(v){ vends=v; vendsGlobal=v; return cargarVacaciones(anio,forzar); })
+    .then(function(r){ vac=r; return cargarFeriaPublica(anio,forzar); })
+    .then(function(fe){ feria=fe; return cargarFiestas(anio,false); })
     .then(function(f){
       if(anio!==anioActual) return; // el usuario cambió de año mientras cargaba
-      prepararDatos(vends,vac.data,f);
+      prepararDatos(vends,vac.data,feria,f);
       document.getElementById("estado").textContent="Datos "+hace(vac.ts);
       document.getElementById("cargando").style.display="none";
       pintarCalendario();
       pintarPeriodos();
+      if(esAdmin) rellenarSelectVendedores();
     })
     .catch(function(e){
       console.error(e);
@@ -259,7 +413,11 @@ function cargarTodo(forzar){
 // ═════════════════════════════════════════════════════════════════════════
 // PREPARAR: quién es rojo, quién es verde, y qué días está cada uno
 // ═════════════════════════════════════════════════════════════════════════
-function prepararDatos(vends,regs,listaFiestas){
+function marcarDia(d,color,alias){
+  if(!diasMap[d]) diasMap[d]={rojo:[],verde:[],morado:[]};
+  if(diasMap[d][color].indexOf(alias)<0) diasMap[d][color].push(alias);
+}
+function prepararDatos(vends,regs,feria,listaFiestas){
   personas={}; diasMap={}; fiestas={}; periodos=[];
   vends.forEach(function(v){
     if(!v.activo) return;
@@ -272,10 +430,14 @@ function prepararDatos(vends,regs,listaFiestas){
   regs.forEach(function(r){
     var color=personas[r.alias];
     if(!color) return;
-    periodos.push({alias:r.alias, ini:r.ini, fin:r.fin, color:color});
+    periodos.push({alias:r.alias, ini:r.ini, fin:r.fin, color:color, feria:false});
+    diasRango(r.ini,r.fin).forEach(function(d){ marcarDia(d,color,r.alias); });
+  });
+  // Días de feria devueltos → MORADO (cualquier persona, la apunta José Ángel)
+  (feria||[]).forEach(function(r){
+    periodos.push({alias:r.alias, ini:r.ini, fin:r.fin, color:"morado", feria:true});
     diasRango(r.ini,r.fin).forEach(function(d){
-      if(!diasMap[d]) diasMap[d]={rojo:[],verde:[]};
-      if(diasMap[d][color].indexOf(r.alias)<0) diasMap[d][color].push(r.alias);
+      if(d.slice(0,4)===String(anioActual)) marcarDia(d,"morado",r.alias);
     });
   });
   (listaFiestas||[]).forEach(function(f){ if(f&&f.fecha) fiestas[f.fecha]=f.nombre||"Festivo"; });
@@ -287,6 +449,18 @@ function prepararDatos(vends,regs,listaFiestas){
 // ═════════════════════════════════════════════════════════════════════════
 var MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 var DIAS_SEM=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+
+// Fondo de la casilla según lo que haya ese día (1, 2 o 3 colores)
+function fondoDia(info){
+  var c=[];
+  if(info.rojo.length)   c.push(COL_ROJO);
+  if(info.verde.length)  c.push(COL_VERDE);
+  if(info.morado.length) c.push(COL_MORADO);
+  if(c.length===1) return c[0];
+  if(c.length===2) return "linear-gradient(135deg,"+c[0]+" 50%,"+c[1]+" 50%)";
+  if(c.length===3) return "linear-gradient(135deg,"+c[0]+" 33%,"+c[1]+" 33%,"+c[1]+" 66%,"+c[2]+" 66%)";
+  return "";
+}
 
 function pintarCalendario(){
   var year=anioActual;
@@ -313,21 +487,19 @@ function pintarCalendario(){
       var fs=year+"-"+p2(m+1)+"-"+p2(dia);
       var dow=new Date(year,m,dia).getDay();
       var info=diasMap[fs];
-      var r=info&&info.rojo.length, g=info&&info.verde.length;
-      var cls="dia";
-      if(r&&g)            cls+=" mixto";
-      else if(r)          cls+=" rojo";
-      else if(g)          cls+=" verde";
-      else if(fiestas[fs])cls+=" festivo";
-      else if(dow===0)    cls+=" finde";
-      else                cls+=" normal";
-      if(fs===hoy) cls+=" hoy";
+      var fondo=info?fondoDia(info):"";
       var cel=document.createElement("div");
+      var cls="dia";
+      if(fondo){ cls+=" ocupado"; cel.style.background=fondo; }
+      else if(fiestas[fs]) cls+=" festivo";
+      else if(dow===0)     cls+=" finde";
+      else                 cls+=" normal";
+      if(fs===hoy) cls+=" hoy";
       cel.className=cls;
       cel.textContent=dia;
       cel.setAttribute("data-f",fs);
       var tt=[];
-      if(info){ tt=tt.concat(info.rojo,info.verde); }
+      if(info){ tt=tt.concat(info.rojo,info.verde,info.morado.map(function(a){return a+" (feria)";})); }
       if(fiestas[fs]) tt.push(fiestas[fs]);
       if(tt.length) cel.title=tt.join(", ");
       cel.addEventListener("click",clickDia);
@@ -354,13 +526,14 @@ function clickDia(ev){
     var f=document.createElement("div"); f.textContent="🎉 Festivo: "+fiestas[fs]; cont.appendChild(f);
   }
   var info=diasMap[fs];
-  if(!info||(!info.rojo.length&&!info.verde.length)){
+  if(!info||(!info.rojo.length&&!info.verde.length&&!info.morado.length)){
     var l=document.createElement("div"); l.textContent="✅ Nadie de vacaciones este día."; l.style.color="#2d7a4f"; l.style.fontWeight="700";
     cont.appendChild(l); return;
   }
   var linea=document.createElement("div");
   info.rojo.forEach(function(a){ var c=document.createElement("span"); c.className="chip r"; c.textContent="🔴 "+a; linea.appendChild(c); });
   info.verde.forEach(function(a){ var c=document.createElement("span"); c.className="chip v"; c.textContent="🟢 "+a; linea.appendChild(c); });
+  info.morado.forEach(function(a){ var c=document.createElement("span"); c.className="chip m"; c.textContent="🟣 "+a+" · día de feria"; linea.appendChild(c); });
   cont.appendChild(linea);
 }
 
@@ -378,17 +551,236 @@ function pintarPeriodos(){
     cont.appendChild(n); return;
   }
   var hoy=fStr(new Date());
+  var COLS={rojo:COL_ROJO, verde:COL_VERDE, morado:COL_MORADO};
   periodos.forEach(function(p){
     var fila=document.createElement("div");
     fila.className="per";
     if(p.fin<hoy) fila.style.opacity=".45";   // ya pasadas, en gris
-    var dot=document.createElement("div"); dot.className="dot"; dot.style.background=p.color==="rojo"?"#c0392b":"#2d7a4f";
+    var dot=document.createElement("div"); dot.className="dot"; dot.style.background=COLS[p.color];
     var q=document.createElement("div"); q.className="q"; q.textContent=p.alias;
     var f=document.createElement("div"); f.className="f";
     var n=diasRango(p.ini,p.fin).length;
-    f.textContent=(p.ini===p.fin?fCorta(p.ini):"del "+fCorta(p.ini)+" al "+fCorta(p.fin))+" · "+n+(n===1?" día":" días");
+    f.textContent=(p.ini===p.fin?fCorta(p.ini):"del "+fCorta(p.ini)+" al "+fCorta(p.fin))+" · "+n+(n===1?" día":" días")+(p.feria?" de feria":"");
     fila.appendChild(dot); fila.appendChild(q); fila.appendChild(f);
     cont.appendChild(fila);
+  });
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// CANDADO: LOGIN DE JOSÉ ÁNGEL
+// ═════════════════════════════════════════════════════════════════════════
+function abrirLogin(){
+  if(esAdmin){ document.getElementById("panelFeria").scrollIntoView({behavior:"smooth"}); return; }
+  document.getElementById("aErr").style.display="none";
+  document.getElementById("aPass").value="";
+  document.getElementById("ovLogin").classList.add("open");
+  setTimeout(function(){ document.getElementById("aPass").focus(); },100);
+}
+function cerrarLogin(){ document.getElementById("ovLogin").classList.remove("open"); }
+
+function entrarAdmin(){
+  var email=document.getElementById("aEmail").value.trim().toLowerCase();
+  var pass=document.getElementById("aPass").value;
+  var err=document.getElementById("aErr");
+  err.style.display="none";
+  if(email!==ADMIN_EMAIL){ err.textContent="Este acceso es solo para José Ángel."; err.style.display="block"; return; }
+  if(!pass){ err.textContent="Escribe la contraseña."; err.style.display="block"; return; }
+  var b=document.getElementById("bEntrar"); b.disabled=true; b.textContent="Entrando…";
+  adminAuth.signInWithEmailAndPassword(email,pass).then(function(){
+    cerrarLogin();
+  }).catch(function(e){
+    var msg="Email o contraseña incorrectos.";
+    if(e.code==="auth/too-many-requests") msg="Demasiados intentos. Espera unos minutos.";
+    if(e.code==="auth/network-request-failed") msg="Sin conexión a internet.";
+    err.textContent=msg; err.style.display="block";
+  }).then(function(){ b.disabled=false; b.textContent="Entrar"; });
+}
+
+function salirAdmin(){ adminAuth.signOut(); }
+
+// Se activa al entrar / salir (y al recargar la página dentro de la misma pestaña)
+adminAuth.onAuthStateChanged(function(u){
+  var lock=document.getElementById("bLock");
+  if(u && (u.email||"").toLowerCase()===ADMIN_EMAIL){
+    esAdmin=true;
+    lock.classList.add("on"); lock.textContent="🔓 Feria";
+    document.getElementById("panelFeria").style.display="block";
+    rellenarSelectVendedores();
+    cargarFeriaAdmin();
+  } else {
+    if(u) adminAuth.signOut();   // cualquier otro email: fuera
+    esAdmin=false;
+    lock.classList.remove("on"); lock.textContent="🔒";
+    document.getElementById("panelFeria").style.display="none";
+    feriaTodos=[];
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════
+// PANEL DÍAS DE FERIA (solo José Ángel)
+// ═════════════════════════════════════════════════════════════════════════
+function rellenarSelectVendedores(){
+  var sel=document.getElementById("fAlias");
+  var actual=sel.value;
+  while(sel.firstChild) sel.removeChild(sel.firstChild);
+  var op0=document.createElement("option"); op0.value=""; op0.textContent="-- Elige --"; sel.appendChild(op0);
+  vendsGlobal
+    .filter(function(v){ return v.activo && EXCLUIDOS.indexOf((v.alias||"").toLowerCase().trim())<0; })
+    .sort(function(a,b){
+      // primero los vendedores, luego el resto
+      var va=a.tipo==="Vendedor"?0:1, vb=b.tipo==="Vendedor"?0:1;
+      return va-vb || a.alias.localeCompare(b.alias,"es");
+    })
+    .forEach(function(v){
+      var op=document.createElement("option"); op.value=v.alias;
+      op.textContent=v.alias+(v.tipo&&v.tipo!=="Vendedor"?" ("+v.tipo+")":"");
+      sel.appendChild(op);
+    });
+  if(actual) sel.value=actual;
+}
+
+function selTipoFeria(t){
+  tipoFeria=t;
+  document.getElementById("tTrab").className="pf-tipo"+(t==="trabajado"?" sel-t":"");
+  document.getElementById("tDev").className="pf-tipo"+(t==="devuelto"?" sel-d":"");
+  document.getElementById("bGuardarF").style.background = t==="trabajado" ? "#c4571a" : COL_MORADO;
+}
+
+function calcDiasFeria(){
+  var ini=document.getElementById("fIni").value, fin=document.getElementById("fFin").value||ini;
+  var out=document.getElementById("fDias");
+  if(!ini||fin<ini){ out.textContent=""; return; }
+  var n=diasRango(ini,fin).length;
+  out.textContent="→ "+n+(n===1?" día":" días");
+}
+
+// Lee TODOS los registros de feria (son pocos). Solo al abrir el panel.
+function cargarFeriaAdmin(){
+  document.getElementById("saldoBox").textContent="Cargando…";
+  adminDb.collection("dias_feria").get().then(function(sn){
+    feriaTodos=[];
+    sn.forEach(function(d){ feriaTodos.push(Object.assign({_id:d.id},d.data())); });
+    pintarPanelFeria();
+  }).catch(function(e){
+    document.getElementById("saldoBox").textContent="⚠️ No se pudieron leer los días de feria: "+e.message;
+  });
+}
+
+function saldoDe(alias){
+  var t=0, d=0;
+  feriaTodos.forEach(function(r){
+    if(r.alias!==alias) return;
+    if(r.tipo==="trabajado") t+=(r.dias||0); else if(r.tipo==="devuelto") d+=(r.dias||0);
+  });
+  return {t:t, d:d, p:t-d};
+}
+
+function pintarPanelFeria(){
+  // ── SALDO ──
+  var box=document.getElementById("saldoBox");
+  box.innerHTML="";
+  var aliasList=[];
+  feriaTodos.forEach(function(r){ if(aliasList.indexOf(r.alias)<0) aliasList.push(r.alias); });
+  if(!aliasList.length){
+    box.textContent="Todavía no hay días de feria apuntados.";
+  } else {
+    var filas=aliasList.map(function(a){ var s=saldoDe(a); return {a:a,t:s.t,d:s.d,p:s.p}; })
+      .sort(function(x,y){ return y.p-x.p || x.a.localeCompare(y.a,"es"); });
+    var tab=document.createElement("table"); tab.className="saldo-tab";
+    var thead=document.createElement("tr");
+    [["Vendedor",""],["Trabajados","n"],["Devueltos","n"],["Pendientes","n"]].forEach(function(h){
+      var th=document.createElement("th"); th.textContent=h[0]; if(h[1]) th.className=h[1]; thead.appendChild(th);
+    });
+    tab.appendChild(thead);
+    filas.forEach(function(f){
+      var tr=document.createElement("tr");
+      var td1=document.createElement("td"); td1.textContent=f.a; td1.style.fontWeight="700";
+      var td2=document.createElement("td"); td2.className="n"; td2.textContent=f.t;
+      var td3=document.createElement("td"); td3.className="n"; td3.textContent=f.d;
+      var td4=document.createElement("td"); td4.className="n";
+      var sp=document.createElement("span");
+      sp.className = f.p>0 ? "pend-pos" : f.p<0 ? "pend-neg" : "pend-cero";
+      sp.textContent = f.p;
+      td4.appendChild(sp);
+      tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4);
+      tab.appendChild(tr);
+    });
+    box.appendChild(tab);
+  }
+  // ── REGISTROS ──
+  var cont=document.getElementById("regFeria");
+  cont.innerHTML="";
+  var regs=feriaTodos.slice().sort(function(a,b){ return (b.fechaIni||"").localeCompare(a.fechaIni||""); });
+  if(!regs.length){ cont.textContent="—"; return; }
+  regs.forEach(function(r){
+    var fila=document.createElement("div");
+    fila.className="reg-f "+(r.tipo==="trabajado"?"t":"d");
+    var ic=document.createElement("span"); ic.textContent=r.tipo==="trabajado"?"🎪":"🟣";
+    var q=document.createElement("div"); q.className="q"; q.textContent=r.alias;
+    var f=document.createElement("div"); f.className="f";
+    var fechas = r.fechaIni===r.fechaFin ? fLarga(r.fechaIni) : fLarga(r.fechaIni)+" → "+fLarga(r.fechaFin);
+    f.textContent=(r.tipo==="trabajado"?"Trabajó ":"Libra ")+fechas+" · "+r.dias+(r.dias===1?" día":" días")+(r.nota?" · "+r.nota:"");
+    var del=document.createElement("button"); del.className="btn-del"; del.textContent="🗑️"; del.title="Borrar este registro";
+    del.addEventListener("click",function(){ borrarFeria(r); });
+    fila.appendChild(ic); fila.appendChild(q); fila.appendChild(f); fila.appendChild(del);
+    cont.appendChild(fila);
+  });
+}
+
+function mensajeFeria(tipo,txt){
+  var e=document.getElementById("fErr"), o=document.getElementById("fOk");
+  e.style.display="none"; o.style.display="none";
+  if(!txt) return;
+  var el = tipo==="ok" ? o : e;
+  el.textContent=txt; el.style.display="block";
+  if(tipo==="ok") setTimeout(function(){ o.style.display="none"; },3000);
+}
+
+function guardarFeria(){
+  if(!esAdmin) return;
+  var alias=document.getElementById("fAlias").value;
+  var ini=document.getElementById("fIni").value;
+  var fin=document.getElementById("fFin").value||ini;
+  var nota=document.getElementById("fNota").value.trim();
+  mensajeFeria();
+  if(!alias){ mensajeFeria("err","Elige el vendedor."); return; }
+  if(!ini){ mensajeFeria("err","Pon la fecha (Desde)."); return; }
+  if(fin<ini){ mensajeFeria("err","La fecha 'Hasta' no puede ser anterior a 'Desde'."); return; }
+  var dias=diasRango(ini,fin);
+  if(tipoFeria==="devuelto"){
+    var s=saldoDe(alias);
+    if(dias.length>s.p){
+      if(!confirm(alias+" solo tiene "+s.p+" día(s) pendiente(s) y vas a apuntar "+dias.length+". ¿Guardar igualmente?")) return;
+    }
+  }
+  var anios=[];
+  dias.forEach(function(d){ var a=parseInt(d.slice(0,4)); if(anios.indexOf(a)<0) anios.push(a); });
+  var data={alias:alias, tipo:tipoFeria, fechaIni:ini, fechaFin:fin, dias:dias.length,
+            anios:anios, nota:nota, creadoTs:new Date().toISOString()};
+  var b=document.getElementById("bGuardarF"); b.disabled=true;
+  adminDb.collection("dias_feria").add(data).then(function(ref){
+    feriaTodos.push(Object.assign({_id:ref.id},data));
+    pintarPanelFeria();
+    document.getElementById("fIni").value=""; document.getElementById("fFin").value="";
+    calcDiasFeria();
+    mensajeFeria("ok","✅ Guardado: "+alias+" · "+dias.length+(dias.length===1?" día ":" días ")+(tipoFeria==="trabajado"?"trabajado(s) en feria":"devuelto(s)"));
+    if(tipoFeria==="devuelto"){ cacheBorrarFeria(); cargarTodo(false); }
+  }).catch(function(e){
+    mensajeFeria("err", e.code==="permission-denied" ? "Firebase no deja guardar (permisos). Revisa las reglas de dias_feria." : "Error: "+e.message);
+  }).then(function(){ b.disabled=false; });
+}
+
+function borrarFeria(r){
+  if(!esAdmin) return;
+  var txt=(r.tipo==="trabajado"?"trabajado":"devuelto")+" de "+r.alias+" ("+fLarga(r.fechaIni)+(r.fechaIni!==r.fechaFin?" → "+fLarga(r.fechaFin):"")+")";
+  if(!confirm("¿Borrar el registro "+txt+"?")) return;
+  adminDb.collection("dias_feria").doc(r._id).delete().then(function(){
+    feriaTodos=feriaTodos.filter(function(x){ return x._id!==r._id; });
+    pintarPanelFeria();
+    mensajeFeria("ok","🗑️ Borrado.");
+    if(r.tipo==="devuelto"){ cacheBorrarFeria(); cargarTodo(false); }
+  }).catch(function(e){
+    mensajeFeria("err", e.code==="permission-denied" ? "Firebase no deja borrar (permisos)." : "Error: "+e.message);
   });
 }
 
@@ -397,7 +789,22 @@ function pintarPeriodos(){
 // ═════════════════════════════════════════════════════════════════════════
 document.getElementById("bAnt").addEventListener("click",function(){ anioActual--; cargarTodo(false); });
 document.getElementById("bSig").addEventListener("click",function(){ anioActual++; cargarTodo(false); });
-document.getElementById("bRef").addEventListener("click",function(){ cargarTodo(true); });
+document.getElementById("bRef").addEventListener("click",function(){ cargarTodo(true); if(esAdmin) cargarFeriaAdmin(); });
+document.getElementById("bLock").addEventListener("click",abrirLogin);
+document.getElementById("bEntrar").addEventListener("click",entrarAdmin);
+document.getElementById("bCancelar").addEventListener("click",cerrarLogin);
+document.getElementById("aPass").addEventListener("keydown",function(e){ if(e.key==="Enter") entrarAdmin(); });
+document.getElementById("bSalir").addEventListener("click",salirAdmin);
+document.getElementById("tTrab").addEventListener("click",function(){ selTipoFeria("trabajado"); });
+document.getElementById("tDev").addEventListener("click",function(){ selTipoFeria("devuelto"); });
+document.getElementById("fIni").addEventListener("change",function(){
+  var fin=document.getElementById("fFin");
+  if(!fin.value || fin.value<this.value) fin.value=this.value;
+  calcDiasFeria();
+});
+document.getElementById("fFin").addEventListener("change",calcDiasFeria);
+document.getElementById("bGuardarF").addEventListener("click",guardarFeria);
+selTipoFeria("trabajado");
 
 // Si viene ?anio=2027 en la dirección, abre ese año
 (function(){
