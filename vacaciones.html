@@ -1,5 +1,11 @@
 <!DOCTYPE html>
-<!-- vacaciones.html — v2.2 — 07/10/2026
+<!-- vacaciones.html — v2.3 — 22/10/2026
+     CORREGIDO v2.3: vacaciones que CRUZAN DE AÑO (ej. 28/12/2026 → 03/01/2027)
+       - Se siguen DESCONTANDO en el año en que empiezan (como antes).
+       - Ahora también se PINTAN en el calendario del año siguiente
+         (individual y general), y salen en la lista con el aviso
+         "↪ descontadas en 2026". Sin lecturas extra de Firebase.
+     ---- v2.2 — 07/10/2026
      NUEVO v2.2: botón "🚦 Semáforo vendedores" → abre vacaciones-consulta.html
      (calendario anual de solo consulta para todos los vendedores).
      Al guardar/editar/borrar, se borra también la caché de esa página.
@@ -429,6 +435,11 @@ function diasRango(ini,fin){
   while(cur<=d2){ out.push(fStr(cur)); cur.setDate(cur.getDate()+1); }
   return out;
 }
+// ¿Este registro tiene algún día entre "desde" y "hasta" (AAAA-MM-DD)?
+// Sirve para pintar las vacaciones que cruzan de año (28/12 → 03/01).
+function solapa(r,desde,hasta){
+  return !!(r.fechaIni&&r.fechaFin&&r.fechaFin>=desde&&r.fechaIni<=hasta);
+}
 function toast(msg,tipo){ var t=document.getElementById("toast"); t.textContent=msg; t.className="toast "+(tipo||"ok"); t.style.display="block"; setTimeout(function(){t.style.display="none";},3000); }
 
 // Firebase SDK helpers
@@ -569,19 +580,34 @@ function _cargarVistaReal(){
   document.getElementById("vVacia").style.display="none";
   document.getElementById("vPrincipal").style.display="block";
 
+  // misRegs = los que se DESCUENTAN este año (los que empiezan este año) → contadores
   var misRegs=registros.filter(function(r){return r.alias===alias&&parseInt(r.año)===year;})
     .sort(function(a,b){return (a.fechaIni||"").localeCompare(b.fechaIni||"");});
+  // regsPintar = todos los que tienen algún día dentro de este año → calendario y lista
+  // (incluye los que empezaron el año anterior y terminan en enero de este)
+  var regsPintar=registros.filter(function(r){
+    return r.alias===alias&&(parseInt(r.año)===year||solapa(r,year+"-01-01",year+"-12-31"));
+  }).sort(function(a,b){return (a.fechaIni||"").localeCompare(b.fechaIni||"");});
 
-  var dVac={}, dBaja={};
+  // Contadores: igual que siempre (todos los días del registro cuentan en su año de inicio)
+  var cVac={}, cBaja={};
   misRegs.forEach(function(r){
+    diasRango(r.fechaIni,r.fechaFin).forEach(function(d){
+      if(r.tipo==="vacacion") cVac[d]=true;
+      else cBaja[d]=true;
+    });
+  });
+  // Pintar: todos los días que caen en el calendario de este año
+  var dVac={}, dBaja={};
+  regsPintar.forEach(function(r){
     diasRango(r.fechaIni,r.fechaFin).forEach(function(d){
       if(r.tipo==="vacacion") dVac[d]=true;
       else dBaja[d]=true;
     });
   });
 
-  var nV=Object.keys(dVac).length;
-  var nB=Object.keys(dBaja).length;
+  var nV=Object.keys(cVac).length;
+  var nB=Object.keys(cBaja).length;
   document.getElementById("nVac").textContent=nV;
   document.getElementById("nPend").textContent=30-nV;
   document.getElementById("nBaja").textContent=nB;
@@ -608,7 +634,7 @@ function _cargarVistaReal(){
   }
 
   renderCal(year,dVac,dBaja,fest);
-  renderRegs(misRegs,alias,year);
+  renderRegs(regsPintar,alias,year);
 }
 
 function renderCal(year,dVac,dBaja,fest){
@@ -654,12 +680,17 @@ function renderRegs(regs,alias,year){
   regs.forEach(function(r){
     var dias=diasRango(r.fechaIni,r.fechaFin).length;
     var esVac=r.tipo==="vacacion";
+    // ¿Este registro se descuenta en otro año? (cruza de año)
+    var anioReg=parseInt(r.año);
+    var deOtroAnio=(anioReg&&anioReg!==year);
+    var avisoAnio=deOtroAnio?" &nbsp;<span style='color:#c4571a;font-weight:700'>↪ descontados en "+anioReg+"</span>":"";
     var div=document.createElement("div");
     div.className="reg-item "+(esVac?"rv":"rb");
+    if(deOtroAnio) div.style.opacity=".75";
     div.innerHTML=
       "<div class='reg-info'>"+
         "<div class='rf'>"+(esVac?"🏖️ Vacaciones":"🤒 Baja laboral")+" &nbsp;·&nbsp; "+r.fechaIni+(r.fechaIni!==r.fechaFin?" → "+r.fechaFin:"")+"</div>"+
-        "<div class='rd'>"+dias+" día"+(dias!==1?"s":"")+" naturales</div>"+
+        "<div class='rd'>"+dias+" día"+(dias!==1?"s":"")+" naturales"+avisoAnio+"</div>"+
         (r.nota?"<div class='rn'>\""+r.nota+"\"</div>":"")+
       "</div>"+
       "<div style='display:flex;gap:6px;flex-shrink:0'>"+
@@ -949,18 +980,21 @@ function _abrirCalendarioGeneralReal(){
     .filter(function(v){return v.alias!=="Jose Angel"&&v.activo!==false;})
     .sort(function(a,b){return a.alias.localeCompare(b.alias,"es");});
 
+  // Rango que se ve en pantalla: 1 enero del año → 31 enero del año siguiente
+  var desdeCal=year+"-01-01", hastaCal=(year+1)+"-01-31";
   var conRegs=todos.filter(function(v){
-    return registros.some(function(r){return r.alias===v.alias&&parseInt(r.año)===year;});
+    return registros.some(function(r){return r.alias===v.alias&&(parseInt(r.año)===year||solapa(r,desdeCal,hastaCal));});
   });
   if(!conRegs.length) conRegs=todos;
 
   var colorMap={};
   conRegs.forEach(function(v,i){ colorMap[v.alias]=COLORES[i%COLORES.length]; });
 
-  // Solo vacaciones (no bajas) — incluir año y año+1 para cubrir enero siguiente
+  // Solo vacaciones (no bajas) — todas las que tengan algún día en los 13 meses
+  // (incluye las que empezaron en diciembre del año anterior)
   var diasMap={};
   registros.filter(function(r){
-    return (parseInt(r.año)===year||parseInt(r.año)===year+1)&&r.tipo==="vacacion";
+    return r.tipo==="vacacion"&&solapa(r,desdeCal,hastaCal);
   }).forEach(function(r){
     if(!colorMap[r.alias]) return;
     diasRango(r.fechaIni,r.fechaFin).forEach(function(d){

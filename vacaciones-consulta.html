@@ -1,5 +1,11 @@
 <!DOCTYPE html>
-<!-- vacaciones-consulta.html — v1.2 — 13/10/2026
+<!-- vacaciones-consulta.html — v1.3 — 22/10/2026
+     CORREGIDO v1.3: vacaciones que CRUZAN DE AÑO (ej. 28/12/2026 → 03/01/2027)
+       ahora se pintan también en el calendario del año siguiente.
+       AHORRO: además de las del año, solo se leen las que EMPIEZAN en
+       diciembre del año anterior (unos pocos documentos), y se quedan
+       en la misma caché de 1 h. No necesita índices nuevos en Firebase.
+     ---- v1.2 — 13/10/2026
      NUEVO v1.2: DÍAS DE FERIA
        - Candado 🔒 (solo factoria.jose@gmail.com) → panel para apuntar
          días TRABAJADOS en feria y días DEVUELTOS (que el vendedor libra).
@@ -332,19 +338,31 @@ function cargarVendedores(forzar){
 }
 
 function cargarVacaciones(anio,forzar){
-  var key="cvac_regs_"+anio;
+  // (clave nueva "v2" para que no se use la caché antigua sin las de diciembre)
+  var key="cvac_regs_v2_"+anio;
   var c = forzar ? null : cacheGet(key,TTL_REGS);
   if(c) return Promise.resolve(c);
+  var vistos={}, lista=[];
+  function meter(d,deOtroAnio){
+    if(vistos[d.id]) return; vistos[d.id]=true;
+    var r=d.data();
+    if(r.tipo!=="vacacion") return;      // las bajas no se muestran
+    if(!r.fechaIni||!r.fechaFin) return;
+    if(deOtroAnio&&r.fechaFin<anio+"-01-01") return; // terminó en diciembre → no toca este año
+    lista.push({alias:r.alias, ini:r.fechaIni, fin:r.fechaFin, anioReg:deOtroAnio?(anio-1):anio});
+  }
   return asegurarLogin().then(function(){
-    // Solo los registros de ESE año (el año se guarda como número; por si acaso también como texto)
+    // 1) Los registros de ESE año (el año se guarda como número; por si acaso también como texto)
     return db.collection("vacaciones_bajas").where("año","in",[anio,String(anio)]).get();
   }).then(function(sn){
-    var lista=[];
-    sn.forEach(function(d){
-      var r=d.data();
-      if(r.tipo!=="vacacion") return;      // las bajas no se muestran
-      lista.push({alias:r.alias, ini:r.fechaIni, fin:r.fechaFin});
-    });
+    sn.forEach(function(d){ meter(d,false); });
+    // 2) Solo las que EMPIEZAN en diciembre del año anterior (pueden acabar en enero de este).
+    //    Son muy pocas lecturas. Filtro sobre un solo campo → no hace falta índice nuevo.
+    return db.collection("vacaciones_bajas")
+      .where("fechaIni",">=",(anio-1)+"-12-01")
+      .where("fechaIni","<=",(anio-1)+"-12-31").get();
+  }).then(function(sn){
+    sn.forEach(function(d){ meter(d,true); });
     cacheSet(key,lista);
     return {ts:Date.now(), data:lista};
   });
@@ -430,7 +448,7 @@ function prepararDatos(vends,regs,feria,listaFiestas){
   regs.forEach(function(r){
     var color=personas[r.alias];
     if(!color) return;
-    periodos.push({alias:r.alias, ini:r.ini, fin:r.fin, color:color, feria:false});
+    periodos.push({alias:r.alias, ini:r.ini, fin:r.fin, color:color, feria:false, anioReg:r.anioReg});
     diasRango(r.ini,r.fin).forEach(function(d){ marcarDia(d,color,r.alias); });
   });
   // Días de feria devueltos → MORADO (cualquier persona, la apunta José Ángel)
@@ -560,7 +578,10 @@ function pintarPeriodos(){
     var q=document.createElement("div"); q.className="q"; q.textContent=p.alias;
     var f=document.createElement("div"); f.className="f";
     var n=diasRango(p.ini,p.fin).length;
-    f.textContent=(p.ini===p.fin?fCorta(p.ini):"del "+fCorta(p.ini)+" al "+fCorta(p.fin))+" · "+n+(n===1?" día":" días")+(p.feria?" de feria":"");
+    // Si cruza de año, se muestra la fecha completa (con el año) para que se entienda
+    var cruza=(p.ini.slice(0,4)!==p.fin.slice(0,4));
+    var fIni=cruza?fLarga(p.ini):fCorta(p.ini), fFin=cruza?fLarga(p.fin):fCorta(p.fin);
+    f.textContent=(p.ini===p.fin?fCorta(p.ini):"del "+fIni+" al "+fFin)+" · "+n+(n===1?" día":" días")+(p.feria?" de feria":"");
     fila.appendChild(dot); fila.appendChild(q); fila.appendChild(f);
     cont.appendChild(fila);
   });
