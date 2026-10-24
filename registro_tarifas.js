@@ -19,7 +19,8 @@ const REGISTRO_TARIFAS = {
     nombre: "8183 · Liberto",
     precioPunto: 2.80, dtoMax: 25,
     modelos: [
-      {cod:"CLASICA", nombre:"Liberto Clásica (tarifa 1)", script:"tarifas_8183/catalogo_8183_clasica.js", variable:"CATALOGO_8183_CLASICA", carpeta:"tarifas_8183/img/clasica", color:"#5b3a29"}
+      {cod:"LIBERTO-CLASICO", nombre:"8183-LIBERTO-CLASICO", script:"tarifas_8183/catalogo_8183_clasica.js", variable:"CATALOGO_8183_CLASICA", carpeta:"tarifas_8183/img/clasica", color:"#5b3a29"},
+      {cod:"LIBERTO-SPAZIO", nombre:"8183-LIBERTO-SPAZIO", script:"tarifas_8183/catalogo_8183_spazio.js", variable:"CATALOGO_8183_SPAZIO", carpeta:"tarifas_8183/img/spazio", color:"#2e5e6e"}
     ]
   },
   "3090": {
