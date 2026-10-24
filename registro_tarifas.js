@@ -44,7 +44,8 @@ const REGISTRO_TARIFAS = {
       {cod:"ROSA", nombre:"Rosa", script:"tarifas_3090/catalogo_3090_rosa.js", variable:"CATALOGO_3090_ROSA", carpeta:"tarifas_3090/img/rosa", color:"#d81b60"},
       {cod:"IBIZA", nombre:"Ibiza", script:"tarifas_3090/catalogo_3090_ibiza.js", variable:"CATALOGO_3090_IBIZA", carpeta:"tarifas_3090/img/ibiza", color:"#17a589"},
       {cod:"BAKU", nombre:"Baku", script:"tarifas_3090/catalogo_3090_baku.js", variable:"CATALOGO_3090_BAKU", carpeta:"tarifas_3090/img/baku", color:"#5d6d7e"},
-      {cod:"PEKIN", nombre:"Pekín", script:"tarifas_3090/catalogo_3090_pekin.js", variable:"CATALOGO_3090_PEKIN", carpeta:"tarifas_3090/img/pekin", color:"#922b21"}
+      {cod:"PEKIN", nombre:"Pekín", script:"tarifas_3090/catalogo_3090_pekin.js", variable:"CATALOGO_3090_PEKIN", carpeta:"tarifas_3090/img/pekin", color:"#922b21"},
+      {cod:"BOSTON", nombre:"Boston motor", script:"tarifas_3090/catalogo_3090_boston.js", variable:"CATALOGO_3090_BOSTON", carpeta:"tarifas_3090/img/boston", color:"#4a4a4a"}
     ]
   }
 };
