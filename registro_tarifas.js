@@ -15,6 +15,13 @@ const REGISTRO_TARIFAS = {
       {cod:"ALBA", nombre:"ALBA", script:"catalogo_alba.js", variable:"CATALOGO_ALBA", carpeta:"imgALBA", color:"#003580"}
     ]
   },
+  "8183": {
+    nombre: "8183 · Liberto",
+    precioPunto: 2.80, dtoMax: 25,
+    modelos: [
+      {cod:"CLASICA", nombre:"Liberto Clásica (tarifa 1)", script:"tarifas_8183/catalogo_8183_clasica.js", variable:"CATALOGO_8183_CLASICA", carpeta:"tarifas_8183/img/clasica", color:"#5b3a29"}
+    ]
+  },
   "3090": {
     nombre: "3090 · Confourt (sofás)",
     precioPunto: 1.97, dtoMax: 30,
