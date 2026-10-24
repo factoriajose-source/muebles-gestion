@@ -15,6 +15,13 @@ const REGISTRO_TARIFAS = {
       {cod:"ALBA", nombre:"ALBA", script:"catalogo_alba.js", variable:"CATALOGO_ALBA", carpeta:"imgALBA", color:"#003580"}
     ]
   },
+  "6028": {
+    nombre: "6028 · Quality",
+    precioPunto: 3.02, dtoMax: 25,
+    modelos: [
+      {cod:"QUALITY", nombre:"6028-QUALITY", script:"tarifas_6028/catalogo_6028_quality.js", variable:"CATALOGO_6028_QUALITY", carpeta:"tarifas_6028/img/quality", color:"#c2185b"}
+    ]
+  },
   "8183": {
     nombre: "8183 · Liberto",
     precioPunto: 2.80, dtoMax: 25,
