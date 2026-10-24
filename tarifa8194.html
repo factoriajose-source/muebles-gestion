@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tarifa interactiva — Proveedor 8194</title>
+<title>Tarifa interactiva — Proveedores</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -289,19 +289,39 @@
     font-size:11.5px;background:#eef5ff;border:1px solid #b8d6f5;color:#1a4a7a;
     padding:8px 10px;border-radius:6px;margin-bottom:10px;
   }
+  header h1 select{
+    font-size:15px;font-weight:700;padding:4px 8px;border-radius:8px;border:2px solid var(--dorado);
+    background:#fffdf6;color:#3a2212;cursor:pointer;margin-left:6px;max-width:100%;
+  }
+  .botones-modelo{display:flex;gap:8px;flex-wrap:wrap;}
+  .btn-gestion{
+    margin-left:auto;padding:7px 14px;border-radius:20px;border:1px solid #8a6a4a;
+    background:transparent;color:#fff;font-size:12px;font-weight:700;cursor:pointer;
+  }
+  .btn-gestion:hover{background:#5a3a22;}
+  .gm-fila{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #eee;font-size:13px;}
+  .gm-fila .gm-nombre{flex:1;font-weight:700;}
+  .gm-fila .gm-estado{font-size:11px;color:#888;}
+  .gm-fila button{padding:6px 12px;border-radius:7px;border:1px solid #ccc;background:#fff;font-size:12px;font-weight:700;cursor:pointer;}
+  .gm-fila button.rojo{color:#c0392b;border-color:#e0b4ae;}
+  .gm-fila button.verde{color:#1a6b2a;border-color:#a9d3b0;}
+  .gm-fila.oculto .gm-nombre{text-decoration:line-through;color:#aaa;}
+  .tab.hs-msg{cursor:default;}
 </style>
 </head>
 <body>
 
 <header>
-  <h1>🧪 PRUEBA — Tarifa interactiva Proveedor 8194</h1>
-  <p>Elige el modelo (NATI o ALBA) y pulsa sobre una fila para añadirla al presupuesto</p>
+  <h1>🧪 PRUEBA — Tarifa interactiva · Proveedor:
+    <select id="selProveedor" onchange="cambiarProveedor(this.value)" title="Elige el proveedor cuya tarifa quieres usar"></select>
+  </h1>
+  <p id="subCabecera">Elige proveedor y modelo, y pulsa sobre un precio de la tarifa para añadirlo al presupuesto</p>
 </header>
 
 <div class="selector-modelo">
   <label>MODELO:</label>
-  <button class="btn-modelo activo" id="btnNati" onclick="cambiarModelo('NATI')">NATI</button>
-  <button class="btn-modelo" id="btnAlba" onclick="cambiarModelo('ALBA')">ALBA</button>
+  <span id="botonesModelo" class="botones-modelo"></span>
+  <button class="btn-gestion" onclick="abrirGestionModelos()" title="Borrar o recuperar modelos (con clave)">⚙️ Gestionar modelos</button>
 </div>
 
 <div class="tabs" id="tabs"></div>
@@ -340,9 +360,9 @@
         </div>
       </div>
     </div>
-    <div class="sub" style="margin-top:-4px">De momento se ajustan aquí a mano — más adelante se leerán solos de Proveedores.</div>
+    <div class="sub" id="cfgEstado" style="margin-top:-4px"></div>
 
-    <div class="aviso">La lista se mantiene aunque cambies de modelo o de página — puedes mezclar artículos NATI y ALBA en el mismo presupuesto. El texto de cada línea es editable, por si necesitas añadir detalles (medida exacta, color, izquierda/derecha...).</div>
+    <div class="aviso">La lista se mantiene aunque cambies de proveedor, de modelo o de página — puedes mezclar artículos de varios en el mismo presupuesto (cada uno con el valor de punto y descuento de su proveedor). El texto de cada línea es editable, por si necesitas añadir detalles (medida exacta, color, izquierda/derecha...).</div>
 
     <button class="btn btn-manual-toggle" onclick="toggleManual()">➕ Añadir línea manual (en €)</button>
     <div class="manual-box oculto" id="manualBox">
@@ -404,106 +424,248 @@
   </div>
 </div>
 
-<script src="catalogo_nati.js"></script>
-<script src="catalogo_alba.js"></script>
+<!-- MODAL GESTIÓN DE MODELOS (borrar / recuperar, con clave) -->
+<div id="modalModelos" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2100;align-items:center;justify-content:center">
+  <div style="background:white;border-radius:14px;padding:24px;max-width:480px;width:92%;max-height:86vh;overflow:auto;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+    <div style="font-size:16px;font-weight:800;margin-bottom:4px">⚙️ Modelos del proveedor <span id="gmProv"></span></div>
+    <div style="font-size:12px;color:#888;margin-bottom:12px">Borrar o recuperar un modelo pide tu clave. Un modelo borrado desaparece de la lista (para todos los usuarios) pero se puede recuperar desde aquí.</div>
+    <div id="gmLista"></div>
+    <div style="font-size:12px;background:#fff8e6;border:1px solid #C8A951;border-radius:8px;padding:10px;margin-top:12px;line-height:1.5">
+      <strong>➕ Añadir un modelo nuevo:</strong> pasa el PDF del modelo a Claude (proyecto «ERP Muebles»). Te devolverá los ficheros nuevos para subir a GitHub y el modelo aparecerá aquí solo.
+    </div>
+    <button onclick="cerrarGestionModelos()" style="width:100%;padding:9px;border:1.5px solid #ddd;border-radius:8px;background:white;font-family:inherit;font-size:13px;cursor:pointer;color:#555;margin-top:12px">Cerrar</button>
+  </div>
+</div>
+
+<script src="registro_tarifas.js"></script>
 <script>
 /* ============================================================
-   CONFIGURACIÓN — estos son los dos únicos números que cambian
-   si el proveedor actualiza el valor del punto o el descuento
+   TARIFA INTERACTIVA MULTI-PROVEEDOR
+   - Los proveedores y sus modelos se apuntan en registro_tarifas.js
+   - El valor del punto y el descuento de cada proveedor se leen de
+     Proveedores (misma caché de 4 h que selector-tarifas: 0 lecturas
+     de Firebase si ya está en caché) y se pueden corregir a mano.
    ============================================================ */
-let VALOR_PUNTO = 3.34;   // € por punto (por ahora a mano; en el futuro vendrá de proveedores.html)
-let DESCUENTO   = 0.20;   // 20% (por ahora a mano; en el futuro vendrá de proveedores.html)
+const CLAVE_BORRADO = "7557";   // misma clave que ya se usa en selector-tarifas.html
+const CACHE_TTL = 4*60*60*1000;
 
-const MODELOS = {
-  NATI: { catalogo: CATALOGO_NATI, carpeta: "img8194", tag: "tag-nati" },
-  ALBA: { catalogo: CATALOGO_ALBA, carpeta: "imgALBA", tag: "tag-alba" }
-};
-
-let modeloActual = "NATI";
-let paginaActual = 0;
-const carrito = {}; // id único (modelo+item.id) -> {item, cantidad, modelo}
-
-function calcularPrecio(puntos){
-  return Math.round(puntos * VALOR_PUNTO * (1 - DESCUENTO));
+function cacheGet(key){
+  try{
+    const raw = localStorage.getItem(key); if(!raw) return null;
+    const obj = JSON.parse(raw);
+    if(!obj || !obj.data) return null;
+    if(Date.now() - obj.ts > CACHE_TTL){ localStorage.removeItem(key); return null; }
+    if(key === "meres_proveedores" && (typeof obj.data !== "object" || !Object.keys(obj.data).length)) return null;
+    return obj.data;
+  }catch(e){ return null; }
+}
+function cacheSet(key, data){
+  try{ localStorage.setItem(key, JSON.stringify({ts: Date.now(), data: data})); }catch(e){}
+}
+function esc(s){
+  return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
-document.getElementById("inputValorPunto").value = VALOR_PUNTO.toFixed(2);
-document.getElementById("inputDescuento").value = (DESCUENTO*100).toFixed(0);
+/* ---- Estado ---- */
+const CONFIG = {};   // proveedor -> {vp, dto (0-1), editado, origen}
+Object.keys(REGISTRO_TARIFAS).forEach(function(p){
+  CONFIG[p] = {vp: REGISTRO_TARIFAS[p].precioPunto, dto: REGISTRO_TARIFAS[p].dtoMax/100, editado: false, origen: "defecto"};
+});
+let PROV_ACTUAL = new URLSearchParams(window.location.search).get("prov") || "8194";
+if(!REGISTRO_TARIFAS[PROV_ACTUAL]) PROV_ACTUAL = "8194";
+let OCULTOS = {};          // proveedor -> [códigos de modelo borrados]
+let modeloActual = "";
+let paginaActual = 0;
+const CATALOGOS = {};      // "prov|modelo" -> catálogo cargado
+const carrito = {};        // uid -> {item, cantidad, modelo, prov, descripcion, color}
+
+function calcularPrecio(puntos, prov){
+  const c = CONFIG[prov] || CONFIG[PROV_ACTUAL];
+  return Math.round(puntos * c.vp * (1 - c.dto));
+}
+function descripcionItem(item){
+  // Tarifas con series (3090): "Chaise longue 300 cm — Serie A". Las antiguas (8194) se quedan como estaban.
+  if(item.serie !== undefined) return item.etiqueta + (item.serie ? " — Serie " + item.serie : "");
+  return item.seccion + " - " + item.etiqueta;
+}
+function getModelo(prov, cod){
+  return REGISTRO_TARIFAS[prov].modelos.find(function(m){ return m.cod === cod; });
+}
+function modelosVisibles(prov){
+  const oc = OCULTOS[prov] || [];
+  return REGISTRO_TARIFAS[prov].modelos.filter(function(m){ return oc.indexOf(m.cod) < 0; });
+}
+function catActual(){ return CATALOGOS[PROV_ACTUAL + "|" + modeloActual]; }
+
+/* ---- Carga de los ficheros de catálogo (solo cuando se elige el modelo) ---- */
+function leerGlobal(nombre){
+  try{ return (0, eval)("typeof " + nombre + "==='undefined'?null:" + nombre); }catch(e){ return null; }
+}
+function cargarCatalogo(prov, m){
+  const key = prov + "|" + m.cod;
+  if(CATALOGOS[key]) return Promise.resolve(CATALOGOS[key]);
+  const ya = leerGlobal(m.variable);
+  if(ya){ CATALOGOS[key] = ya; return Promise.resolve(ya); }
+  return new Promise(function(res, rej){
+    const s = document.createElement("script");
+    s.src = m.script;
+    s.onload = function(){
+      const c = leerGlobal(m.variable);
+      if(c){ CATALOGOS[key] = c; res(c); }
+      else rej(new Error("El fichero " + m.script + " no contiene " + m.variable));
+    };
+    s.onerror = function(){ rej(new Error("No se encuentra " + m.script + " (¿está subido a GitHub?)")); };
+    document.head.appendChild(s);
+  });
+}
+
+/* ---- Cabecera: proveedor y modelos ---- */
+function pintarSelectorProveedor(){
+  const sel = document.getElementById("selProveedor");
+  sel.innerHTML = "";
+  Object.keys(REGISTRO_TARIFAS).forEach(function(p){
+    const o = document.createElement("option");
+    o.value = p; o.textContent = REGISTRO_TARIFAS[p].nombre;
+    sel.appendChild(o);
+  });
+  sel.value = PROV_ACTUAL;
+}
+
+function pintarBotonesModelo(){
+  const cont = document.getElementById("botonesModelo");
+  cont.innerHTML = "";
+  const vis = modelosVisibles(PROV_ACTUAL);
+  if(!vis.length){
+    cont.innerHTML = '<span style="color:#fff;font-size:12px;opacity:.8">No hay modelos visibles (se pueden recuperar en «Gestionar modelos»)</span>';
+    return;
+  }
+  vis.forEach(function(m){
+    const b = document.createElement("button");
+    b.className = "btn-modelo" + (m.cod === modeloActual ? " activo" : "");
+    b.textContent = m.nombre;
+    b.onclick = function(){ cambiarModelo(m.cod); };
+    cont.appendChild(b);
+  });
+}
+
+function pintarConfigPanel(){
+  const c = CONFIG[PROV_ACTUAL];
+  document.getElementById("inputValorPunto").value = c.vp.toFixed(2);
+  document.getElementById("inputDescuento").value = (c.dto*100).toFixed(0);
+  const est = document.getElementById("cfgEstado");
+  est.textContent = "Proveedor " + REGISTRO_TARIFAS[PROV_ACTUAL].nombre + " — " + (c.editado
+    ? "valores corregidos a mano (solo para esta sesión)."
+    : (c.origen === "proveedores"
+        ? "valores leídos de Proveedores. Puedes corregirlos a mano."
+        : "valores por defecto (no se han podido leer de Proveedores todavía). Puedes corregirlos a mano."));
+}
 
 function cambiarConfigPrecio(){
+  const c = CONFIG[PROV_ACTUAL];
   const vp = parseFloat(document.getElementById("inputValorPunto").value);
   const dto = parseFloat(document.getElementById("inputDescuento").value);
-  if(!isNaN(vp) && vp >= 0) VALOR_PUNTO = vp;
-  if(!isNaN(dto) && dto >= 0 && dto <= 100) DESCUENTO = dto / 100;
-  // Recalcular precios de la página visible (tooltips) y del presupuesto
-  cargarPagina(paginaActual);
+  if(!isNaN(vp) && vp >= 0) c.vp = vp;
+  if(!isNaN(dto) && dto >= 0 && dto <= 100) c.dto = dto / 100;
+  c.editado = true;
+  pintarConfigPanel2();
+  if(catActual()) cargarPagina(paginaActual);
   pintarCarrito();
 }
+function pintarConfigPanel2(){ // solo el texto de estado (no toca los campos mientras se escribe)
+  const c = CONFIG[PROV_ACTUAL];
+  document.getElementById("cfgEstado").textContent = "Proveedor " + REGISTRO_TARIFAS[PROV_ACTUAL].nombre + " — valores corregidos a mano (solo para esta sesión).";
+}
 
-function cambiarModelo(nombre){
-  modeloActual = nombre;
-  document.getElementById("btnNati").classList.toggle("activo", nombre==="NATI");
-  document.getElementById("btnAlba").classList.toggle("activo", nombre==="ALBA");
-  construirTabs();
-  cargarPagina(0);
+function cambiarProveedor(prov){
+  if(!REGISTRO_TARIFAS[prov]) return;
+  PROV_ACTUAL = prov;
+  document.getElementById("selProveedor").value = prov;
+  pintarConfigPanel();
+  const vis = modelosVisibles(prov);
+  if(vis.length){ cambiarModelo(vis[0].cod); }
+  else { modeloActual = ""; pintarBotonesModelo(); limpiarVisor("Este proveedor no tiene modelos visibles"); }
+}
+
+function limpiarVisor(msg){
+  document.getElementById("tabs").innerHTML = "";
+  document.getElementById("tituloPagina").textContent = msg || "—";
+  document.getElementById("imgPagina").removeAttribute("src");
+  document.getElementById("notaPagina").style.display = "none";
+  document.getElementById("paginaWrap").querySelectorAll(".hotspot").forEach(function(h){ h.remove(); });
+}
+
+function cambiarModelo(cod){
+  const m = getModelo(PROV_ACTUAL, cod);
+  if(!m) return;
+  modeloActual = cod;
+  pintarBotonesModelo();
+  limpiarVisor("Cargando " + m.nombre + "…");
+  const provPedido = PROV_ACTUAL;
+  cargarCatalogo(PROV_ACTUAL, m).then(function(){
+    if(provPedido !== PROV_ACTUAL || cod !== modeloActual) return; // el usuario ya cambió de modelo
+    construirTabs();
+    cargarPagina(0);
+  }).catch(function(e){
+    limpiarVisor("⚠️ " + e.message);
+  });
 }
 
 function construirTabs(){
   const tabsEl = document.getElementById("tabs");
   tabsEl.innerHTML = "";
-  const paginas = MODELOS[modeloActual].catalogo.pages;
-  paginas.forEach((p, idx) => {
+  const paginas = catActual().pages;
+  paginas.forEach(function(p, idx){
     const t = document.createElement("div");
-    t.className = "tab" + (idx===0 ? " activa" : "");
+    t.className = "tab" + (idx === 0 ? " activa" : "");
     t.id = "tab_" + idx;
-    t.innerHTML = `<span class="n">${p.num}</span>${p.titulo}`;
-    t.onclick = () => cargarPagina(idx);
+    t.innerHTML = '<span class="n">' + p.num + '</span>' + esc(p.titulo);
+    t.onclick = function(){ cargarPagina(idx); };
     tabsEl.appendChild(t);
   });
 }
 
 function irPagina(delta){
+  if(!catActual()) return;
   const nueva = paginaActual + delta;
-  const paginas = MODELOS[modeloActual].catalogo.pages;
-  if(nueva >= 0 && nueva < paginas.length) cargarPagina(nueva);
+  if(nueva >= 0 && nueva < catActual().pages.length) cargarPagina(nueva);
 }
 
 function cargarPagina(idx){
+  const cat = catActual();
+  if(!cat) return;
   paginaActual = idx;
-  const cat = MODELOS[modeloActual].catalogo;
-  const carpeta = MODELOS[modeloActual].carpeta;
+  const m = getModelo(PROV_ACTUAL, modeloActual);
   const p = cat.pages[idx];
+  const pw = p.pageWidth || cat.pageWidth;
+  const ph = p.pageHeight || cat.pageHeight;
 
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("activa"));
-  const tabEl = document.getElementById("tab_"+idx);
+  document.querySelectorAll(".tab").forEach(function(t){ t.classList.remove("activa"); });
+  const tabEl = document.getElementById("tab_" + idx);
   if(tabEl) tabEl.classList.add("activa");
 
-  document.getElementById("tituloPagina").textContent = modeloActual + " — Página " + p.num + " — " + p.titulo;
-  document.getElementById("imgPagina").src = carpeta + "/" + p.img;
+  document.getElementById("tituloPagina").textContent = m.nombre + " — Página " + p.num + " — " + p.titulo;
+  document.getElementById("imgPagina").src = m.carpeta + "/" + p.img;
 
   const notaEl = document.getElementById("notaPagina");
-  if(p.nota){
-    notaEl.style.display = "block";
-    notaEl.textContent = "⚠️ " + p.nota;
-  } else {
-    notaEl.style.display = "none";
-  }
+  if(p.nota){ notaEl.style.display = "block"; notaEl.textContent = "⚠️ " + p.nota; }
+  else { notaEl.style.display = "none"; }
 
   const wrap = document.getElementById("paginaWrap");
-  wrap.querySelectorAll(".hotspot").forEach(h => h.remove());
+  wrap.querySelectorAll(".hotspot").forEach(function(h){ h.remove(); });
 
-  p.items.forEach(item => {
-    const uid = modeloActual + "_" + item.id;
+  p.items.forEach(function(item){
+    const uid = PROV_ACTUAL + "_" + modeloActual + "_" + item.id;
     const div = document.createElement("div");
     div.className = "hotspot";
     div.id = "hs_" + uid;
-    div.style.left   = (item.x0 / cat.pageWidth * 100) + "%";
-    div.style.top    = (item.y0 / cat.pageHeight * 100) + "%";
-    div.style.width  = ((item.x1 - item.x0) / cat.pageWidth * 100) + "%";
-    div.style.height = ((item.y1 - item.y0) / cat.pageHeight * 100) + "%";
-    div.title = item.seccion + " — " + item.etiqueta + " (" + calcularPrecio(item.puntos) + " €)";
+    div.style.left   = (item.x0 / pw * 100) + "%";
+    div.style.top    = (item.y0 / ph * 100) + "%";
+    div.style.width  = ((item.x1 - item.x0) / pw * 100) + "%";
+    div.style.height = ((item.y1 - item.y0) / ph * 100) + "%";
+    div.title = descripcionItem(item) + " — " + calcularPrecio(item.puntos, PROV_ACTUAL) + " €";
     div.innerHTML = '<span class="badge"></span>';
-    div.onclick = () => añadirAlCarrito(item, modeloActual);
+    const provClic = PROV_ACTUAL, modClic = modeloActual;
+    div.onclick = function(){ anadirAlCarrito(item, modClic, provClic); };
     wrap.appendChild(div);
     if(carrito[uid]){
       div.classList.add("added");
@@ -512,12 +674,14 @@ function cargarPagina(idx){
   });
 }
 
-function añadirAlCarrito(item, modelo){
-  const uid = modelo + "_" + item.id;
+function anadirAlCarrito(item, modelo, prov){
+  const uid = prov + "_" + modelo + "_" + item.id;
   if(!carrito[uid]){
+    const m = getModelo(prov, modelo);
     carrito[uid] = {
-      item, cantidad: 0, modelo,
-      descripcion: item.seccion + " - " + item.etiqueta
+      item: item, cantidad: 0, modelo: modelo, prov: prov,
+      descripcion: descripcionItem(item),
+      color: m ? m.color : "#555"
     };
   }
   carrito[uid].cantidad++;
@@ -551,6 +715,7 @@ function agregarManual(){
     item: { seccion: "Cargo manual", etiqueta: desc, puntos: null },
     cantidad: 1,
     modelo: "MANUAL",
+    prov: "MANUAL",
     descripcion: desc,
     precioManual: precio
   };
@@ -581,17 +746,17 @@ function quitarDelCarrito(uid){
 }
 
 function vaciarCarrito(){
-  Object.keys(carrito).forEach(k => delete carrito[k]);
+  Object.keys(carrito).forEach(function(k){ delete carrito[k]; });
   pintarCarrito();
 }
 
 function precioUnidad(en){
-  return en.modelo === "MANUAL" ? (en.precioManual || 0) : calcularPrecio(en.item.puntos);
+  return en.modelo === "MANUAL" ? (en.precioManual || 0) : calcularPrecio(en.item.puntos, en.prov);
 }
 
 function pintarCarrito(){
-  document.querySelectorAll(".hotspot").forEach(hs => {
-    const uid = hs.id.replace("hs_","");
+  document.querySelectorAll(".hotspot").forEach(function(hs){
+    const uid = hs.id.replace("hs_", "");
     const en = carrito[uid];
     if(en){
       hs.classList.add("added");
@@ -604,37 +769,38 @@ function pintarCarrito(){
   const lista = document.getElementById("cartList");
   const ids = Object.keys(carrito);
   if(ids.length === 0){
-    lista.innerHTML = '<div class="vacio">Todavía no has añadido ningún artículo.<br>Pulsa sobre una fila de la tabla, o usa "Añadir línea manual".</div>';
+    lista.innerHTML = '<div class="vacio">Todavía no has añadido ningún artículo.<br>Pulsa sobre un precio de la tarifa, o usa "Añadir línea manual".</div>';
     document.getElementById("totalTxt").textContent = "0 €";
     return;
   }
 
   lista.innerHTML = "";
-  ids.forEach(uid => {
+  ids.forEach(function(uid){
     const en = carrito[uid];
     const esManual = en.modelo === "MANUAL";
-    const tagClass = esManual ? "tag-manual" : MODELOS[en.modelo].tag;
-    const subInfo = esManual ? "" : `<span>${en.item.puntos} pts</span>`;
+    const tagStyle = esManual ? "" : ' style="background:' + en.color + '"';
+    const tagClass = esManual ? "tag-manual" : "";
+    const tagTxt = esManual ? "MANUAL" : esc(en.prov + " · " + en.modelo);
+    const subInfo = esManual ? "" : '<span>' + en.item.puntos + ' pts' + (en.item.serie ? ' · Serie ' + esc(en.item.serie) : '') + '</span>';
     const precioCelda = esManual
-      ? `<input type="number" class="desc-edit" style="width:56px;text-align:right;border:1px solid #ddd;" value="${en.precioManual}" step="1" oninput="editarPrecioManual('${uid}', this.value)">€`
-      : `<div class="precio" id="subtotal_${uid}">${precioUnidad(en)*en.cantidad} €</div>`;
+      ? '<input type="number" class="desc-edit" style="width:56px;text-align:right;border:1px solid #ddd;" value="' + en.precioManual + '" step="1" oninput="editarPrecioManual(\'' + uid + '\', this.value)">€'
+      : '<div class="precio" id="subtotal_' + uid + '">' + (precioUnidad(en) * en.cantidad) + ' €</div>';
 
     const row = document.createElement("div");
     row.className = "cart-item";
-    row.innerHTML = `
-      <div class="desc">
-        <span class="modelo-tag ${tagClass}">${en.modelo}</span>
-        <input type="text" class="desc-edit" value="${en.descripcion}" oninput="editarDescripcion('${uid}', this.value)">
-        ${subInfo}
-      </div>
-      <div class="qty-ctrl">
-        <button onclick="cambiarCantidad('${uid}',-1)">−</button>
-        <span>${en.cantidad}</span>
-        <button onclick="cambiarCantidad('${uid}',1)">+</button>
-      </div>
-      ${esManual ? `<div class="precio">${precioCelda}</div>` : precioCelda}
-      <div class="del" onclick="quitarDelCarrito('${uid}')">✕</div>
-    `;
+    row.innerHTML =
+      '<div class="desc">'
+      + '<span class="modelo-tag ' + tagClass + '"' + tagStyle + '>' + tagTxt + '</span>'
+      + '<input type="text" class="desc-edit" value="' + esc(en.descripcion) + '" oninput="editarDescripcion(\'' + uid + '\', this.value)">'
+      + subInfo
+      + '</div>'
+      + '<div class="qty-ctrl">'
+      + '<button onclick="cambiarCantidad(\'' + uid + '\',-1)">−</button>'
+      + '<span>' + en.cantidad + '</span>'
+      + '<button onclick="cambiarCantidad(\'' + uid + '\',1)">+</button>'
+      + '</div>'
+      + (esManual ? '<div class="precio">' + precioCelda + '</div>' : precioCelda)
+      + '<div class="del" onclick="quitarDelCarrito(\'' + uid + '\')">✕</div>';
     lista.appendChild(row);
   });
 
@@ -643,7 +809,7 @@ function pintarCarrito(){
 
 function actualizarTotales(){
   let total = 0;
-  Object.keys(carrito).forEach(uid => {
+  Object.keys(carrito).forEach(function(uid){
     const en = carrito[uid];
     const subtotal = precioUnidad(en) * en.cantidad;
     total += subtotal;
@@ -661,15 +827,130 @@ function mostrarTexto(){
     ta.value = "(la lista está vacía)";
     return;
   }
-  let lineas = [];
-  ids.forEach(uid => {
+  const lineas = [];
+  ids.forEach(function(uid){
     const en = carrito[uid];
     const pu = precioUnidad(en);
-    lineas.push(`[${en.modelo}] ${en.descripcion}\tCant: ${en.cantidad}\tPrecio: ${pu} €\tSubtotal: ${pu*en.cantidad} €`);
+    lineas.push("[" + en.modelo + "] " + en.descripcion + "\tCant: " + en.cantidad + "\tPrecio: " + pu + " €\tSubtotal: " + (pu * en.cantidad) + " €");
   });
   ta.style.display = "block";
   ta.value = lineas.join("\n");
   ta.select();
+}
+
+/* ============================================================
+   LECTURA DE PROVEEDORES (valor punto y descuento) — con caché
+   ============================================================ */
+function aplicarProveedoresMap(map){
+  Object.keys(CONFIG).forEach(function(p){
+    const pd = map[p] || map[parseInt(p, 10)];
+    if(pd && !CONFIG[p].editado){
+      if(pd.precioPunto > 0) CONFIG[p].vp = pd.precioPunto;
+      if(pd.dtoMax > 0) CONFIG[p].dto = pd.dtoMax / 100;
+      CONFIG[p].origen = "proveedores";
+    }
+  });
+}
+
+function cargarConfigProveedores(){
+  const c = cacheGet("meres_proveedores");     // misma caché que selector-tarifas y facturacion
+  if(c){ aplicarProveedoresMap(c); return Promise.resolve(); }
+  if(!FIREBASE_AUTH_OK) return Promise.resolve();
+  // Solo se lee la colección "proveedores" (no las tarifas) y se guarda en caché 4 h
+  return db8194.collection("proveedores").get().then(function(snap){
+    const prvMap = {};
+    snap.docs.forEach(function(d){
+      const o = d.data();
+      const cod = String(o.Codigo || o.codigo || d.id || "").trim();
+      if(!cod) return;
+      const pp = parseFloat(String(o.PUNTOS || o.puntos || o.precioPunto || "0").replace(",", ".")) || 0;
+      const dto = parseFloat(String(o.MAX_DTO || o.dtoMax || "0").replace(",", ".").replace("%", "")) || 0;
+      const nom = o.Nombre || o.nombre || cod;
+      prvMap[cod] = {nombre: nom, precioPunto: pp, dtoMax: dto};
+      if(/^\d+$/.test(cod)) prvMap[parseInt(cod, 10)] = {nombre: nom, precioPunto: pp, dtoMax: dto};
+    });
+    cacheSet("meres_proveedores", prvMap);
+    aplicarProveedoresMap(prvMap);
+  }).catch(function(e){ console.warn("No se pudo leer Proveedores:", e); });
+}
+
+/* ============================================================
+   MODELOS OCULTOS ("borrados") — lista compartida en Firebase
+   (documento tarifas_config/modelos_ocultos) con caché de 4 h
+   ============================================================ */
+function leerOcultosLocal(){
+  try{ return JSON.parse(localStorage.getItem("meres_tarifas_ocultos_local") || "{}") || {}; }catch(e){ return {}; }
+}
+function cargarOcultos(){
+  const c = cacheGet("meres_tarifas_ocultos");
+  if(c){ OCULTOS = c; return Promise.resolve(); }
+  if(!FIREBASE_AUTH_OK){ OCULTOS = leerOcultosLocal(); return Promise.resolve(); }
+  return db8194.collection("tarifas_config").doc("modelos_ocultos").get().then(function(snap){
+    OCULTOS = (snap.exists && snap.data().ocultos) ? snap.data().ocultos : {};
+    cacheSet("meres_tarifas_ocultos", OCULTOS);
+  }).catch(function(e){
+    console.warn("No se pudo leer modelos ocultos:", e);
+    OCULTOS = leerOcultosLocal();
+  });
+}
+async function guardarOcultos(){
+  cacheSet("meres_tarifas_ocultos", OCULTOS);
+  try{ localStorage.setItem("meres_tarifas_ocultos_local", JSON.stringify(OCULTOS)); }catch(e){}
+  if(!FIREBASE_AUTH_OK){
+    alert("No hay sesión de Firebase: el cambio solo vale en este ordenador. Abre esta página desde menu.html o facturacion.html para que valga para todos.");
+    return;
+  }
+  try{
+    await db8194.collection("tarifas_config").doc("modelos_ocultos").set({
+      ocultos: OCULTOS, actualizado: new Date().toISOString(), por: VENDEDOR_ACTUAL || ""
+    });
+  }catch(e){
+    alert("No se pudo guardar en Firebase (" + e.message + "). El cambio solo vale en este ordenador.");
+  }
+}
+
+function abrirGestionModelos(){
+  pintarGestionModelos();
+  document.getElementById("modalModelos").style.display = "flex";
+}
+function cerrarGestionModelos(){
+  document.getElementById("modalModelos").style.display = "none";
+}
+function pintarGestionModelos(){
+  document.getElementById("gmProv").textContent = REGISTRO_TARIFAS[PROV_ACTUAL].nombre;
+  const cont = document.getElementById("gmLista");
+  cont.innerHTML = "";
+  const oc = OCULTOS[PROV_ACTUAL] || [];
+  REGISTRO_TARIFAS[PROV_ACTUAL].modelos.forEach(function(m){
+    const oculto = oc.indexOf(m.cod) >= 0;
+    const fila = document.createElement("div");
+    fila.className = "gm-fila" + (oculto ? " oculto" : "");
+    fila.innerHTML = '<span class="gm-nombre">' + esc(m.nombre) + '</span>'
+      + '<span class="gm-estado">' + (oculto ? "borrado" : "en la lista") + '</span>'
+      + (oculto
+          ? '<button class="verde" onclick="cambiarOculto(\'' + m.cod + '\', false)">♻️ Recuperar</button>'
+          : '<button class="rojo" onclick="cambiarOculto(\'' + m.cod + '\', true)">🗑️ Borrar</button>');
+    cont.appendChild(fila);
+  });
+}
+async function cambiarOculto(cod, ocultar){
+  const m = getModelo(PROV_ACTUAL, cod);
+  const k = prompt("Introduce tu clave para " + (ocultar ? "BORRAR" : "RECUPERAR") + " el modelo " + m.nombre + ":");
+  if(k === null) return;
+  if(k !== CLAVE_BORRADO){ alert("Clave incorrecta"); return; }
+  if(ocultar && !confirm("¿Borrar el modelo " + m.nombre + " de la lista? (se puede recuperar desde «Gestionar modelos»)")) return;
+  const lista = (OCULTOS[PROV_ACTUAL] || []).filter(function(c){ return c !== cod; });
+  if(ocultar) lista.push(cod);
+  OCULTOS[PROV_ACTUAL] = lista;
+  await guardarOcultos();
+  pintarGestionModelos();
+  // Si se ha borrado el modelo que se estaba viendo, pasar a otro
+  const vis = modelosVisibles(PROV_ACTUAL);
+  if(ocultar && cod === modeloActual){
+    if(vis.length) cambiarModelo(vis[0].cod); else { modeloActual = ""; limpiarVisor("Este proveedor no tiene modelos visibles"); }
+  }
+  if(!ocultar && !modeloActual && vis.length) cambiarModelo(vis[0].cod);
+  pintarBotonesModelo();
 }
 
 /* ============================================================
@@ -858,12 +1139,10 @@ function ejecutarImpresionPresupuesto(){
 }
 
 /* ---------- 2) PEDIDO A FÁBRICA ----------
-   Al contrario que el presupuesto: aquí SÍ debe verse el modelo
-   (NATI/ALBA) y los puntos de cada artículo, porque la fábrica
-   trabaja en puntos. Pero NUNCA debe verse ningún precio en €:
-   no le interesa saber a cuánto lo vendemos al público.
-   Las líneas manuales (cargos que no son artículos de fábrica)
-   se excluyen de este documento. */
+   Aquí SÍ se ve el modelo (y la serie de tejido, si la hay) y los puntos de
+   cada artículo, porque la fábrica trabaja en puntos. Pero NUNCA debe verse
+   ningún precio en €. Cada proveedor sale en su propio pedido (una hoja por
+   proveedor). Las líneas manuales salen sin precio ni puntos. */
 function ejecutarImpresionFabrica(){
   if(!PRES_TIENDA_SEL){ alert("Elige una tienda primero"); return; }
   document.getElementById("modalTienda").style.display = "none";
@@ -873,46 +1152,64 @@ function ejecutarImpresionFabrica(){
   const refPedido = document.getElementById("cli-nombre").value.trim();
   const fecha = new Date().toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric"});
 
-  const idsFabrica = Object.keys(carrito);
+  const ids = Object.keys(carrito);
+  const provs = [];
+  ids.forEach(function(uid){ const p = carrito[uid].prov; if(p !== "MANUAL" && provs.indexOf(p) < 0) provs.push(p); });
 
-  let totalPuntos = 0;
-  const filas = idsFabrica.map(function(uid){
-    const en = carrito[uid];
-    const esManual = en.modelo === "MANUAL";
-    const pts = esManual ? null : en.item.puntos;
-    const ptsTotal = esManual ? null : pts * en.cantidad;
-    if(!esManual) totalPuntos += ptsTotal;
-    const tagColor = esManual ? "#8a5a00" : (en.modelo === "NATI" ? "#1a6b2a" : "#003580");
-    const tagTxt = esManual ? "Manual" : en.modelo;
-    return "<tr>"
-      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center'>"
-        +"<span style='display:inline-block;font-size:10px;font-weight:700;color:#fff;background:"+tagColor+";border-radius:6px;padding:2px 8px'>"+tagTxt+"</span>"
-      +"</td>"
-      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;font-size:12px'><strong>"+en.descripcion+"</strong></td>"
-      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center'>"+en.cantidad+"</td>"
-      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;color:"+(esManual?"#ccc":"#1a1714")+"'>"+(esManual?"—":pts)+"</td>"
-      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700;color:"+(esManual?"#ccc":"#1a1714")+"'>"+(esManual?"—":ptsTotal)+"</td>"
-      +"</tr>";
-  }).join("");
+  // Un grupo por proveedor. Si solo hay un proveedor, las líneas manuales van en su mismo pedido;
+  // si hay varios, las manuales van en una hoja aparte.
+  const grupos = provs.map(function(p){
+    return {prov: p, nombre: REGISTRO_TARIFAS[p] ? REGISTRO_TARIFAS[p].nombre : p,
+            ids: ids.filter(function(u){ return carrito[u].prov === p; })};
+  });
+  const manuales = ids.filter(function(u){ return carrito[u].prov === "MANUAL"; });
+  if(grupos.length === 1) grupos[0].ids = grupos[0].ids.concat(manuales);
+  else if(grupos.length === 0) grupos.push({prov: "MANUAL", nombre: "Líneas manuales", ids: manuales});
+  else if(manuales.length) grupos.push({prov: "MANUAL", nombre: "Líneas manuales", ids: manuales});
 
-  const pagina = "<div style='padding:20px'>"+mkCabeceraTienda(st, tienda)
-    +"<div style='display:flex;justify-content:space-between;margin-bottom:10px'>"
-      +"<div style='font-size:15px;font-weight:800'>Pedido a fábrica — Proveedor 8194</div>"
-      +"<div style='font-size:12px;color:#888'>"+fecha+"</div>"
-    +"</div>"
-    +(refPedido?"<div style='margin-bottom:14px;font-size:12px'><span style='color:#888;font-size:10px;text-transform:uppercase'>Referencia</span><br><strong>"+refPedido+"</strong></div>":"")
-    +"<table style='width:100%;border-collapse:collapse'><thead><tr>"
-    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:center;width:70px'>Modelo</th>"
-    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:left'>Artículo</th>"
-    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:center;width:60px'>Cant.</th>"
-    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:right;width:80px'>Pts/ud</th>"
-    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:right;width:90px'>Pts total</th>"
-    +"</tr></thead><tbody>"+filas+"</tbody>"
-    +"<tfoot><tr><td colspan='4' style='padding:10px 8px;text-align:right;font-weight:700;font-size:14px;border-top:2px solid #1a1714'>TOTAL PUNTOS</td>"
-    +"<td style='padding:10px 8px;text-align:right;font-weight:800;font-size:18px;color:"+st.color+";border-top:2px solid #1a1714'>"+totalPuntos+"</td></tr></tfoot></table>"
-    +"<div style='margin-top:6px;font-size:11px;color:#aaa;text-align:center'>Documento de prueba</div></div>";
+  const th = "background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;";
+  const hojas = grupos.map(function(g, gi){
+    let totalPuntos = 0;
+    const filas = g.ids.map(function(uid){
+      const en = carrito[uid];
+      const esManual = en.modelo === "MANUAL";
+      const pts = esManual ? null : en.item.puntos;
+      const ptsTotal = esManual ? null : pts * en.cantidad;
+      if(!esManual) totalPuntos += ptsTotal;
+      const tagColor = esManual ? "#8a5a00" : (en.color || "#555");
+      const tagTxt = esManual ? "Manual" : en.modelo;
+      const serie = (!esManual && en.item.serie) ? "<div style='font-size:10px;font-weight:700;margin-top:3px'>Serie "+en.item.serie+"</div>" : "";
+      return "<tr>"
+        +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center'>"
+          +"<span style='display:inline-block;font-size:10px;font-weight:700;color:#fff;background:"+tagColor+";border-radius:6px;padding:2px 8px'>"+tagTxt+"</span>"+serie
+        +"</td>"
+        +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;font-size:12px'><strong>"+en.descripcion+"</strong></td>"
+        +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center'>"+en.cantidad+"</td>"
+        +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;color:"+(esManual?"#ccc":"#1a1714")+"'>"+(esManual?"—":pts)+"</td>"
+        +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700;color:"+(esManual?"#ccc":"#1a1714")+"'>"+(esManual?"—":ptsTotal)+"</td>"
+        +"</tr>";
+    }).join("");
 
-  abrirVentanaImpresion(pagina);
+    const titulo = g.prov === "MANUAL" ? "Pedido a fábrica — Líneas manuales" : "Pedido a fábrica — Proveedor " + g.nombre;
+    return "<div style='padding:20px;"+(gi < grupos.length-1 ? "page-break-after:always;" : "")+"'>"+mkCabeceraTienda(st, tienda)
+      +"<div style='display:flex;justify-content:space-between;margin-bottom:10px'>"
+        +"<div style='font-size:15px;font-weight:800'>"+titulo+"</div>"
+        +"<div style='font-size:12px;color:#888'>"+fecha+"</div>"
+      +"</div>"
+      +(refPedido?"<div style='margin-bottom:14px;font-size:12px'><span style='color:#888;font-size:10px;text-transform:uppercase'>Referencia</span><br><strong>"+refPedido+"</strong></div>":"")
+      +"<table style='width:100%;border-collapse:collapse'><thead><tr>"
+      +"<th style='"+th+"text-align:center;width:90px'>Modelo</th>"
+      +"<th style='"+th+"text-align:left'>Artículo</th>"
+      +"<th style='"+th+"text-align:center;width:60px'>Cant.</th>"
+      +"<th style='"+th+"text-align:right;width:80px'>Pts/ud</th>"
+      +"<th style='"+th+"text-align:right;width:90px'>Pts total</th>"
+      +"</tr></thead><tbody>"+filas+"</tbody>"
+      +"<tfoot><tr><td colspan='4' style='padding:10px 8px;text-align:right;font-weight:700;font-size:14px;border-top:2px solid #1a1714'>TOTAL PUNTOS</td>"
+      +"<td style='padding:10px 8px;text-align:right;font-weight:800;font-size:18px;color:"+st.color+";border-top:2px solid #1a1714'>"+totalPuntos+"</td></tr></tfoot></table>"
+      +"<div style='margin-top:6px;font-size:11px;color:#aaa;text-align:center'>Documento de prueba</div></div>";
+  });
+
+  abrirVentanaImpresion(hojas.join(""));
 }
 
 /* ============================================================
@@ -929,6 +1226,19 @@ let VENDEDOR_ACTUAL = new URLSearchParams(window.location.search).get("usuario")
 
 auth8194.onAuthStateChanged(function(u){
   FIREBASE_AUTH_OK = !!u;
+  if(u){
+    // Con sesión: leer Proveedores y modelos borrados (con caché de 4 h: normalmente 0 lecturas)
+    Promise.all([cargarConfigProveedores(), cargarOcultos()]).then(function(){
+      pintarConfigPanel();
+      const vis = modelosVisibles(PROV_ACTUAL);
+      if(modeloActual && !vis.some(function(m){ return m.cod === modeloActual; })){
+        if(vis.length) cambiarModelo(vis[0].cod); else { modeloActual = ""; limpiarVisor("Este proveedor no tiene modelos visibles"); }
+      }
+      pintarBotonesModelo();
+      if(catActual()) cargarPagina(paginaActual);
+      pintarCarrito();
+    });
+  }
 });
 
 function uid8194(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
@@ -958,7 +1268,7 @@ async function guardarEImprimir(){
     return {
       id: idx + 1,
       desc: en.descripcion,
-      fabrica: esManual ? "" : ("PROV.8194 | " + en.modelo + " | " + en.item.puntos + "pts"),
+      fabrica: esManual ? "" : ("PROV." + en.prov + " | " + en.modelo + (en.item.serie ? " | Serie " + en.item.serie : "") + " | " + en.item.puntos + "pts"),
       medidas: "",
       color: "",
       qty: en.cantidad,
@@ -968,9 +1278,14 @@ async function guardarEImprimir(){
     };
   });
 
+  const provsUsados = [];
+  ids.forEach(function(k){ const p = carrito[k].prov; if(p !== "MANUAL" && provsUsados.indexOf(p) < 0) provsUsados.push(p); });
+  const prefijoNum = provsUsados.length === 1 ? provsUsados[0] : "TAR";
+  const textoProv = provsUsados.length ? provsUsados.join(" + ") : "manual";
+
   const data = {
     id: uid8194(),
-    num: "8194-" + Date.now().toString(36).toUpperCase().slice(-6),
+    num: prefijoNum + "-" + Date.now().toString(36).toUpperCase().slice(-6),
     fecha: today8194(),
     estado: "pendiente",
     cliente: {
@@ -979,7 +1294,7 @@ async function guardarEImprimir(){
       email: "",
       dni: "",
       dir: document.getElementById("cli-poblacion").value.trim(),
-      notas: "Presupuesto rápido — Proveedor 8194"
+      notas: "Presupuesto rápido — Proveedor " + textoProv
     },
     tienda: PRES_TIENDA_SEL,
     vendedor: document.getElementById("cli-vendedor").value.trim() || VENDEDOR_ACTUAL || "Jose Angel",
@@ -1006,9 +1321,17 @@ async function guardarEImprimir(){
 }
 
 
-construirTabs();
-cargarPagina(0);
+/* ---------- ARRANQUE ---------- */
+pintarSelectorProveedor();
+(function(){
+  const c = cacheGet("meres_proveedores");        // valores de Proveedores desde caché, sin gastar lecturas
+  if(c) aplicarProveedoresMap(c);
+  const oc = cacheGet("meres_tarifas_ocultos");
+  OCULTOS = oc || leerOcultosLocal();
+})();
+pintarConfigPanel();
 pintarCarrito();
+cambiarProveedor(PROV_ACTUAL);
 </script>
 
 </body>
