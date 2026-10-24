@@ -294,6 +294,7 @@
     background:#fffdf6;color:#3a2212;cursor:pointer;margin-left:6px;max-width:100%;
   }
   .botones-modelo{display:flex;gap:8px;flex-wrap:wrap;}
+  .sel-modelo{font-family:inherit;font-size:15px;font-weight:700;padding:8px 14px;border-radius:10px;border:2px solid #C8A951;background:#C8A951;color:#2b1d10;cursor:pointer;min-width:260px;}
   .btn-gestion{
     margin-left:auto;padding:7px 14px;border-radius:20px;border:1px solid #8a6a4a;
     background:transparent;color:#fff;font-size:12px;font-weight:700;cursor:pointer;
@@ -537,6 +538,20 @@ function pintarBotonesModelo(){
   const vis = modelosVisibles(PROV_ACTUAL);
   if(!vis.length){
     cont.innerHTML = '<span style="color:#fff;font-size:12px;opacity:.8">No hay modelos visibles (se pueden recuperar en «Gestionar modelos»)</span>';
+    return;
+  }
+  if(REGISTRO_TARIFAS[PROV_ACTUAL].desplegable){
+    // Proveedores con muchos modelos (p. ej. Quality): lista desplegable en vez de botones
+    const s = document.createElement("select");
+    s.className = "sel-modelo";
+    vis.forEach(function(m){
+      const o = document.createElement("option");
+      o.value = m.cod; o.textContent = m.nombre;
+      if(m.cod === modeloActual) o.selected = true;
+      s.appendChild(o);
+    });
+    s.onchange = function(){ cambiarModelo(s.value); };
+    cont.appendChild(s);
     return;
   }
   vis.forEach(function(m){
