@@ -308,6 +308,36 @@
   .gm-fila button.verde{color:#1a6b2a;border-color:#a9d3b0;}
   .gm-fila.oculto .gm-nombre{text-decoration:line-through;color:#aaa;}
   .tab.hs-msg{cursor:default;}
+
+  /* ---- Vista tabla grande (Quality) ---- */
+  .visor{overflow:clip;}
+  .vista-tabla{display:flex;gap:14px;padding:10px 12px;align-items:flex-start;}
+  .vt-izq{flex:0 0 36%;position:sticky;top:8px;}
+  .vt-recorte{overflow:hidden;line-height:0;border:1px solid #e3ddd2;border-radius:8px;background:#fff;}
+  .vt-recorte img{display:block;max-width:none;}
+  .vt-der{flex:1;min-width:0;}
+  table.vt{border-collapse:collapse;width:100%;font-size:14px;}
+  .vt th{position:sticky;top:0;z-index:2;background:#2b2320;color:#fff;padding:7px 4px;font-size:13px;text-align:center;}
+  .vt th.desc{text-align:left;padding-left:8px;}
+  .vt td{border-bottom:1px solid #ece7de;padding:6px 4px;}
+  .vt tr:nth-child(even) td{background:#faf8f4;}
+  .vt tr.sep td{border-top:3px solid #2b2320;}
+  .vt td.n{width:26px;text-align:center;color:#a39a8c;font-size:11px;}
+  .vt td.desc{font-size:13.5px;padding-left:8px;line-height:1.25;}
+  .vt td.celda{position:relative;text-align:center;cursor:pointer;font-weight:700;min-width:50px;}
+  .vt td.celda.hotspot{border:none;border-bottom:1px solid #ece7de;border-radius:0;}
+  .vt td.celda:hover{background:var(--dorado-suave);}
+  .vt td.celda.added{background:var(--verde-suave);}
+  .vt td.celda .badge{top:-2px;right:-1px;}
+  .vt tr:hover td.desc, .vt tr:hover td.n{background:#f6efdc;}
+
+  /* ---- Zoom del visor ---- */
+  .zm-barra{display:inline-flex;gap:4px;margin-right:10px;align-items:center;}
+  .zm-barra button.on{background:#C8A951;border-color:#C8A951;font-weight:700;}
+  .zm-barra button:disabled{background:#fff;color:#555;cursor:default;min-width:46px;}
+  #zoomCont.con-zoom{overflow:auto;max-height:calc(100vh - 150px);cursor:grab;}
+  #zoomCont.arrastrando{cursor:grabbing;user-select:none;}
+  #zoomCont.con-zoom .hotspot{cursor:pointer;}
 </style>
 </head>
 <body>
@@ -607,6 +637,9 @@ function limpiarVisor(msg){
   document.getElementById("imgPagina").removeAttribute("src");
   document.getElementById("notaPagina").style.display = "none";
   document.getElementById("paginaWrap").querySelectorAll(".hotspot").forEach(function(h){ h.remove(); });
+  const vt = document.getElementById("vistaTabla"); if(vt){ vt.innerHTML = ""; vt.style.display = "none"; }
+  document.getElementById("paginaWrap").style.display = "";
+  const bv = document.getElementById("btnVista"); if(bv) bv.style.display = "none";
 }
 
 function cambiarModelo(cod){
@@ -645,6 +678,128 @@ function irPagina(delta){
   if(nueva >= 0 && nueva < catActual().pages.length) cargarPagina(nueva);
 }
 
+/* ---------- Vista «tabla grande» (catálogos con cat.vista === "tabla", p. ej. Quality) ---------- */
+let VISTA_TABLA = true;
+function alternarVista(){ VISTA_TABLA = !VISTA_TABLA; if(catActual()) cargarPagina(paginaActual); }
+/* ---------- Zoom del visor (catálogos con cat.zoom === true, p. ej. Quality) ---------- */
+let ZOOM = 1, ZOOM_MODO = "todo";
+try{ ZOOM_MODO = localStorage.getItem("meres_zoom_modo") || "todo"; }catch(e){}
+function zoomC(){ return document.getElementById("zoomCont"); }
+function zoomEtiqueta(){ const b = document.getElementById("zmNivel"); if(b) b.textContent = Math.round(ZOOM*100) + "%"; }
+function marcarModoZoom(){
+  ["todo","dibujos","tabla"].forEach(function(k){
+    const b = document.getElementById("zm_" + k); if(b) b.classList.toggle("on", ZOOM_MODO === k);
+  });
+}
+function fijarZoom(z){
+  const c = zoomC(), w = document.getElementById("paginaWrap");
+  const fx = (c.scrollLeft + c.clientWidth/2) / Math.max(1, w.offsetWidth), fy = (c.scrollTop + c.clientHeight/2) / Math.max(1, w.offsetHeight);
+  ZOOM = Math.max(1, Math.min(4, z));
+  w.style.width = (ZOOM*100) + "%";
+  c.classList.toggle("con-zoom", ZOOM > 1.001);
+  c.scrollLeft = fx * w.offsetWidth - c.clientWidth/2; c.scrollTop = fy * w.offsetHeight - c.clientHeight/2;
+  zoomEtiqueta();
+}
+function zoomPaso(f){ ZOOM_MODO = "libre"; try{ localStorage.setItem("meres_zoom_modo", "libre"); }catch(e){} marcarModoZoom(); fijarZoom(ZOOM * f); }
+function zoomModo(modo){
+  ZOOM_MODO = modo; try{ localStorage.setItem("meres_zoom_modo", modo); }catch(e){}
+  aplicarZoomPagina();
+}
+function aplicarZoomPagina(){
+  const cat = catActual(); if(!cat || !cat.zoom) return;
+  const c = zoomC(), w = document.getElementById("paginaWrap");
+  const p = cat.pages[paginaActual], pw = p.pageWidth || cat.pageWidth, ph = p.pageHeight || cat.pageHeight;
+  marcarModoZoom();
+  if(ZOOM_MODO === "libre"){ zoomEtiqueta(); return; }
+  if(ZOOM_MODO === "todo" || !p.tx){ ZOOM = 1; w.style.width = "100%"; c.classList.remove("con-zoom"); c.scrollLeft = 0; c.scrollTop = 0; zoomEtiqueta(); return; }
+  const x0 = ZOOM_MODO === "dibujos" ? 0 : Math.max(0, p.tx - 22), x1 = ZOOM_MODO === "dibujos" ? p.tx : pw;
+  ZOOM = Math.max(1, Math.min(4, pw / (x1 - x0) * 0.98));
+  w.style.width = (ZOOM*100) + "%"; c.classList.add("con-zoom");
+  c.scrollLeft = x0 / pw * w.offsetWidth;
+  c.scrollTop = (ZOOM_MODO === "tabla" ? (p.ty || 0) : 0) / ph * w.offsetHeight;
+  zoomEtiqueta();
+}
+function arrastrarZoom(c){
+  let down = false, moved = false, sx = 0, sy = 0, sl = 0, st = 0;
+  c.addEventListener("mousedown", function(e){ if(e.button !== 0) return; down = true; moved = false; sx = e.clientX; sy = e.clientY; sl = c.scrollLeft; st = c.scrollTop; });
+  window.addEventListener("mousemove", function(e){
+    if(!down) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if(!moved && Math.abs(dx) + Math.abs(dy) > 6){ moved = true; c.classList.add("arrastrando"); }
+    if(moved){ c.scrollLeft = sl - dx; c.scrollTop = st - dy; }
+  });
+  window.addEventListener("mouseup", function(){ if(down){ down = false; c.classList.remove("arrastrando"); } });
+  c.addEventListener("click", function(e){ if(moved){ e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+}
+function asegurarVistaUI(){
+  if(!document.getElementById("zoomCont")){
+    const w = document.getElementById("paginaWrap"), z = document.createElement("div");
+    z.id = "zoomCont"; w.parentNode.insertBefore(z, w); z.appendChild(w); arrastrarZoom(z);
+  }
+  if(!document.getElementById("zmBarra")){
+    const bar = document.createElement("span"); bar.id = "zmBarra"; bar.className = "zm-barra"; bar.style.display = "none";
+    bar.innerHTML = '<button onclick="zoomPaso(1/1.25)" title="Alejar">🔍−</button><button id="zmNivel" disabled>100%</button><button onclick="zoomPaso(1.25)" title="Acercar">🔍+</button>'
+      + '<button id="zm_todo" onclick="zoomModo(\'todo\')" title="Ver la página entera">Página entera</button>'
+      + '<button id="zm_dibujos" onclick="zoomModo(\'dibujos\')" title="Ampliar los dibujos de los sofás">Dibujos</button>'
+      + '<button id="zm_tabla" onclick="zoomModo(\'tabla\')" title="Ampliar la tabla de precios">Tabla</button>';
+    document.querySelector(".nav-btns").prepend(bar);
+  }
+  if(!document.getElementById("vistaTabla")){
+    const d = document.createElement("div"); d.id = "vistaTabla"; d.className = "vista-tabla"; d.style.display = "none";
+    document.getElementById("zoomCont").after(d);
+  }
+  if(!document.getElementById("btnVista")){
+    const b = document.createElement("button"); b.id = "btnVista"; b.onclick = alternarVista; b.style.display = "none";
+    document.querySelector(".nav-btns").prepend(b);
+  }
+}
+function pintarTabla(p, m, pw){
+  const vt = document.getElementById("vistaTabla");
+  vt.innerHTML = "";
+  const filas = [], pos = {}, series = [];
+  p.items.forEach(function(it){
+    const k = it.id.split("_")[1];
+    if(!(k in pos)){ pos[k] = filas.length; filas.push({n: it.n || 0, desc: it.etiqueta.replace(p.titulo + " — ", ""), celdas: {}}); }
+    filas[pos[k]].celdas[it.serie] = it;
+    if(series.indexOf(it.serie) < 0) series.push(it.serie);
+  });
+  // izquierda: recorte de la página original (dibujos), fijo mientras se desplaza la tabla
+  const izq = document.createElement("div"); izq.className = "vt-izq";
+  const rec = document.createElement("div"); rec.className = "vt-recorte";
+  const im = document.createElement("img");
+  im.src = m.carpeta + "/" + p.img;
+  im.style.width = (p.tx ? (pw / p.tx * 100) : 100) + "%";
+  rec.appendChild(im); izq.appendChild(rec); vt.appendChild(izq);
+  // derecha: tabla con letra grande
+  const der = document.createElement("div"); der.className = "vt-der";
+  const tb = document.createElement("table"); tb.className = "vt";
+  let h = "<thead><tr><th class='n'></th><th class='desc'>" + esc(p.titulo) + "</th>";
+  series.forEach(function(s){ h += "<th>" + esc(s) + "</th>"; });
+  tb.innerHTML = h + "</tr></thead>";
+  const tbody = document.createElement("tbody");
+  filas.forEach(function(f, i){
+    const tr = document.createElement("tr");
+    if(i > 0 && !f.n && filas[i-1].n) tr.className = "sep";
+    const tdn = document.createElement("td"); tdn.className = "n"; tdn.textContent = f.n || ""; tr.appendChild(tdn);
+    const td = document.createElement("td"); td.className = "desc"; td.textContent = f.desc; tr.appendChild(td);
+    series.forEach(function(s){
+      const it = f.celdas[s];
+      const c = document.createElement("td");
+      if(!it){ tr.appendChild(c); return; }
+      const uid = PROV_ACTUAL + "_" + modeloActual + "_" + it.id;
+      c.className = "celda hotspot"; c.id = "hs_" + uid;
+      c.title = descripcionItem(it) + " — " + calcularPrecio(it.puntos, PROV_ACTUAL) + " €";
+      c.innerHTML = "<span>" + it.puntos + "</span><span class='badge'></span>";
+      const provClic = PROV_ACTUAL, modClic = modeloActual;
+      c.onclick = function(){ anadirAlCarrito(it, modClic, provClic); };
+      if(carrito[uid]){ c.classList.add("added"); c.querySelector(".badge").textContent = carrito[uid].cantidad; }
+      tr.appendChild(c);
+    });
+    tbody.appendChild(tr);
+  });
+  tb.appendChild(tbody); der.appendChild(tb); vt.appendChild(der);
+}
+
 function cargarPagina(idx){
   const cat = catActual();
   if(!cat) return;
@@ -667,6 +822,17 @@ function cargarPagina(idx){
 
   const wrap = document.getElementById("paginaWrap");
   wrap.querySelectorAll(".hotspot").forEach(function(h){ h.remove(); });
+  asegurarVistaUI();
+  const hayTabla = cat.vista === "tabla", usaTabla = hayTabla && VISTA_TABLA;
+  const btnV = document.getElementById("btnVista");
+  btnV.style.display = hayTabla ? "" : "none";
+  document.getElementById("zmBarra").style.display = cat.zoom ? "inline-flex" : "none";
+  if(!cat.zoom){ document.getElementById("paginaWrap").style.width = "100%"; zoomC().classList.remove("con-zoom"); }
+  btnV.textContent = usaTabla ? "🖼️ Página original" : "📋 Tabla grande";
+  wrap.style.display = usaTabla ? "none" : "";
+  document.getElementById("vistaTabla").style.display = usaTabla ? "flex" : "none";
+  if(!usaTabla) document.getElementById("vistaTabla").innerHTML = "";
+  if(usaTabla){ pintarTabla(p, m, pw); return; }
 
   p.items.forEach(function(item){
     const uid = PROV_ACTUAL + "_" + modeloActual + "_" + item.id;
@@ -687,6 +853,7 @@ function cargarPagina(idx){
       div.querySelector(".badge").textContent = carrito[uid].cantidad;
     }
   });
+  aplicarZoomPagina();
 }
 
 function anadirAlCarrito(item, modelo, prov){
