@@ -712,7 +712,7 @@ function aplicarZoomPagina(){
   marcarModoZoom();
   if(ZOOM_MODO === "libre"){ zoomEtiqueta(); return; }
   if(ZOOM_MODO === "todo" || !p.tx){ ZOOM = 1; w.style.width = "100%"; c.classList.remove("con-zoom"); c.scrollLeft = 0; c.scrollTop = 0; zoomEtiqueta(); return; }
-  const x0 = ZOOM_MODO === "dibujos" ? 0 : Math.max(0, p.tx - 22), x1 = ZOOM_MODO === "dibujos" ? p.tx : (p.tx1 || pw);
+  const x0 = ZOOM_MODO === "dibujos" ? (p.txD0 || 0) : Math.max(0, p.tx - 22), x1 = ZOOM_MODO === "dibujos" ? p.tx : (p.tx1 || pw);
   ZOOM = Math.max(1, Math.min(4, pw / (x1 - x0) * 0.98));
   w.style.width = (ZOOM*100) + "%"; c.classList.add("con-zoom");
   c.scrollLeft = x0 / pw * w.offsetWidth;

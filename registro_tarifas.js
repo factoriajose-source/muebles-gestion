@@ -42,6 +42,7 @@ const REGISTRO_TARIFAS = {
       {cod:"PREMIUM", nombre:"7022-PREMIUM", script:"tarifas_7022/catalogo_7022_premium.js", variable:"CATALOGO_7022_PREMIUM", carpeta:"tarifas_7022/img", color:"#455a64"},
       {cod:"SENSE", nombre:"7022-SENSE", script:"tarifas_7022/catalogo_7022_sense.js", variable:"CATALOGO_7022_SENSE", carpeta:"tarifas_7022/img", color:"#455a64"},
       {cod:"TICO", nombre:"7022-TICO", script:"tarifas_7022/catalogo_7022_tico.js", variable:"CATALOGO_7022_TICO", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"TOMMY", nombre:"7022-TOMMY", script:"tarifas_7022/catalogo_7022_tommy.js", variable:"CATALOGO_7022_TOMMY", carpeta:"tarifas_7022/img", color:"#455a64"},
       {cod:"TOPO", nombre:"7022-TOPO", script:"tarifas_7022/catalogo_7022_topo.js", variable:"CATALOGO_7022_TOPO", carpeta:"tarifas_7022/img", color:"#455a64"},
       {cod:"TRIANA", nombre:"7022-TRIANA", script:"tarifas_7022/catalogo_7022_triana.js", variable:"CATALOGO_7022_TRIANA", carpeta:"tarifas_7022/img", color:"#455a64"}
     ]
