@@ -47,6 +47,27 @@ const REGISTRO_TARIFAS = {
       {cod:"TRIANA", nombre:"7022-TRIANA", script:"tarifas_7022/catalogo_7022_triana.js", variable:"CATALOGO_7022_TRIANA", carpeta:"tarifas_7022/img", color:"#455a64"}
     ]
   },
+  "7022_CAMAS": {
+    nombre: "7022-CAMAS MAYOR",
+    precioPunto: 2.91, dtoMax: 20,
+    desplegable: true,
+    modelos: [
+      {cod:"AMORE", nombre:"CAMAS-AMORE", script:"tarifas_camas7022/catalogo_camas7022_amore.js", variable:"CATALOGO_CAMAS7022_AMORE", carpeta:"tarifas_camas7022/img", color:"#6d4c41"},
+      {cod:"CHANNEL", nombre:"CAMAS-CHANNEL", script:"tarifas_camas7022/catalogo_camas7022_channel.js", variable:"CATALOGO_CAMAS7022_CHANNEL", carpeta:"tarifas_camas7022/img", color:"#6d4c41"},
+      {cod:"FENDY", nombre:"CAMAS-FENDY", script:"tarifas_camas7022/catalogo_camas7022_fendy.js", variable:"CATALOGO_CAMAS7022_FENDY", carpeta:"tarifas_camas7022/img", color:"#6d4c41"},
+      {cod:"GEO", nombre:"CAMAS-GEO", script:"tarifas_camas7022/catalogo_camas7022_geo.js", variable:"CATALOGO_CAMAS7022_GEO", carpeta:"tarifas_camas7022/img", color:"#6d4c41"},
+      {cod:"GIO", nombre:"CAMAS-GIO", script:"tarifas_camas7022/catalogo_camas7022_gio.js", variable:"CATALOGO_CAMAS7022_GIO", carpeta:"tarifas_camas7022/img", color:"#6d4c41"},
+      {cod:"KIMI", nombre:"CAMAS-KIMI", script:"tarifas_camas7022/catalogo_camas7022_kimi.js", variable:"CATALOGO_CAMAS7022_KIMI", carpeta:"tarifas_camas7022/img", color:"#6d4c41"},
+      {cod:"LOTUS-5-MAX", nombre:"CAMAS-LOTUS-5-MAX", script:"tarifas_camas7022/catalogo_camas7022_lotus_5_max.js", variable:"CATALOGO_CAMAS7022_LOTUS_5_MAX", carpeta:"tarifas_camas7022/img", color:"#6d4c41"},
+      {cod:"LYRA", nombre:"CAMAS-LYRA", script:"tarifas_camas7022/catalogo_camas7022_lyra.js", variable:"CATALOGO_CAMAS7022_LYRA", carpeta:"tarifas_camas7022/img", color:"#6d4c41"},
+      {cod:"MAGNUM", nombre:"CAMAS-MAGNUM", script:"tarifas_camas7022/catalogo_camas7022_magnum.js", variable:"CATALOGO_CAMAS7022_MAGNUM", carpeta:"tarifas_camas7022/img", color:"#6d4c41"},
+      {cod:"MARTINA", nombre:"CAMAS-MARTINA", script:"tarifas_camas7022/catalogo_camas7022_martina.js", variable:"CATALOGO_CAMAS7022_MARTINA", carpeta:"tarifas_camas7022/img", color:"#6d4c41"},
+      {cod:"PARIS", nombre:"CAMAS-PARIS", script:"tarifas_camas7022/catalogo_camas7022_paris.js", variable:"CATALOGO_CAMAS7022_PARIS", carpeta:"tarifas_camas7022/img", color:"#6d4c41"},
+      {cod:"PETIT", nombre:"CAMAS-PETIT", script:"tarifas_camas7022/catalogo_camas7022_petit.js", variable:"CATALOGO_CAMAS7022_PETIT", carpeta:"tarifas_camas7022/img", color:"#6d4c41"},
+      {cod:"TOPO", nombre:"CAMAS-TOPO", script:"tarifas_camas7022/catalogo_camas7022_topo.js", variable:"CATALOGO_CAMAS7022_TOPO", carpeta:"tarifas_camas7022/img", color:"#6d4c41"},
+      {cod:"TRIANA", nombre:"CAMAS-TRIANA", script:"tarifas_camas7022/catalogo_camas7022_triana.js", variable:"CATALOGO_CAMAS7022_TRIANA", carpeta:"tarifas_camas7022/img", color:"#6d4c41"}
+    ]
+  },
   "6028": {
     nombre: "6028 · Quality",
     precioPunto: 3.02, dtoMax: 25,

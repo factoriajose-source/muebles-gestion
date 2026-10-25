@@ -827,6 +827,7 @@ function cargarPagina(idx){
   const btnV = document.getElementById("btnVista");
   btnV.style.display = hayTabla ? "" : "none";
   document.getElementById("zmBarra").style.display = cat.zoom ? "inline-flex" : "none";
+  { const bd = document.getElementById("zm_dibujos"); if(bd) bd.style.display = cat.sinDibujos ? "none" : ""; if(cat.sinDibujos && ZOOM_MODO === "dibujos") ZOOM_MODO = "tabla"; }
   if(!cat.zoom){ document.getElementById("paginaWrap").style.width = "100%"; zoomC().classList.remove("con-zoom"); }
   btnV.textContent = usaTabla ? "🖼️ Página original" : "📋 Tabla grande";
   wrap.style.display = usaTabla ? "none" : "";
@@ -1025,7 +1026,8 @@ function mostrarTexto(){
    ============================================================ */
 function aplicarProveedoresMap(map){
   Object.keys(CONFIG).forEach(function(p){
-    const pd = map[p] || map[parseInt(p, 10)];
+    let pd = map[p] || (/^\d+$/.test(p) ? map[parseInt(p, 10)] : null);
+    if(!pd){ const np = String(p).toUpperCase().replace(/[\s-]+/g, "_"); Object.keys(map).forEach(function(k){ if(!pd && String(k).toUpperCase().replace(/[\s-]+/g, "_") === np) pd = map[k]; }); }
     if(pd && !CONFIG[p].editado){
       if(pd.precioPunto > 0) CONFIG[p].vp = pd.precioPunto;
       if(pd.dtoMax > 0) CONFIG[p].dto = pd.dtoMax / 100;
