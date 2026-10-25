@@ -15,6 +15,37 @@ const REGISTRO_TARIFAS = {
       {cod:"ALBA", nombre:"ALBA", script:"catalogo_alba.js", variable:"CATALOGO_ALBA", carpeta:"imgALBA", color:"#003580"}
     ]
   },
+  "7022": {
+    nombre: "7022 · Tapizados Mayor",
+    precioPunto: 2.90, dtoMax: 25,
+    desplegable: true,
+    modelos: [
+      {cod:"AKUA", nombre:"7022-AKUA", script:"tarifas_7022/catalogo_7022_akua.js", variable:"CATALOGO_7022_AKUA", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"BUTACA-450", nombre:"7022-BUTACA-450", script:"tarifas_7022/catalogo_7022_butaca_450.js", variable:"CATALOGO_7022_BUTACA_450", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"BUTACA-500", nombre:"7022-BUTACA-500", script:"tarifas_7022/catalogo_7022_butaca_500.js", variable:"CATALOGO_7022_BUTACA_500", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"CITY", nombre:"7022-CITY", script:"tarifas_7022/catalogo_7022_city.js", variable:"CATALOGO_7022_CITY", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"COJINES", nombre:"7022-COJINES", script:"tarifas_7022/catalogo_7022_cojines.js", variable:"CATALOGO_7022_COJINES", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"ELI", nombre:"7022-ELI", script:"tarifas_7022/catalogo_7022_eli.js", variable:"CATALOGO_7022_ELI", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"ESTELA", nombre:"7022-ESTELA", script:"tarifas_7022/catalogo_7022_estela.js", variable:"CATALOGO_7022_ESTELA", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"FENDY", nombre:"7022-FENDY", script:"tarifas_7022/catalogo_7022_fendy.js", variable:"CATALOGO_7022_FENDY", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"GEO", nombre:"7022-GEO", script:"tarifas_7022/catalogo_7022_geo.js", variable:"CATALOGO_7022_GEO", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"GIO", nombre:"7022-GIO", script:"tarifas_7022/catalogo_7022_gio.js", variable:"CATALOGO_7022_GIO", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"KENZO", nombre:"7022-KENZO", script:"tarifas_7022/catalogo_7022_kenzo.js", variable:"CATALOGO_7022_KENZO", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"KUORE", nombre:"7022-KUORE", script:"tarifas_7022/catalogo_7022_kuore.js", variable:"CATALOGO_7022_KUORE", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"LOTUS", nombre:"7022-LOTUS", script:"tarifas_7022/catalogo_7022_lotus.js", variable:"CATALOGO_7022_LOTUS", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"MAGNUM", nombre:"7022-MAGNUM", script:"tarifas_7022/catalogo_7022_magnum.js", variable:"CATALOGO_7022_MAGNUM", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"MARTINA", nombre:"7022-MARTINA", script:"tarifas_7022/catalogo_7022_martina.js", variable:"CATALOGO_7022_MARTINA", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"NINA", nombre:"7022-NINA", script:"tarifas_7022/catalogo_7022_nina.js", variable:"CATALOGO_7022_NINA", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"NOA", nombre:"7022-NOA", script:"tarifas_7022/catalogo_7022_noa.js", variable:"CATALOGO_7022_NOA", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"PETIT", nombre:"7022-PETIT", script:"tarifas_7022/catalogo_7022_petit.js", variable:"CATALOGO_7022_PETIT", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"POLO", nombre:"7022-POLO", script:"tarifas_7022/catalogo_7022_polo.js", variable:"CATALOGO_7022_POLO", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"PREMIUM", nombre:"7022-PREMIUM", script:"tarifas_7022/catalogo_7022_premium.js", variable:"CATALOGO_7022_PREMIUM", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"SENSE", nombre:"7022-SENSE", script:"tarifas_7022/catalogo_7022_sense.js", variable:"CATALOGO_7022_SENSE", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"TICO", nombre:"7022-TICO", script:"tarifas_7022/catalogo_7022_tico.js", variable:"CATALOGO_7022_TICO", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"TOPO", nombre:"7022-TOPO", script:"tarifas_7022/catalogo_7022_topo.js", variable:"CATALOGO_7022_TOPO", carpeta:"tarifas_7022/img", color:"#455a64"},
+      {cod:"TRIANA", nombre:"7022-TRIANA", script:"tarifas_7022/catalogo_7022_triana.js", variable:"CATALOGO_7022_TRIANA", carpeta:"tarifas_7022/img", color:"#455a64"}
+    ]
+  },
   "6028": {
     nombre: "6028 · Quality",
     precioPunto: 3.02, dtoMax: 25,
