@@ -68,6 +68,31 @@ const REGISTRO_TARIFAS = {
       {cod:"TRIANA", nombre:"CAMAS-TRIANA", script:"tarifas_camas7022/catalogo_camas7022_triana.js", variable:"CATALOGO_CAMAS7022_TRIANA", carpeta:"tarifas_camas7022/img", color:"#6d4c41"}
     ]
   },
+  "7042": {
+    nombre: "7042-IBERCAM",
+    precioPunto: 4.90, dtoMax: 25,
+    desplegable: true,
+    modelos: [
+      {cod:"CASTELLON", nombre:"IBERCAM-CASTELLON", script:"tarifas_ibercam7042/catalogo_ibercam7042_castellon.js", variable:"CATALOGO_IBERCAM7042_CASTELLON", carpeta:"tarifas_ibercam7042/img", color:"#00796b"},
+      {cod:"CLOE", nombre:"IBERCAM-CLOE", script:"tarifas_ibercam7042/catalogo_ibercam7042_cloe.js", variable:"CATALOGO_IBERCAM7042_CLOE", carpeta:"tarifas_ibercam7042/img", color:"#00796b"},
+      {cod:"DANTE", nombre:"IBERCAM-DANTE", script:"tarifas_ibercam7042/catalogo_ibercam7042_dante.js", variable:"CATALOGO_IBERCAM7042_DANTE", carpeta:"tarifas_ibercam7042/img", color:"#00796b"},
+      {cod:"EVA", nombre:"IBERCAM-EVA", script:"tarifas_ibercam7042/catalogo_ibercam7042_eva.js", variable:"CATALOGO_IBERCAM7042_EVA", carpeta:"tarifas_ibercam7042/img", color:"#00796b"},
+      {cod:"EVA-H2", nombre:"IBERCAM-EVA-H2", script:"tarifas_ibercam7042/catalogo_ibercam7042_eva_h2.js", variable:"CATALOGO_IBERCAM7042_EVA_H2", carpeta:"tarifas_ibercam7042/img", color:"#00796b"},
+      {cod:"FRIDA", nombre:"IBERCAM-FRIDA", script:"tarifas_ibercam7042/catalogo_ibercam7042_frida.js", variable:"CATALOGO_IBERCAM7042_FRIDA", carpeta:"tarifas_ibercam7042/img", color:"#00796b"},
+      {cod:"INDIANA", nombre:"IBERCAM-INDIANA", script:"tarifas_ibercam7042/catalogo_ibercam7042_indiana.js", variable:"CATALOGO_IBERCAM7042_INDIANA", carpeta:"tarifas_ibercam7042/img", color:"#00796b"},
+      {cod:"KALA", nombre:"IBERCAM-KALA", script:"tarifas_ibercam7042/catalogo_ibercam7042_kala.js", variable:"CATALOGO_IBERCAM7042_KALA", carpeta:"tarifas_ibercam7042/img", color:"#00796b"},
+      {cod:"LELA", nombre:"IBERCAM-LELA", script:"tarifas_ibercam7042/catalogo_ibercam7042_lela.js", variable:"CATALOGO_IBERCAM7042_LELA", carpeta:"tarifas_ibercam7042/img", color:"#00796b"},
+      {cod:"MAE", nombre:"IBERCAM-MAE", script:"tarifas_ibercam7042/catalogo_ibercam7042_mae.js", variable:"CATALOGO_IBERCAM7042_MAE", carpeta:"tarifas_ibercam7042/img", color:"#00796b"},
+      {cod:"MAGGIE", nombre:"IBERCAM-MAGGIE", script:"tarifas_ibercam7042/catalogo_ibercam7042_maggie.js", variable:"CATALOGO_IBERCAM7042_MAGGIE", carpeta:"tarifas_ibercam7042/img", color:"#00796b"},
+      {cod:"NAOMI", nombre:"IBERCAM-NAOMI", script:"tarifas_ibercam7042/catalogo_ibercam7042_naomi.js", variable:"CATALOGO_IBERCAM7042_NAOMI", carpeta:"tarifas_ibercam7042/img", color:"#00796b"},
+      {cod:"OLIVIA", nombre:"IBERCAM-OLIVIA", script:"tarifas_ibercam7042/catalogo_ibercam7042_olivia.js", variable:"CATALOGO_IBERCAM7042_OLIVIA", carpeta:"tarifas_ibercam7042/img", color:"#00796b"},
+      {cod:"SCARLETT", nombre:"IBERCAM-SCARLETT", script:"tarifas_ibercam7042/catalogo_ibercam7042_scarlett.js", variable:"CATALOGO_IBERCAM7042_SCARLETT", carpeta:"tarifas_ibercam7042/img", color:"#00796b"},
+      {cod:"SIMONE", nombre:"IBERCAM-SIMONE", script:"tarifas_ibercam7042/catalogo_ibercam7042_simone.js", variable:"CATALOGO_IBERCAM7042_SIMONE", carpeta:"tarifas_ibercam7042/img", color:"#00796b"},
+      {cod:"SYLVIA", nombre:"IBERCAM-SYLVIA", script:"tarifas_ibercam7042/catalogo_ibercam7042_sylvia.js", variable:"CATALOGO_IBERCAM7042_SYLVIA", carpeta:"tarifas_ibercam7042/img", color:"#00796b"},
+      {cod:"VALENCIA", nombre:"IBERCAM-VALENCIA", script:"tarifas_ibercam7042/catalogo_ibercam7042_valencia.js", variable:"CATALOGO_IBERCAM7042_VALENCIA", carpeta:"tarifas_ibercam7042/img", color:"#00796b"},
+      {cod:"VALENTINA", nombre:"IBERCAM-VALENTINA", script:"tarifas_ibercam7042/catalogo_ibercam7042_valentina.js", variable:"CATALOGO_IBERCAM7042_VALENTINA", carpeta:"tarifas_ibercam7042/img", color:"#00796b"}
+    ]
+  },
   "6028": {
     nombre: "6028 · Quality",
     precioPunto: 3.02, dtoMax: 25,
