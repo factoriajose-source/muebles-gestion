@@ -514,10 +514,31 @@ function calcularPrecio(puntos, prov){
   const c = CONFIG[prov] || CONFIG[PROV_ACTUAL];
   return Math.round(puntos * c.vp * (1 - c.dto));
 }
-function descripcionItem(item){
+function normNom(s){ return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, ""); }
+function mayus1(t){ return t ? t.charAt(0).toUpperCase() + t.slice(1) : t; }
+/* El nombre del modelo NO debe salir en el presupuesto del cliente (la competencia podría pisarnos la venta).
+   Se quita del principio de la descripción: "Gio — Cama italiana…" -> "Cama italiana…". */
+function quitarNombreModelo(txt, prov, modelo){
+  try{
+    if(!txt || !prov || !modelo || prov === "MANUAL") return txt;
+    if(prov === "8183"){ const j = txt.indexOf(" · "); return (j > 0 && j < 40) ? mayus1(txt.slice(j + 3)) : txt; }  // aquí el nombre del sofá va delante
+    const j = txt.indexOf(" — "); if(j <= 0 || j > 40) return txt;
+    const pre = normNom(txt.slice(0, j));
+    const m = getModelo(prov, modelo), cat = CATALOGOS[prov + "|" + modelo];
+    const cand = [modelo];
+    if(m){ cand.push(m.nombre); cand.push(String(m.nombre).replace(/^[^-]*-/, "")); }
+    if(cat) cat.pages.forEach(function(p){ if(p.titulo) cand.push(p.titulo); });
+    if(cand.some(function(c){ return normNom(c) === pre; })) return mayus1(txt.slice(j + 3));
+  }catch(e){}
+  return txt;
+}
+function txtSerie(item){ return item.serie ? (item.sl ? "" : "Serie ") + item.serie : ""; }
+function provNum(p){ const m = String(p).match(/^\d+/); return m ? m[0] : String(p); }
+function descripcionItem(item, prov, modelo){
   // Tarifas con series (3090): "Chaise longue 300 cm — Serie A". Las antiguas (8194) se quedan como estaban.
-  if(item.serie !== undefined) return item.etiqueta + (item.serie ? " — Serie " + item.serie : "");
-  return item.seccion + " - " + item.etiqueta;
+  const et = quitarNombreModelo(item.etiqueta, prov, modelo);
+  if(item.serie !== undefined) return et + (item.serie ? " — " + txtSerie(item) : "");
+  return item.seccion + " - " + et;
 }
 function getModelo(prov, cod){
   return REGISTRO_TARIFAS[prov].modelos.find(function(m){ return m.cod === cod; });
@@ -554,7 +575,11 @@ function cargarCatalogo(prov, m){
 function pintarSelectorProveedor(){
   const sel = document.getElementById("selProveedor");
   sel.innerHTML = "";
-  Object.keys(REGISTRO_TARIFAS).forEach(function(p){
+  Object.keys(REGISTRO_TARIFAS).sort(function(a, b){
+    const na = parseInt(a, 10), nb = parseInt(b, 10);
+    if(na !== nb) return na - nb;
+    return a < b ? -1 : (a > b ? 1 : 0);
+  }).forEach(function(p){
     const o = document.createElement("option");
     o.value = p; o.textContent = REGISTRO_TARIFAS[p].nombre;
     sel.appendChild(o);
@@ -666,7 +691,7 @@ function construirTabs(){
     const t = document.createElement("div");
     t.className = "tab" + (idx === 0 ? " activa" : "");
     t.id = "tab_" + idx;
-    t.innerHTML = '<span class="n">' + p.num + '</span>' + esc(p.titulo);
+    t.innerHTML = '<span class="n">' + p.num + '</span>' + esc(p.tab || p.titulo);
     t.onclick = function(){ cargarPagina(idx); };
     tabsEl.appendChild(t);
   });
@@ -687,7 +712,7 @@ try{ ZOOM_MODO = localStorage.getItem("meres_zoom_modo") || "todo"; }catch(e){}
 function zoomC(){ return document.getElementById("zoomCont"); }
 function zoomEtiqueta(){ const b = document.getElementById("zmNivel"); if(b) b.textContent = Math.round(ZOOM*100) + "%"; }
 function marcarModoZoom(){
-  ["todo","dibujos","tabla"].forEach(function(k){
+  ["todo","dibujos","tabla","tabla2"].forEach(function(k){
     const b = document.getElementById("zm_" + k); if(b) b.classList.toggle("on", ZOOM_MODO === k);
   });
 }
@@ -711,12 +736,13 @@ function aplicarZoomPagina(){
   const p = cat.pages[paginaActual], pw = p.pageWidth || cat.pageWidth, ph = p.pageHeight || cat.pageHeight;
   marcarModoZoom();
   if(ZOOM_MODO === "libre"){ zoomEtiqueta(); return; }
-  if(ZOOM_MODO === "todo" || !p.tx){ ZOOM = 1; w.style.width = "100%"; c.classList.remove("con-zoom"); c.scrollLeft = 0; c.scrollTop = 0; zoomEtiqueta(); return; }
-  const x0 = ZOOM_MODO === "dibujos" ? (p.txD0 || 0) : Math.max(0, p.tx - 22), x1 = ZOOM_MODO === "dibujos" ? p.tx : (p.tx1 || pw);
+  const MODO = (ZOOM_MODO === "tabla2" && !p.tB) ? "tabla" : ZOOM_MODO;
+  if(MODO === "todo" || !p.tx){ ZOOM = 1; w.style.width = "100%"; c.classList.remove("con-zoom"); c.scrollLeft = 0; c.scrollTop = 0; zoomEtiqueta(); return; }
+  const x0 = MODO === "dibujos" ? (p.txD0 || 0) : (MODO === "tabla2" ? Math.max(0, p.tB - 22) : Math.max(0, p.tx - 22)), x1 = MODO === "dibujos" ? p.tx : (MODO === "tabla2" ? (p.tB1 || pw) : (p.tx1 || pw));
   ZOOM = Math.max(1, Math.min(4, pw / (x1 - x0) * 0.98));
   w.style.width = (ZOOM*100) + "%"; c.classList.add("con-zoom");
   c.scrollLeft = x0 / pw * w.offsetWidth;
-  c.scrollTop = (ZOOM_MODO === "tabla" ? (p.ty || 0) : (p.tyD || 0)) / ph * w.offsetHeight;
+  c.scrollTop = (MODO === "tabla" ? (p.ty || 0) : (MODO === "tabla2" ? (p.tyB || p.ty || 0) : (p.tyD || 0))) / ph * w.offsetHeight;
   zoomEtiqueta();
 }
 function arrastrarZoom(c){
@@ -741,7 +767,8 @@ function asegurarVistaUI(){
     bar.innerHTML = '<button onclick="zoomPaso(1/1.25)" title="Alejar">🔍−</button><button id="zmNivel" disabled>100%</button><button onclick="zoomPaso(1.25)" title="Acercar">🔍+</button>'
       + '<button id="zm_todo" onclick="zoomModo(\'todo\')" title="Ver la página entera">Página entera</button>'
       + '<button id="zm_dibujos" onclick="zoomModo(\'dibujos\')" title="Ampliar los dibujos de los sofás">Dibujos</button>'
-      + '<button id="zm_tabla" onclick="zoomModo(\'tabla\')" title="Ampliar la tabla de precios">Tabla</button>';
+      + '<button id="zm_tabla" onclick="zoomModo(\'tabla\')" title="Ampliar la tabla de precios">Tabla</button>'
+      + '<button id="zm_tabla2" onclick="zoomModo(\'tabla2\')" title="Ampliar la segunda tabla de precios" style="display:none">Tabla 2</button>';
     document.querySelector(".nav-btns").prepend(bar);
   }
   if(!document.getElementById("vistaTabla")){
@@ -788,7 +815,7 @@ function pintarTabla(p, m, pw){
       if(!it){ tr.appendChild(c); return; }
       const uid = PROV_ACTUAL + "_" + modeloActual + "_" + it.id;
       c.className = "celda hotspot"; c.id = "hs_" + uid;
-      c.title = descripcionItem(it) + " — " + calcularPrecio(it.puntos, PROV_ACTUAL) + " €";
+      c.title = descripcionItem(it, PROV_ACTUAL, modeloActual) + " — " + calcularPrecio(it.puntos, PROV_ACTUAL) + " €";
       c.innerHTML = "<span>" + it.puntos + "</span><span class='badge'></span>";
       const provClic = PROV_ACTUAL, modClic = modeloActual;
       c.onclick = function(){ anadirAlCarrito(it, modClic, provClic); };
@@ -828,6 +855,7 @@ function cargarPagina(idx){
   btnV.style.display = hayTabla ? "" : "none";
   document.getElementById("zmBarra").style.display = cat.zoom ? "inline-flex" : "none";
   { const bd = document.getElementById("zm_dibujos"); if(bd) bd.style.display = cat.sinDibujos ? "none" : ""; if(cat.sinDibujos && ZOOM_MODO === "dibujos") ZOOM_MODO = "tabla"; }
+  { const b2 = document.getElementById("zm_tabla2"); if(b2) b2.style.display = (cat.zoom && p.tB) ? "" : "none"; }
   if(!cat.zoom){ document.getElementById("paginaWrap").style.width = "100%"; zoomC().classList.remove("con-zoom"); }
   btnV.textContent = usaTabla ? "🖼️ Página original" : "📋 Tabla grande";
   wrap.style.display = usaTabla ? "none" : "";
@@ -844,7 +872,7 @@ function cargarPagina(idx){
     div.style.top    = (item.y0 / ph * 100) + "%";
     div.style.width  = ((item.x1 - item.x0) / pw * 100) + "%";
     div.style.height = ((item.y1 - item.y0) / ph * 100) + "%";
-    div.title = descripcionItem(item) + " — " + calcularPrecio(item.puntos, PROV_ACTUAL) + " €";
+    div.title = descripcionItem(item, PROV_ACTUAL, modeloActual) + " — " + calcularPrecio(item.puntos, PROV_ACTUAL) + " €";
     div.innerHTML = '<span class="badge"></span>';
     const provClic = PROV_ACTUAL, modClic = modeloActual;
     div.onclick = function(){ anadirAlCarrito(item, modClic, provClic); };
@@ -861,14 +889,34 @@ function anadirAlCarrito(item, modelo, prov){
   const uid = prov + "_" + modelo + "_" + item.id;
   if(!carrito[uid]){
     const m = getModelo(prov, modelo);
+    const eraPrimero = !Object.keys(carrito).some(function(k){ const e = carrito[k]; return e.prov === prov && e.modelo === modelo && !e.caract; });
     carrito[uid] = {
       item: item, cantidad: 0, modelo: modelo, prov: prov,
-      descripcion: descripcionItem(item),
+      descripcion: descripcionItem(item, prov, modelo),
       color: m ? m.color : "#555"
     };
+    // Características técnicas del modelo: UNA sola línea por modelo (aunque se pulse otra vez el mismo modelo)
+    const cat = CATALOGOS[prov + "|" + modelo];
+    const cu = "CARACT_" + prov + "_" + modelo;
+    if(eraPrimero && cat && cat.caracteristicas && !carrito[cu]){
+      carrito[cu] = {
+        item: { seccion: "Características técnicas", etiqueta: "Características técnicas", puntos: null },
+        cantidad: 1, modelo: modelo, prov: prov, caract: true,
+        descripcion: "Características técnicas: " + cat.caracteristicas,
+        color: m ? m.color : "#555"
+      };
+    }
   }
   carrito[uid].cantidad++;
   pintarCarrito();
+}
+/* Si ya no queda ningún artículo de un modelo, su línea de características técnicas desaparece sola */
+function limpiarCaracts(){
+  Object.keys(carrito).forEach(function(k){
+    const e = carrito[k]; if(!e.caract) return;
+    const hay = Object.keys(carrito).some(function(j){ const x = carrito[j]; return !x.caract && x.prov === e.prov && x.modelo === e.modelo; });
+    if(!hay) delete carrito[k];
+  });
 }
 
 function editarDescripcion(uid, valor){
@@ -919,12 +967,13 @@ function editarPrecioManual(uid, valor){
 function cambiarCantidad(uid, delta){
   if(!carrito[uid]) return;
   carrito[uid].cantidad += delta;
-  if(carrito[uid].cantidad <= 0) delete carrito[uid];
+  if(carrito[uid].cantidad <= 0){ delete carrito[uid]; limpiarCaracts(); }
   pintarCarrito();
 }
 
 function quitarDelCarrito(uid){
   delete carrito[uid];
+  limpiarCaracts();
   pintarCarrito();
 }
 
@@ -934,6 +983,7 @@ function vaciarCarrito(){
 }
 
 function precioUnidad(en){
+  if(en.caract) return 0;
   return en.modelo === "MANUAL" ? (en.precioManual || 0) : calcularPrecio(en.item.puntos, en.prov);
 }
 
@@ -960,11 +1010,22 @@ function pintarCarrito(){
   lista.innerHTML = "";
   ids.forEach(function(uid){
     const en = carrito[uid];
+    if(en.caract){
+      const rc = document.createElement("div");
+      rc.className = "cart-item";
+      rc.style.cssText = "background:#faf8f3;border-left:3px solid " + en.color + ";padding-left:7px";
+      rc.innerHTML = '<div class="desc"><span class="modelo-tag" style="background:' + en.color + '">' + esc(en.prov + " · " + en.modelo) + '</span>'
+        + '<span style="font-size:10.5px;color:#777;display:inline">Características técnicas (salen una sola vez en el presupuesto)</span>'
+        + '<textarea class="desc-edit" style="width:100%;min-height:58px;font-size:11px;font-weight:400;color:#555;border:1px solid #e5e0d6;border-radius:4px;padding:3px 5px;font-family:inherit;resize:vertical;background:#fff" oninput="editarDescripcion(\'' + uid + '\', this.value)">' + esc(en.descripcion) + '</textarea></div>'
+        + '<div class="del" onclick="quitarDelCarrito(\'' + uid + '\')">✕</div>';
+      lista.appendChild(rc);
+      return;
+    }
     const esManual = en.modelo === "MANUAL";
     const tagStyle = esManual ? "" : ' style="background:' + en.color + '"';
     const tagClass = esManual ? "tag-manual" : "";
     const tagTxt = esManual ? "MANUAL" : esc(en.prov + " · " + en.modelo);
-    const subInfo = esManual ? "" : '<span>' + en.item.puntos + ' pts' + (en.item.serie ? ' · Serie ' + esc(en.item.serie) : '') + '</span>';
+    const subInfo = esManual ? "" : '<span>' + en.item.puntos + ' pts' + (en.item.serie ? ' · ' + esc(txtSerie(en.item)) : '') + '</span>';
     const precioCelda = esManual
       ? '<input type="number" class="desc-edit" style="width:56px;text-align:right;border:1px solid #ddd;" value="' + en.precioManual + '" step="1" oninput="editarPrecioManual(\'' + uid + '\', this.value)">€'
       : '<div class="precio" id="subtotal_' + uid + '">' + (precioUnidad(en) * en.cantidad) + ' €</div>';
@@ -1013,6 +1074,7 @@ function mostrarTexto(){
   const lineas = [];
   ids.forEach(function(uid){
     const en = carrito[uid];
+    if(en.caract){ lineas.push("      " + en.descripcion); return; }
     const pu = precioUnidad(en);
     lineas.push("[" + en.modelo + "] " + en.descripcion + "\tCant: " + en.cantidad + "\tPrecio: " + pu + " €\tSubtotal: " + (pu * en.cantidad) + " €");
   });
@@ -1274,12 +1336,17 @@ function ejecutarImpresionPresupuesto(){
   let total = 0;
   const filas = Object.keys(carrito).map(function(uid){
     const en = carrito[uid];
+    if(en.caract){
+      // Características técnicas: una fila de ancho completo bajo el artículo, letra pequeña y gris, sin cantidad ni precio
+      return "<tr><td colspan='4' style='padding:1px 8px 9px 18px;border-bottom:1px solid #f0ece6;font-size:9.5px;color:#777;line-height:1.35'>"+esc(en.descripcion)+"</td></tr>";
+    }
     const pu = precioUnidad(en);
     const sub = pu * en.cantidad;
     total += sub;
-    // Sin etiqueta de modelo y sin puntos — el cliente no debe verlos
+    // Sin nombre de modelo y sin puntos — el cliente no debe verlos. Sí sale el número de proveedor.
+    const provTxt = en.modelo === "MANUAL" ? "" : "<div style='font-size:9.5px;color:#999;margin-top:2px'>Prov. "+provNum(en.prov)+"</div>";
     return "<tr>"
-      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;font-size:12px'><strong>"+en.descripcion+"</strong></td>"
+      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;font-size:12px'><strong>"+en.descripcion+"</strong>"+provTxt+"</td>"
       +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center'>"+en.cantidad+"</td>"
       +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700'>"+pu+" €</td>"
       +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700'>"+sub+" €</td>"
@@ -1356,13 +1423,14 @@ function ejecutarImpresionFabrica(){
     let totalPuntos = 0;
     const filas = g.ids.map(function(uid){
       const en = carrito[uid];
+      if(en.caract) return "";
       const esManual = en.modelo === "MANUAL";
       const pts = esManual ? null : en.item.puntos;
       const ptsTotal = esManual ? null : pts * en.cantidad;
       if(!esManual) totalPuntos += ptsTotal;
       const tagColor = esManual ? "#8a5a00" : (en.color || "#555");
       const tagTxt = esManual ? "Manual" : en.modelo;
-      const serie = (!esManual && en.item.serie) ? "<div style='font-size:10px;font-weight:700;margin-top:3px'>Serie "+en.item.serie+"</div>" : "";
+      const serie = (!esManual && en.item.serie) ? "<div style='font-size:10px;font-weight:700;margin-top:3px'>"+txtSerie(en.item)+"</div>" : "";
       return "<tr>"
         +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center'>"
           +"<span style='display:inline-block;font-size:10px;font-weight:700;color:#fff;background:"+tagColor+";border-radius:6px;padding:2px 8px'>"+tagTxt+"</span>"+serie
@@ -1447,12 +1515,15 @@ async function guardarEImprimir(){
 
   const lines = ids.map(function(uidKey, idx){
     const en = carrito[uidKey];
+    if(en.caract){
+      return { id: idx + 1, tipo: "caract", desc: en.descripcion, fabrica: "", medidas: "", color: "", qty: 1, price: 0, img: "", cheslon: "" };
+    }
     const esManual = en.modelo === "MANUAL";
     const precio = precioUnidad(en);
     return {
       id: idx + 1,
       desc: en.descripcion,
-      fabrica: esManual ? "" : ("PROV." + en.prov + " | " + en.modelo + (en.item.serie ? " | Serie " + en.item.serie : "") + " | " + en.item.puntos + "pts"),
+      fabrica: esManual ? "" : ("PROV." + en.prov + " | " + en.modelo + (en.item.serie ? " | " + txtSerie(en.item) : "") + " | " + en.item.puntos + "pts"),
       medidas: "",
       color: "",
       qty: en.cantidad,
