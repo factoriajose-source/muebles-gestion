@@ -158,6 +158,22 @@ const REGISTRO_TARIFAS = {
       {cod:"ZEUS", nombre:"ORTIZ-ZEUS", script:"tarifas_ortiz425/catalogo_ortiz425_zeus.js", variable:"CATALOGO_ORTIZ425_ZEUS", carpeta:"tarifas_ortiz425/img", color:"#8d5a2b"}
     ]
   },
+  "4028": {
+    nombre: "4028-Referenzza",
+    precioPunto: 3.02, dtoMax: 25,
+    desplegable: true,
+    modelos: [
+      {cod:"ARKO", nombre:"REFERENZZA-ARKO", script:"tarifas_4028/catalogo_4028_arko.js", variable:"CATALOGO_4028_ARKO", carpeta:"tarifas_4028/img", color:"#c2185b"},
+      {cod:"DIAMOND", nombre:"REFERENZZA-DIAMOND", script:"tarifas_4028/catalogo_4028_diamond.js", variable:"CATALOGO_4028_DIAMOND", carpeta:"tarifas_4028/img", color:"#c2185b"},
+      {cod:"EVEREST", nombre:"REFERENZZA-EVEREST", script:"tarifas_4028/catalogo_4028_everest.js", variable:"CATALOGO_4028_EVEREST", carpeta:"tarifas_4028/img", color:"#c2185b"},
+      {cod:"HAWAII", nombre:"REFERENZZA-HAWAII", script:"tarifas_4028/catalogo_4028_hawaii.js", variable:"CATALOGO_4028_HAWAII", carpeta:"tarifas_4028/img", color:"#c2185b"},
+      {cod:"HIMALAYA", nombre:"REFERENZZA-HIMALAYA", script:"tarifas_4028/catalogo_4028_himalaya.js", variable:"CATALOGO_4028_HIMALAYA", carpeta:"tarifas_4028/img", color:"#c2185b"},
+      {cod:"LYRA", nombre:"REFERENZZA-LYRA", script:"tarifas_4028/catalogo_4028_lyra.js", variable:"CATALOGO_4028_LYRA", carpeta:"tarifas_4028/img", color:"#c2185b"},
+      {cod:"MYKONOS", nombre:"REFERENZZA-MYKONOS", script:"tarifas_4028/catalogo_4028_mykonos.js", variable:"CATALOGO_4028_MYKONOS", carpeta:"tarifas_4028/img", color:"#c2185b"},
+      {cod:"SAHARA", nombre:"REFERENZZA-SAHARA", script:"tarifas_4028/catalogo_4028_sahara.js", variable:"CATALOGO_4028_SAHARA", carpeta:"tarifas_4028/img", color:"#c2185b"},
+      {cod:"VENTO", nombre:"REFERENZZA-VENTO", script:"tarifas_4028/catalogo_4028_vento.js", variable:"CATALOGO_4028_VENTO", carpeta:"tarifas_4028/img", color:"#c2185b"}
+    ]
+  },
   "6028": {
     nombre: "6028 · Quality",
     precioPunto: 3.02, dtoMax: 25,
