@@ -200,6 +200,13 @@ const REGISTRO_TARIFAS = {
       {cod:"ZEUS-PLUS", nombre:"6028-ZEUS-PLUS", script:"tarifas_6028/catalogo_6028_zeus_plus.js", variable:"CATALOGO_6028_ZEUS_PLUS", carpeta:"tarifas_6028/img", color:"#c2185b"}
     ]
   },
+  "8157": {
+    nombre: "8157-Modelo Mini",
+    precioPunto: 4.03, dtoMax: 25,
+    modelos: [
+      {cod:"MINI", nombre:"MINI", script:"tarifas_8157/catalogo_8157_mini.js", variable:"CATALOGO_8157_MINI", carpeta:"tarifas_8157/img", color:"#2e7d6b"}
+    ]
+  },
   "8183": {
     nombre: "8183 · Liberto",
     precioPunto: 2.80, dtoMax: 25,
