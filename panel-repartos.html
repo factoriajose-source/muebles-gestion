@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- panel-repartos v1.1 — 28/10/2026 — NUEVO: Informe dietas por población + unificación de repartidores (ALFREDO) -->
+<!-- panel-repartos v1.2 — 28/10/2026 — Informe agrupado por DÍAS (1 dieta por día fuera de zona) + € por dieta. v1.1: Informe dietas por población + unificación de repartidores (ALFREDO) -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -173,6 +173,12 @@ body.modo-informe #informe{display:block}
 .inf-tabla tr.pob td{background:#f3efe2; font-weight:800; color:var(--marron); padding:6px 8px}
 .inf-tabla tr.pob td span{font-weight:600; color:var(--gris)}
 .inf-tabla .cli{font-weight:700}
+.inf-res > div.destacado{border:2px solid var(--naranja); background:#fff6ee}
+.inf-sub{font-size:14px; color:var(--marron); text-transform:uppercase; letter-spacing:.4px; margin:16px 0 8px}
+.inf-resumen td{font-size:13.5px; padding:7px 8px}
+.inf-resumen tfoot td{background:var(--beige-claro); color:var(--marron); padding:8px}
+.tag-zona{font-size:10px; background:#eef3dc; color:var(--oliva-osc); border-radius:6px; padding:1px 6px; font-weight:700}
+.tag-rev{font-size:10px; background:#fde4e2; color:#b3261e; border-radius:6px; padding:1px 6px; font-weight:700}
 .btn-pob{border:1px solid var(--beige); background:#fff; border-radius:6px; padding:2px 7px; cursor:pointer; font-size:12px}
 .inf-dias{margin-top:14px; font-size:13px; line-height:1.6}
 .inf-dias b{color:var(--marron)}
@@ -187,6 +193,8 @@ body.modo-informe #informe{display:block}
   .inf-bloque:last-child{page-break-after:auto}
   .inf-tabla{font-size:10.5px}
   .inf-tabla tr{page-break-inside:avoid}
+  .inf-sub.salto{page-break-before:always}
+  .inf-resumen tfoot td{-webkit-print-color-adjust:exact; print-color-adjust:exact}
   .inf-tabla tr.sec td, .inf-tabla tr.pob td, .inf-tabla th{-webkit-print-color-adjust:exact; print-color-adjust:exact}
 }
 </style>
@@ -281,6 +289,7 @@ body.modo-informe #informe{display:block}
       <div class="campo"><label for="inf-anio">Año</label><select id="inf-anio"></select></div>
       <div class="campo"><label for="inf-mes">Mes</label><select id="inf-mes"></select></div>
       <div class="campo"><label for="inf-rep">Repartidor</label><select id="inf-rep"></select></div>
+      <div class="campo"><label for="inf-eur">€ por dieta</label><input type="number" id="inf-eur" min="0" step="0.5" placeholder="0,00" style="font:inherit;font-size:15px;padding:9px 12px;border:1px solid var(--beige);border-radius:9px;width:110px"></div>
       <label class="chk"><input type="checkbox" id="inf-solo-ent"> Solo entregadas</label>
       <div class="der">
         <button class="btn btn-linea" onclick="unificarEnBD()" title="Corrige en Firebase los nombres repetidos del repartidor">🔧 Unificar repartidores</button>
@@ -746,6 +755,9 @@ iAnio.addEventListener("change", ()=>prepararInforme());
 iMes.addEventListener("change", ()=>prepararInforme());
 iRep.addEventListener("change", pintarInforme);
 iSolo.addEventListener("change", pintarInforme);
+// € por dieta: se recuerda en este ordenador
+try{ $("inf-eur").value = localStorage.getItem("rep_eur_dieta") || ""; }catch(e){}
+$("inf-eur").addEventListener("input", ()=>{ try{ localStorage.setItem("rep_eur_dieta", $("inf-eur").value); }catch(e){} pintarInforme(); });
 
 /* ---- Dibujar informe ---- */
 const fechaES = f => f ? f.split("-").reverse().join("/") : "";
@@ -766,61 +778,83 @@ function pintarInforme(){
   $("inf-contenido").innerHTML = Object.keys(porRep).sort().map(rep => bloqueRepartidor(rep, porRep[rep], periodo)).join("");
 }
 
+const DIAS_SEM = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+const diaSem = f => DIAS_SEM[new Date(f+"T12:00:00").getDay()];
+function eurDieta(){ const v=parseFloat(String($("inf-eur").value).replace(",",".")); return isNaN(v)?0:v; }
+
 function bloqueRepartidor(rep, arr, periodo){
   const filas = arr.map(n => ({...n, ...poblacionDe(n)}));
-  const fuera   = filas.filter(n=>n.poblacion && n.concejo && !esSinDieta(n.concejo));
-  const dentro  = filas.filter(n=>n.poblacion && n.concejo &&  esSinDieta(n.concejo));
-  const revisar = filas.filter(n=>!n.poblacion || !n.concejo);
+  const tipo = n => (!n.poblacion || !n.concejo) ? "revisar" : (esSinDieta(n.concejo) ? "zona" : "fuera");
+  const porDia = agrupar(filas, n=>n.fecha);
+  const fechas = Object.keys(porDia).sort();
 
-  // Días con salida fuera de Oviedo/Siero (una dieta por día)
-  const dias = agrupar(fuera, n=>n.fecha);
-  const listaDias = Object.keys(dias).sort().map(f => `<b>${fechaES(f)}</b> (${[...new Set(dias[f].map(n=>n.poblacion))].join(", ")})`);
+  // Un día cuenta como UNA salida con dieta si ese día hizo al menos una entrega fuera de Oviedo/Siero
+  const diasDieta   = fechas.filter(f => porDia[f].some(n=>tipo(n)==="fuera"));
+  const diasRevisar = fechas.filter(f => !diasDieta.includes(f) && porDia[f].some(n=>tipo(n)==="revisar"));
+  const diasZona    = fechas.filter(f => !diasDieta.includes(f) && !diasRevisar.includes(f));
+  const eur = eurDieta();
+  const pobsFuera = f => [...new Set(porDia[f].filter(n=>tipo(n)==="fuera").map(n=>n.poblacion))].sort((a,b)=>a.localeCompare(b,"es"));
 
-  const seccion = (titulo, clase, lista) => {
-    if(!lista.length) return "";
-    const porPob = agrupar(lista, n=>n.poblacion || "SIN IDENTIFICAR");
-    let h = `<tr class="sec ${clase}"><td colspan="7">${titulo} · ${lista.length} entrega${lista.length!==1?"s":""}</td></tr>`;
-    Object.keys(porPob).sort((a,b)=>a.localeCompare(b,"es")).forEach(pob => {
-      const g = porPob[pob].sort((a,b)=>a.fecha.localeCompare(b.fecha) || a.cliente.localeCompare(b.cliente));
-      const conc = g[0].concejo && normT(g[0].concejo)!==normT(pob) ? ` <span>(concejo ${esc(g[0].concejo)})</span>` : "";
-      if(clase!=="revisar") h += `<tr class="pob"><td colspan="7">📍 ${esc(pob)}${conc} — ${g.length} entrega${g.length!==1?"s":""}</td></tr>`;
-      g.forEach(n => {
-        h += `<tr>
-          <td>${fechaES(n.fecha)}</td>
-          <td class="cli">${esc(n.cliente)}</td>
-          <td>${esc(n.direccion)}${n.poblacion && !n.concejo ? ` — <b>${esc(n.poblacion)}</b>` : ""}</td>
-          <td>${esc(n.telefono)}</td>
-          <td>${esc(n.tienda)}</td>
-          <td>${esc(n.bultos)}</td>
-          <td class="no-print"><button class="btn-pob" data-dir="${esc(n.direccion)}" data-pob="${esc(n.poblacionCampo)}" title="Indicar / corregir la población">✏️</button></td>
-        </tr>`;
-      });
-    });
-    return h;
+  // ---- Resumen para pagar: una línea por día ----
+  let resumen = "";
+  if(diasDieta.length){
+    resumen = `<table class="inf-tabla inf-resumen">
+      <thead><tr><th style="width:40px">Nº</th><th style="width:150px">Día</th><th>Poblaciones fuera de zona</th><th style="width:90px;text-align:center">Entregas</th>${eur?'<th style="width:90px;text-align:right">Dieta</th>':''}</tr></thead>
+      <tbody>${diasDieta.map((f,i)=>`<tr>
+        <td><b>${i+1}</b></td><td><b>${fechaES(f)}</b> <span style="color:var(--gris)">${diaSem(f)}</span></td>
+        <td>${pobsFuera(f).map(esc).join(", ")}</td>
+        <td style="text-align:center">${porDia[f].length}</td>
+        ${eur?`<td style="text-align:right">${eur.toLocaleString("es-ES",{minimumFractionDigits:2})} €</td>`:''}</tr>`).join("")}
+      </tbody>
+      <tfoot><tr><td colspan="3"><b>TOTAL ${diasDieta.length} SALIDA${diasDieta.length!==1?"S":""} CON DIETA</b></td>
+        <td style="text-align:center"><b>${diasDieta.reduce((s,f)=>s+porDia[f].length,0)}</b></td>
+        ${eur?`<td style="text-align:right"><b>${(eur*diasDieta.length).toLocaleString("es-ES",{minimumFractionDigits:2})} €</b></td>`:''}</tr></tfoot>
+    </table>`;
+  } else resumen = `<div class="sin-datos">Ninguna salida fuera de Oviedo y Siero en este periodo.</div>`;
+
+  // ---- Detalle: un bloque por día ----
+  const filaEntrega = n => `<tr>
+      <td>${esc(n.poblacion||"¿?")}${tipo(n)==="zona"?' <span class="tag-zona">zona</span>':''}${tipo(n)==="revisar"?' <span class="tag-rev">revisar</span>':''}</td>
+      <td class="cli">${esc(n.cliente)}</td>
+      <td>${esc(n.direccion)}</td>
+      <td>${esc(n.telefono)}</td>
+      <td>${esc(n.tienda)}</td>
+      <td>${esc(n.bultos)}</td>
+      <td class="no-print"><button class="btn-pob" data-dir="${esc(n.direccion)}" data-pob="${esc(n.poblacionCampo)}" title="Indicar / corregir la población">✏️</button></td>
+    </tr>`;
+  const ordenFila = (a,b) => (tipo(a)==="fuera"?0:1)-(tipo(b)==="fuera"?0:1) || (a.poblacion||"").localeCompare(b.poblacion||"","es") || a.cliente.localeCompare(b.cliente,"es");
+  const bloqueDia = (f, cabecera) => {
+    const g = porDia[f].slice().sort(ordenFila);
+    return `<tr class="pob"><td colspan="7">📅 ${fechaES(f)} <span>${diaSem(f)}</span> — ${cabecera} — ${g.length} entrega${g.length!==1?"s":""}</td></tr>` + g.map(filaEntrega).join("");
   };
+  const seccion = (titulo, clase, dias, cab) => !dias.length ? "" :
+    `<tr class="sec ${clase}"><td colspan="7">${titulo} · ${dias.length} día${dias.length!==1?"s":""}</td></tr>` + dias.map(cab).join("");
 
+  const totalEnt = filas.length;
   return `<div class="inf-bloque">
     <div class="inf-cab">
-      <div><div class="emp">Meres Central de Compras S.L. · Informe de repartos por población</div>
+      <div><div class="emp">Meres Central de Compras S.L. · Informe de salidas fuera de zona</div>
         <h2>🚚 ${esc(rep)}</h2></div>
-      <div class="per">${periodo}<br><span style="font-size:12px;color:var(--gris);font-weight:600">Dietas por desplazamiento fuera de Oviedo y Siero</span></div>
+      <div class="per">${periodo}<br><span style="font-size:12px;color:var(--gris);font-weight:600">Dietas por desplazamiento fuera de Oviedo y Siero · 1 dieta por día</span></div>
     </div>
     <div class="inf-res">
-      <div><div class="et">Entregas</div><div class="v">${filas.length}</div></div>
-      <div><div class="et">Fuera Oviedo/Siero</div><div class="v naranja">${fuera.length}</div></div>
-      <div><div class="et">Días con salida fuera</div><div class="v naranja">${listaDias.length}</div></div>
-      <div><div class="et">Sin identificar</div><div class="v ${revisar.length?"rojo":""}">${revisar.length}</div></div>
+      <div class="destacado"><div class="et">Salidas con dieta (días)</div><div class="v naranja">${diasDieta.length}</div></div>
+      <div><div class="et">${eur?"Total dietas":"Días repartiendo"}</div><div class="v">${eur?(eur*diasDieta.length).toLocaleString("es-ES",{minimumFractionDigits:2})+" €":fechas.length}</div></div>
+      <div><div class="et">Entregas totales</div><div class="v">${totalEnt}</div></div>
+      <div><div class="et">Días por revisar</div><div class="v ${diasRevisar.length?"rojo":""}">${diasRevisar.length}</div></div>
     </div>
+    <h3 class="inf-sub">Resumen de salidas para pagar</h3>
+    ${resumen}
+    <div class="inf-firmas"><div>Conforme repartidor</div><div>Conforme empresa</div></div>
+    <h3 class="inf-sub salto">Detalle de entregas por día</h3>
     <table class="inf-tabla">
-      <thead><tr><th style="width:78px">Fecha</th><th>Cliente</th><th>Dirección</th><th style="width:90px">Teléfono</th><th>Tienda</th><th>Mercancía</th><th class="no-print" style="width:30px"></th></tr></thead>
+      <thead><tr><th style="width:150px">Población</th><th>Cliente</th><th>Dirección</th><th style="width:90px">Teléfono</th><th>Tienda</th><th>Mercancía</th><th class="no-print" style="width:30px"></th></tr></thead>
       <tbody>
-        ${seccion("CON DIETA — FUERA DE OVIEDO Y SIERO","dieta",fuera)}
-        ${seccion("SIN DIETA — CONCEJOS DE OVIEDO Y SIERO","",dentro)}
-        ${seccion("POBLACIÓN SIN IDENTIFICAR — REVISAR (pulsa ✏️)","revisar",revisar)}
+        ${seccion("CON DIETA — DÍAS CON SALIDA FUERA DE OVIEDO Y SIERO","dieta",diasDieta, f=>bloqueDia(f, "Salida nº "+(diasDieta.indexOf(f)+1)+": "+pobsFuera(f).map(esc).join(", ")))}
+        ${seccion("DÍAS POR REVISAR — hay entregas sin población (pulsa ✏️)","revisar",diasRevisar, f=>bloqueDia(f,"revisar"))}
+        ${seccion("SIN DIETA — DÍAS SOLO EN OVIEDO Y SIERO","",diasZona, f=>bloqueDia(f,"dentro de zona"))}
       </tbody>
     </table>
-    <div class="inf-dias">Días con desplazamiento fuera de Oviedo y Siero: ${listaDias.length ? listaDias.join(" · ") : "ninguno"}</div>
-    <div class="inf-firmas"><div>Conforme repartidor</div><div>Conforme empresa</div></div>
   </div>`;
 }
 
