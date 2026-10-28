@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- panel-repartos v1.1 — 28/10/2026 — NUEVO: Informe dietas por población + unificación de repartidores (ALFREDO) -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -139,6 +140,55 @@ tfoot td{padding:13px 14px; background:#faf8f2; font-weight:800; color:var(--mar
   .filtros, .banner, .btn, .btn-mini, .reloj, .login-fondo{display:none !important}
   .kpi, .ruta, .tienda, .tabla-caja, .grafico{box-shadow:none; border:1px solid #ccc}
 }
+
+/* ===== INFORME DIETAS POR POBLACIÓN ===== */
+#informe{display:none; position:fixed; inset:0; background:var(--fondo); z-index:900; overflow-y:auto}
+body.modo-informe #informe{display:block}
+.inf-wrap{max-width:1280px; margin:0 auto; padding:18px 22px 60px}
+.inf-barra{display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; background:var(--blanco); border-radius:14px; padding:14px 16px; box-shadow:var(--sombra); margin-bottom:16px}
+.inf-barra .campo label{display:block; font-size:11.5px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; margin-bottom:5px}
+.inf-barra select{font:inherit; font-size:15px; padding:9px 12px; border:1px solid var(--beige); border-radius:9px; background:#fff; color:var(--texto); min-width:120px}
+.inf-barra .chk{display:flex; align-items:center; gap:6px; font-size:14px; font-weight:600; color:var(--marron); padding-bottom:10px}
+.inf-barra .der{margin-left:auto; display:flex; gap:10px; flex-wrap:wrap}
+.btn-naranja{background:var(--naranja); color:#fff}
+.btn-naranja:hover{background:var(--naranja-osc)}
+.inf-aviso{background:#fff7e6; border:1px solid #f1c27d; color:#7a4a00; border-radius:10px; padding:10px 14px; font-size:13.5px; margin-bottom:14px}
+.inf-bloque{background:var(--blanco); border-radius:14px; box-shadow:var(--sombra); padding:18px 20px; margin-bottom:22px}
+.inf-cab{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; border-bottom:3px solid var(--marron); padding-bottom:10px; margin-bottom:12px}
+.inf-cab h2{font-size:19px; color:var(--marron); font-weight:800}
+.inf-cab .emp{font-size:12px; color:var(--gris); font-weight:600; text-transform:uppercase; letter-spacing:.3px}
+.inf-cab .per{font-size:15px; font-weight:700; color:var(--oliva-osc); text-align:right}
+.inf-res{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px}
+.inf-res > div{border:1px solid var(--linea); border-radius:10px; padding:8px 12px}
+.inf-res .et{font-size:11px; font-weight:700; color:var(--gris); text-transform:uppercase}
+.inf-res .v{font-size:22px; font-weight:800; color:var(--marron)}
+.inf-res .v.naranja{color:var(--naranja)}
+.inf-res .v.rojo{color:#b3261e}
+.inf-tabla{width:100%; border-collapse:collapse; font-size:13px}
+.inf-tabla th{background:var(--beige-claro); color:var(--marron); text-align:left; padding:6px 8px; font-size:11.5px; text-transform:uppercase}
+.inf-tabla td{padding:5px 8px; border-bottom:1px solid var(--linea); vertical-align:top}
+.inf-tabla tr.sec td{background:var(--marron); color:#fff; font-weight:800; font-size:13.5px; padding:8px; letter-spacing:.3px}
+.inf-tabla tr.sec.dieta td{background:var(--naranja)}
+.inf-tabla tr.sec.revisar td{background:#b3261e}
+.inf-tabla tr.pob td{background:#f3efe2; font-weight:800; color:var(--marron); padding:6px 8px}
+.inf-tabla tr.pob td span{font-weight:600; color:var(--gris)}
+.inf-tabla .cli{font-weight:700}
+.btn-pob{border:1px solid var(--beige); background:#fff; border-radius:6px; padding:2px 7px; cursor:pointer; font-size:12px}
+.inf-dias{margin-top:14px; font-size:13px; line-height:1.6}
+.inf-dias b{color:var(--marron)}
+.inf-firmas{display:flex; gap:40px; margin-top:26px}
+.inf-firmas div{flex:1; border-top:1px solid #999; padding-top:4px; font-size:11px; color:var(--gris); text-transform:uppercase; font-weight:700}
+@media print{
+  body.modo-informe .wrap{display:none !important}
+  body.modo-informe #informe{position:static; display:block; overflow:visible; background:#fff}
+  .inf-barra, .inf-aviso, .no-print{display:none !important}
+  .inf-wrap{padding:0; max-width:none}
+  .inf-bloque{box-shadow:none; border:none; padding:0; margin:0; page-break-after:always}
+  .inf-bloque:last-child{page-break-after:auto}
+  .inf-tabla{font-size:10.5px}
+  .inf-tabla tr{page-break-inside:avoid}
+  .inf-tabla tr.sec td, .inf-tabla tr.pob td, .inf-tabla th{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+}
 </style>
 </head>
 <body>
@@ -176,6 +226,7 @@ tfoot td{padding:13px 14px; background:#faf8f2; font-weight:800; color:var(--mar
       <button class="btn btn-linea" onclick="verHistorico()">Todo el histórico</button>
       <button class="btn btn-oliva" onclick="actualizar()">Actualizar</button>
       <button class="btn btn-linea" onclick="window.print()">Imprimir</button>
+      <button class="btn btn-naranja" onclick="abrirInforme()">📋 Informe dietas por población</button>
     </div>
   </div>
 
@@ -224,6 +275,24 @@ tfoot td{padding:13px 14px; background:#faf8f2; font-weight:800; color:var(--mar
 
 </div>
 
+<div id="informe">
+  <div class="inf-wrap">
+    <div class="inf-barra">
+      <div class="campo"><label for="inf-anio">Año</label><select id="inf-anio"></select></div>
+      <div class="campo"><label for="inf-mes">Mes</label><select id="inf-mes"></select></div>
+      <div class="campo"><label for="inf-rep">Repartidor</label><select id="inf-rep"></select></div>
+      <label class="chk"><input type="checkbox" id="inf-solo-ent"> Solo entregadas</label>
+      <div class="der">
+        <button class="btn btn-linea" onclick="unificarEnBD()" title="Corrige en Firebase los nombres repetidos del repartidor">🔧 Unificar repartidores</button>
+        <button class="btn btn-oliva" onclick="imprimirInforme()">🖨️ Imprimir informe</button>
+        <button class="btn btn-linea" onclick="cerrarInforme()">✕ Cerrar</button>
+      </div>
+    </div>
+    <div class="inf-aviso" id="inf-aviso" style="display:none"></div>
+    <div id="inf-contenido"></div>
+  </div>
+</div>
+
 <div class="login-fondo" id="login">
   <div class="login-caja">
     <h3>Identifícate</h3>
@@ -255,6 +324,14 @@ const CAMPOS = {
 };
 const ANIOS_EN_LISTA = 5;   // años seleccionables (actual + 4 anteriores)
 const MAX_FILAS = 500;      // tope de filas dibujadas en la tabla (no afecta a totales)
+/* ---- Repartidores que se escribieron de varias formas → un solo nombre ----
+   Para añadir otro caso: copia la línea y cambia los dos textos.
+   "empiezaPor": cualquier nombre que empiece así se convierte en "correcto". */
+const UNIFICAR_REPARTIDORES = [
+  { empiezaPor:"ALFREDO", correcto:"ALFREDO RODRIGUEZ MORTERA 09388406J" }
+];
+const COLECCION_POBLACIONES = "config_repartos";   // 1 documento con las poblaciones corregidas a mano
+const DOC_POBLACIONES = "poblaciones";
 const MESES = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
 /* ================================================================= */
@@ -299,13 +376,19 @@ function fechaISO(v){
   m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if(m) return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
   return s.slice(0,10);
 }
-function mapear(d){
+function limpiaNombre(s){ return txt(s).toUpperCase().replace(/\s+/g," "); }
+function unificarRep(s){
+  const n=limpiaNombre(s);
+  for(const u of UNIFICAR_REPARTIDORES){ if(n.startsWith(u.empiezaPor)) return u.correcto; }
+  return n;
+}
+function mapear(d, id){
   const g=k=>d[CAMPOS[k]];
-  return {
+  return { id:id||"", repOriginal:txt(g("repartidor")), poblacionCampo:txt(d.poblacion).toUpperCase(),
     cliente:txt(g("cliente")), direccion:txt(g("direccion")), telefono:txt(g("telefono")),
     tienda:txt(g("tienda"))||"Sin tienda", bultos:txt(g("bultos")),
     importe:num(g("importe")), cobrar:num(g("cobrar")), notas:txt(g("notas")),
-    entregado:boolv(g("entregado")), repartidor:txt(g("repartidor"))||"Sin asignar",
+    entregado:boolv(g("entregado")), repartidor:unificarRep(g("repartidor"))||"Sin asignar",
     matricula:txt(g("matricula")), fecha:fechaISO(g("fecha"))
   };
 }
@@ -322,11 +405,11 @@ async function traerAnio(anio){
     .where(CAMPOS.fecha, ">=", anio+"-01-01")
     .where(CAMPOS.fecha, "<=", anio+"-12-31")
     .get();
-  return snap.docs.map(d=>mapear(d.data()));
+  return snap.docs.map(d=>mapear(d.data(), d.id));
 }
 async function traerTodo(){
   const snap = await db.collection(COLECCION).get();
-  return snap.docs.map(d=>mapear(d.data()));
+  return snap.docs.map(d=>mapear(d.data(), d.id));
 }
 async function asegurar(anio){
   if(cargados.has("ALL")) return;
@@ -530,6 +613,276 @@ function graficoTemporal(L){
     </div>`;
   }).join("") : `<div class="sin-datos" style="width:100%">Sin datos en este período.</div>`;
   $("pista").textContent = entradas.length ? (tipo==="dia"?"Toca una barra para ver ese día":"Toca una barra para profundizar") : "";
+}
+
+/* ================================================================= */
+/*  4) INFORME DIETAS POR POBLACIÓN                                   */
+/*  Lecturas Firebase: 0 si el año ya está cargado en el panel,       */
+/*  + 1 sola lectura (documento de poblaciones corregidas a mano).    */
+/* ================================================================= */
+const CONCEJOS_SIN_DIETA = ["OVIEDO","SIERO"];
+const LOCALIDADES = {
+  "OVIEDO": "OVIEDO,UVIEU,LA CORREDORIA,CORREDORIA,COLLOTO,SAN CLAUDIO,TRUBIA,LA MANJOYA,MANJOYA,OLIVARES,LATORES,LAS CALDAS,LIMANES,BRAÑES,NARANCO,CIUDAD NARANCO,VILLAPEREZ,LA TENDERINA,TENDERINA,VENTANIELLES,EL CRISTO,BUENAVISTA,VALLOBIN,LA ERIA,MONTECERRADO,LA FLORIDA,SAN LAZARO,TUDELA VEGUIN,TUDELA DE AGÜERIA,SAN ESTEBAN DE LAS CRUCES,PRIORIO,PIEDRAMUELLE,LA ARGAÑOSA,ARGAÑOSA,LLAMAQUIQUE",
+  "SIERO": "SIERO,POLA DE SIERO,POLA SIERO,LA POLA,LUGONES,EL BERRON,BERRON,LIERES,GRANDA,MERES,TIÑANA,ANES,VIELLA,VALDESOTO,LA FRESNEDA,FRESNEDA,CARBAYIN,SANTIAGO DE ARENAS,ARGÜELLES,MUÑO,HEVIA,BOBES,CELES,MARCENADO,VEGA DE POJA,POJA,SAN MIGUEL DE LA BARREDA",
+  "NOREÑA": "NOREÑA",
+  "GIJÓN": "GIJON,XIXON,SOMIO,CABUEÑES,PORCEYO,LA CALZADA,ROCES,CONTRUECES,CEARES,VIESQUES,NUEVO GIJON,TREMAÑES,DEVA,CENERO,MONTEANA,VEGA DE GIJON",
+  "AVILÉS": "AVILES,VILLALEGRE,LA CARRIONA,LLARANES,SABUGO",
+  "CORVERA": "CORVERA,CORVERA DE ASTURIAS,LAS VEGAS,LOS CAMPOS,CANCIENES,TRASONA,SOLIS,NUBLEDO",
+  "CASTRILLÓN": "CASTRILLON,PIEDRAS BLANCAS,SALINAS,RAICES,ARNAO",
+  "CARREÑO": "CARREÑO,CANDAS,PERLORA,TAMON,ALBANDI,PRENDES,PIEDECAUSA,LOGREZANA,GUIMARAN",
+  "GOZÓN": "GOZON,LUANCO,BAÑUGUES,VERDICIO,ANTROMERO",
+  "LLANERA": "LLANERA,POSADA DE LLANERA,LUGO DE LLANERA,ABLES,VILLABONA,CAYES,BONIELLES,SAN CUCAO,SOTO DE LLANERA,PRUVIA,SILVOTA,ASIPO",
+  "LANGREO": "LANGREO,LA FELGUERA,FELGUERA,SAMA,SAMA DE LANGREO,CIAÑO,RIAÑO,BARROS,TUILLA,LADA",
+  "SAN MARTÍN DEL REY AURELIO": "SAN MARTIN DEL REY AURELIO,EL ENTREGO,ENTREGO,SOTRONDIO,BLIMEA",
+  "LAVIANA": "LAVIANA,POLA DE LAVIANA,BARREDOS",
+  "MIERES": "MIERES,TURON,FIGAREDO,UJO,SANTA CRUZ DE MIERES,RIOTURBIO,SEANA",
+  "LENA": "LENA,POLA DE LENA,CAMPOMANES",
+  "ALLER": "ALLER,CABAÑAQUINTA,MOREDA,FELECHOSA,CABORANA",
+  "MORCÍN": "MORCIN,SANTA EULALIA DE MORCIN",
+  "RIOSA": "RIOSA,LA VEGA DE RIOSA",
+  "RIBERA DE ARRIBA": "RIBERA DE ARRIBA,SOTO DE RIBERA,BUEÑO,FERREROS",
+  "SARIEGO": "SARIEGO,VEGA DE SARIEGO",
+  "BIMENES": "BIMENES,MARTIMPORRA",
+  "NAVA": "NAVA",
+  "CABRANES": "CABRANES",
+  "VILLAVICIOSA": "VILLAVICIOSA,AMANDI,TAZONES,PEON,QUINTES,QUINTUELES,ARGUERO",
+  "COLUNGA": "COLUNGA,LASTRES",
+  "CARAVIA": "CARAVIA",
+  "PILOÑA": "PILOÑA,INFIESTO",
+  "PARRES": "PARRES,ARRIONDAS",
+  "CANGAS DE ONÍS": "CANGAS DE ONIS,COVADONGA",
+  "RIBADESELLA": "RIBADESELLA",
+  "LLANES": "LLANES,POSADA DE LLANES,NUEVA DE LLANES",
+  "GRADO": "GRADO",
+  "CANDAMO": "CANDAMO,GRULLOS",
+  "LAS REGUERAS": "LAS REGUERAS",
+  "PRAVIA": "PRAVIA",
+  "SOTO DEL BARCO": "SOTO DEL BARCO,SAN JUAN DE LA ARENA",
+  "MUROS DE NALÓN": "MUROS DE NALON",
+  "CUDILLERO": "CUDILLERO",
+  "SALAS": "SALAS,CORNELLANA",
+  "TINEO": "TINEO",
+  "CANGAS DEL NARCEA": "CANGAS DEL NARCEA",
+  "VALDÉS": "LUARCA",
+  "NAVIA": "NAVIA",
+  "PROAZA": "PROAZA",
+  "TEVERGA": "TEVERGA,SAN MARTIN DE TEVERGA",
+  "QUIRÓS": "QUIROS,BARZANA"
+};
+
+const normT = s => txt(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z0-9]+/g," ").trim();
+const esc = s => txt(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+const DICC = [];
+Object.entries(LOCALIDADES).forEach(([concejo,lista]) => {
+  lista.split(",").forEach(loc => { const k=normT(loc); if(k) DICC.push({clave:k, pob:loc.trim(), concejo}); });
+});
+// Busca la población dentro de la dirección. Si hay varias, gana la que está más al final.
+function detectarPoblacion(dir){
+  const t=" "+normT(dir)+" ";
+  let mejor=null;
+  for(const e of DICC){
+    const i=t.lastIndexOf(" "+e.clave+" ");
+    if(i<0) continue;
+    const fin=i+e.clave.length;
+    if(!mejor || fin>mejor.fin || (fin===mejor.fin && e.clave.length>mejor.clave.length)) mejor={...e, fin};
+  }
+  return mejor ? {poblacion:(normT(mejor.pob)===normT(mejor.concejo)?mejor.concejo:mejor.pob), concejo:mejor.concejo} : null;
+}
+const esSinDieta = concejo => CONCEJOS_SIN_DIETA.includes(normT(concejo)) || concejo==="OVIEDO/SIERO";
+
+/* ---- Correcciones a mano (1 documento en Firebase, se lee 1 vez por sesión) ---- */
+let correcciones = null;
+async function cargarCorrecciones(){
+  if(correcciones) return;
+  correcciones = {};
+  if(MODO_DEMO) return;
+  try{
+    const d = await db.collection(COLECCION_POBLACIONES).doc(DOC_POBLACIONES).get();
+    if(d.exists) correcciones = d.data() || {};
+  }catch(e){ console.warn("No se pudieron leer las correcciones de poblaciones", e); }
+}
+function poblacionDe(n){
+  // 1º corrección a mano para esa dirección
+  const c = correcciones && correcciones[normT(n.direccion)];
+  if(c && c.p) return {poblacion:c.p, concejo:c.c||c.p, manual:true};
+  // 2º campo "Población" guardado al dar de alta el reparto (menu.html v4.0)
+  if(n.poblacionCampo){
+    const cp = correcciones && correcciones["POB "+normT(n.poblacionCampo)];
+    if(cp && cp.c) return {poblacion:n.poblacionCampo, concejo:cp.c};
+    const det = detectarPoblacion(n.poblacionCampo);
+    return {poblacion:n.poblacionCampo, concejo: det ? det.concejo : ""};   // sin concejo → "revisar"
+  }
+  // 3º se busca dentro de la dirección (repartos antiguos)
+  return detectarPoblacion(n.direccion) || {poblacion:"", concejo:""};
+}
+
+/* ---- Abrir / cerrar ---- */
+const iAnio=$("inf-anio"), iMes=$("inf-mes"), iRep=$("inf-rep"), iSolo=$("inf-solo-ent");
+async function abrirInforme(){
+  document.body.classList.add("modo-informe");
+  const anios=[...elAnio.options].map(o=>o.value).filter(Boolean);
+  iAnio.innerHTML = anios.map(a=>`<option value="${a}">${a}</option>`).join("");
+  iAnio.value = elAnio.value || anios[0];
+  iMes.innerHTML = '<option value="">Todos</option>' + MESES.slice(1).map((m,i)=>`<option value="${String(i+1).padStart(2,"0")}">${m}</option>`).join("");
+  iMes.value = elMes.value || String(new Date().getMonth()+1).padStart(2,"0");
+  await prepararInforme(elRep.value);
+}
+function cerrarInforme(){ document.body.classList.remove("modo-informe"); }
+
+async function prepararInforme(repDeseado){
+  $("inf-contenido").innerHTML = '<div class="sin-datos">Cargando…</div>';
+  try{
+    if(!MODO_DEMO){ await asegurar(iAnio.value); }
+    await cargarCorrecciones();
+  }catch(e){ $("inf-contenido").innerHTML = `<div class="sin-datos">Error leyendo Firebase: ${esc(e.message)}</div>`; return; }
+  const reps=[...new Set(subset({anio:iAnio.value, mes:iMes.value}).map(n=>n.repartidor))].sort();
+  const keep = repDeseado!==undefined ? repDeseado : iRep.value;
+  iRep.innerHTML = '<option value="">Todos</option>' + reps.map(r=>`<option value="${esc(r)}">${esc(r)}</option>`).join("");
+  iRep.value = reps.includes(keep) ? keep : "";
+  pintarInforme();
+}
+iAnio.addEventListener("change", ()=>prepararInforme());
+iMes.addEventListener("change", ()=>prepararInforme());
+iRep.addEventListener("change", pintarInforme);
+iSolo.addEventListener("change", pintarInforme);
+
+/* ---- Dibujar informe ---- */
+const fechaES = f => f ? f.split("-").reverse().join("/") : "";
+function pintarInforme(){
+  let L = subset({anio:iAnio.value, mes:iMes.value, rep:iRep.value});
+  if(iSolo.checked) L = L.filter(n=>n.entregado);
+  const periodo = iMes.value ? `${MESES[parseInt(iMes.value)]} ${iAnio.value}` : `Año ${iAnio.value}`;
+
+  // Aviso si quedan nombres sin unificar en Firebase
+  const variantes=[...new Set(L.filter(n=>n.repOriginal && limpiaNombre(n.repOriginal)!==n.repartidor).map(n=>n.repOriginal))];
+  const av=$("inf-aviso");
+  if(variantes.length){ av.style.display="block"; av.innerHTML=`ℹ️ En este informe ya se juntan como un solo repartidor estos nombres: <b>${variantes.map(esc).join(" · ")}</b>. Para corregirlos también en la base de datos pulsa <b>🔧 Unificar repartidores</b>.`; }
+  else av.style.display="none";
+
+  if(!L.length){ $("inf-contenido").innerHTML = '<div class="sin-datos">No hay repartos para este mes y repartidor.</div>'; return; }
+
+  const porRep = agrupar(L, n=>n.repartidor);
+  $("inf-contenido").innerHTML = Object.keys(porRep).sort().map(rep => bloqueRepartidor(rep, porRep[rep], periodo)).join("");
+}
+
+function bloqueRepartidor(rep, arr, periodo){
+  const filas = arr.map(n => ({...n, ...poblacionDe(n)}));
+  const fuera   = filas.filter(n=>n.poblacion && n.concejo && !esSinDieta(n.concejo));
+  const dentro  = filas.filter(n=>n.poblacion && n.concejo &&  esSinDieta(n.concejo));
+  const revisar = filas.filter(n=>!n.poblacion || !n.concejo);
+
+  // Días con salida fuera de Oviedo/Siero (una dieta por día)
+  const dias = agrupar(fuera, n=>n.fecha);
+  const listaDias = Object.keys(dias).sort().map(f => `<b>${fechaES(f)}</b> (${[...new Set(dias[f].map(n=>n.poblacion))].join(", ")})`);
+
+  const seccion = (titulo, clase, lista) => {
+    if(!lista.length) return "";
+    const porPob = agrupar(lista, n=>n.poblacion || "SIN IDENTIFICAR");
+    let h = `<tr class="sec ${clase}"><td colspan="7">${titulo} · ${lista.length} entrega${lista.length!==1?"s":""}</td></tr>`;
+    Object.keys(porPob).sort((a,b)=>a.localeCompare(b,"es")).forEach(pob => {
+      const g = porPob[pob].sort((a,b)=>a.fecha.localeCompare(b.fecha) || a.cliente.localeCompare(b.cliente));
+      const conc = g[0].concejo && normT(g[0].concejo)!==normT(pob) ? ` <span>(concejo ${esc(g[0].concejo)})</span>` : "";
+      if(clase!=="revisar") h += `<tr class="pob"><td colspan="7">📍 ${esc(pob)}${conc} — ${g.length} entrega${g.length!==1?"s":""}</td></tr>`;
+      g.forEach(n => {
+        h += `<tr>
+          <td>${fechaES(n.fecha)}</td>
+          <td class="cli">${esc(n.cliente)}</td>
+          <td>${esc(n.direccion)}${n.poblacion && !n.concejo ? ` — <b>${esc(n.poblacion)}</b>` : ""}</td>
+          <td>${esc(n.telefono)}</td>
+          <td>${esc(n.tienda)}</td>
+          <td>${esc(n.bultos)}</td>
+          <td class="no-print"><button class="btn-pob" data-dir="${esc(n.direccion)}" data-pob="${esc(n.poblacionCampo)}" title="Indicar / corregir la población">✏️</button></td>
+        </tr>`;
+      });
+    });
+    return h;
+  };
+
+  return `<div class="inf-bloque">
+    <div class="inf-cab">
+      <div><div class="emp">Meres Central de Compras S.L. · Informe de repartos por población</div>
+        <h2>🚚 ${esc(rep)}</h2></div>
+      <div class="per">${periodo}<br><span style="font-size:12px;color:var(--gris);font-weight:600">Dietas por desplazamiento fuera de Oviedo y Siero</span></div>
+    </div>
+    <div class="inf-res">
+      <div><div class="et">Entregas</div><div class="v">${filas.length}</div></div>
+      <div><div class="et">Fuera Oviedo/Siero</div><div class="v naranja">${fuera.length}</div></div>
+      <div><div class="et">Días con salida fuera</div><div class="v naranja">${listaDias.length}</div></div>
+      <div><div class="et">Sin identificar</div><div class="v ${revisar.length?"rojo":""}">${revisar.length}</div></div>
+    </div>
+    <table class="inf-tabla">
+      <thead><tr><th style="width:78px">Fecha</th><th>Cliente</th><th>Dirección</th><th style="width:90px">Teléfono</th><th>Tienda</th><th>Mercancía</th><th class="no-print" style="width:30px"></th></tr></thead>
+      <tbody>
+        ${seccion("CON DIETA — FUERA DE OVIEDO Y SIERO","dieta",fuera)}
+        ${seccion("SIN DIETA — CONCEJOS DE OVIEDO Y SIERO","",dentro)}
+        ${seccion("POBLACIÓN SIN IDENTIFICAR — REVISAR (pulsa ✏️)","revisar",revisar)}
+      </tbody>
+    </table>
+    <div class="inf-dias">Días con desplazamiento fuera de Oviedo y Siero: ${listaDias.length ? listaDias.join(" · ") : "ninguno"}</div>
+    <div class="inf-firmas"><div>Conforme repartidor</div><div>Conforme empresa</div></div>
+  </div>`;
+}
+
+/* ---- Corregir población a mano (1 escritura, se recuerda para siempre por dirección) ---- */
+$("inf-contenido").addEventListener("click", async e => {
+  const b = e.target.closest(".btn-pob"); if(!b) return;
+  const dir = b.getAttribute("data-dir");
+  const pobCampo = b.getAttribute("data-pob") || "";
+  const actual = poblacionDe({direccion:dir, poblacionCampo:pobCampo});
+  const pob = prompt(`Población de esta dirección:\n\n${dir}`, actual.poblacion||"");
+  if(pob===null) return;
+  const p = pob.trim().toUpperCase();
+  if(!p) return;
+  const det = detectarPoblacion(p);
+  let c;
+  if(det) c = det.concejo;
+  else c = confirm(`¿"${p}" pertenece a los concejos de OVIEDO o SIERO?\n\nAceptar = SÍ (sin dieta)\nCancelar = NO (con dieta)`) ? "OVIEDO/SIERO" : p;
+  const cambios = {};
+  cambios[normT(dir)] = {p, c};
+  if(pobCampo && normT(pobCampo)===normT(p)) cambios["POB "+normT(p)] = {p, c};   // sirve para todos los repartos con esa población
+  Object.assign(correcciones, cambios);
+  if(!MODO_DEMO){
+    try{ await db.collection(COLECCION_POBLACIONES).doc(DOC_POBLACIONES).set(cambios, {merge:true}); }
+    catch(err){ alert("No se pudo guardar la población en Firebase: "+err.message); }
+  }
+  pintarInforme();
+});
+
+/* ---- Imprimir en A4 apaisado ---- */
+function imprimirInforme(){
+  const st=document.createElement("style");
+  st.id="pagina-informe"; st.textContent="@page{size:A4 landscape; margin:10mm}";
+  document.head.appendChild(st);
+  window.print();
+  setTimeout(()=>st.remove(), 1000);
+}
+
+/* ---- Unificar nombres de repartidor en Firebase (solo lee los que empiezan igual) ---- */
+async function unificarEnBD(){
+  if(MODO_DEMO){ alert("En modo demostración no se guarda nada."); return; }
+  try{
+    let total=0;
+    for(const u of UNIFICAR_REPARTIDORES){
+      const snap = await db.collection(COLECCION)
+        .where(CAMPOS.repartidor, ">=", u.empiezaPor)
+        .where(CAMPOS.repartidor, "<",  u.empiezaPor+"\uf8ff").get();
+      const cambiar = snap.docs.filter(d => txt(d.data()[CAMPOS.repartidor]) !== u.correcto);
+      if(!cambiar.length) continue;
+      const cuenta={}; cambiar.forEach(d=>{const k=txt(d.data()[CAMPOS.repartidor]); cuenta[k]=(cuenta[k]||0)+1;});
+      const resumen=Object.entries(cuenta).map(([k,v])=>`  • ${k}  (${v} reparto${v!==1?"s":""})`).join("\n");
+      if(!confirm(`Se van a cambiar ${cambiar.length} repartos de todos los años:\n\n${resumen}\n\nquedarán todos como:\n  ✔ ${u.correcto}\n\n¿Continuar?`)) continue;
+      for(let i=0;i<cambiar.length;i+=400){
+        const lote=db.batch();
+        cambiar.slice(i,i+400).forEach(d=>lote.update(d.ref, {[CAMPOS.repartidor]: u.correcto}));
+        await lote.commit();
+      }
+      datos.forEach(n=>{ if(n.repartidor===u.correcto) n.repOriginal=u.correcto; });
+      total+=cambiar.length;
+    }
+    alert(total ? `Hecho: ${total} repartos corregidos en Firebase.` : "No había nada que corregir: los nombres ya están unificados.");
+    reconstruirCascada(); render(); pintarInforme();
+  }catch(e){ alert("No se pudo unificar: "+e.message); }
 }
 
 iniciar();

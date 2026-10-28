@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- v4.0 — 28/10/2026 — REPARTOS: lista de repartidores guardada en Firebase (sin nombres duplicados), campo Población obligatorio, lecturas solo de la fecha consultada (antes leía toda la colección) -->
 <!-- v3.9 — 07/10/2026 — NUEVO: botón "🚦 Calendario vacaciones" en PERSONAL (todos) → vacaciones-consulta.html -->
 <html lang="es">
 <head>
@@ -308,7 +309,7 @@ tr:last-child td{border-bottom:none}
     </div>
 
   </div>
-  <div style="position:fixed;bottom:10px;left:12px;font-size:11px;color:#888;font-family:monospace;pointer-events:none;font-weight:700">v3.9 — 07/10/2026</div>
+  <div style="position:fixed;bottom:10px;left:12px;font-size:11px;color:#888;font-family:monospace;pointer-events:none;font-weight:700">v4.0 — 28/10/2026</div>
   <!-- BOTÓN FLOTANTE FICHAJE en pantalla de selección -->
   <button onclick="window._abrirFichajeRapido&&window._abrirFichajeRapido()" style="position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:#1a6b2a;color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(26,107,42,.4);z-index:500;display:flex;align-items:center;justify-content:center;touch-action:manipulation" title="Fichar">⏱️</button>
 </div>
@@ -5057,16 +5058,109 @@ function generarInformeIncidencia(inc) {
 }
 
 // ===== REPARTOS =====
-let REPARTIDORES_FIJOS = ["ALEX","ANTONIO_CONFO","CLEO","DARWIN","EDISON","JAVIER MIKAMA","JA_CUBANO","ROBERTO","X-CHUS"];
+// Lista inicial (solo se usa la primera vez; luego manda la guardada en Firebase: config_repartos/repartidores)
+let REPARTIDORES_FIJOS = ["ALEX","ALFREDO RODRIGUEZ MORTERA 09388406J","ANTONIO_CONFO","CLEO","DARWIN","EDISON","JAVIER MIKAMA","JA_CUBANO","ROBERTO","X-CHUS"];
+const REP_CFG_COL = "config_repartos", REP_CFG_DOC = "repartidores";
+const REP_LS_KEY = "menu_repartidores", REP_LS_TTL = 24*60*60*1000;   // caché 24h en el ordenador
+let _repListaCargada = false;
 
-async function initRepartos() {
+// Poblaciones sugeridas en el campo "Población" (se puede escribir cualquier otra)
+const REP_POBLACIONES = ["OVIEDO","LA CORREDORIA","COLLOTO","SAN CLAUDIO","TRUBIA","LUGONES","POLA DE SIERO","EL BERRON","LIERES","GRANDA","MERES","TIÑANA","ANES","VIELLA","VALDESOTO","LA FRESNEDA","CARBAYIN","NOREÑA","GIJON","AVILES","CORVERA","LAS VEGAS","LOS CAMPOS","PIEDRAS BLANCAS","SALINAS","CANDAS","LUANCO","POSADA DE LLANERA","LUGO DE LLANERA","LA FELGUERA","SAMA DE LANGREO","EL ENTREGO","SOTRONDIO","POLA DE LAVIANA","MIERES","POLA DE LENA","MOREDA","NAVA","INFIESTO","ARRIONDAS","VILLAVICIOSA","COLUNGA","RIBADESELLA","LLANES","CANGAS DE ONIS","GRADO","PRAVIA","CUDILLERO","SALAS","TINEO","LUARCA","NAVIA","CANGAS DEL NARCEA"];
+
+function repNormNombre(s) { return String(s||"").trim().toUpperCase().replace(/\s+/g," "); }
+
+async function cargarListaRepartidores(forzar) {
+  if (_repListaCargada && !forzar) return;
+  try {
+    if (!forzar) {
+      const c = JSON.parse(localStorage.getItem(REP_LS_KEY) || "null");
+      if (c && Array.isArray(c.lista) && c.lista.length && (Date.now() - c.ts) < REP_LS_TTL) {
+        REPARTIDORES_FIJOS = c.lista; _repListaCargada = true; return;
+      }
+    }
+    const snap = await getDoc(doc(db, REP_CFG_COL, REP_CFG_DOC));          // 1 lectura
+    if (snap.exists() && Array.isArray(snap.data().lista) && snap.data().lista.length) {
+      REPARTIDORES_FIJOS = snap.data().lista;
+    } else {
+      await setDoc(doc(db, REP_CFG_COL, REP_CFG_DOC), { lista: REPARTIDORES_FIJOS });   // primera vez: crea la lista
+    }
+    localStorage.setItem(REP_LS_KEY, JSON.stringify({ ts: Date.now(), lista: REPARTIDORES_FIJOS }));
+    _repListaCargada = true;
+  } catch(e) { console.warn("Lista de repartidores no disponible, uso la fija", e); }
+}
+async function guardarListaRepartidores() {
+  REPARTIDORES_FIJOS.sort((a,b) => a.localeCompare(b,"es"));
+  await setDoc(doc(db, REP_CFG_COL, REP_CFG_DOC), { lista: REPARTIDORES_FIJOS });
+  localStorage.setItem(REP_LS_KEY, JSON.stringify({ ts: Date.now(), lista: REPARTIDORES_FIJOS }));
+}
+// Añade un repartidor a la lista común avisando si ya hay uno parecido. Devuelve el nombre elegido o "".
+async function anadirRepartidorNuevo(nombreEscrito) {
+  const nombre = repNormNombre(nombreEscrito);
+  if (!nombre) return "";
+  await cargarListaRepartidores(true);                                  // lista al día (1 lectura)
+  if (REPARTIDORES_FIJOS.includes(nombre)) { showToast("Ya existe: " + nombre); return nombre; }
+  const primera = nombre.split(" ")[0];
+  const parecidos = REPARTIDORES_FIJOS.filter(x => x.split(" ")[0] === primera);
+  if (parecidos.length) {
+    const usar = confirm("Ya existe un repartidor parecido:\n\n  " + parecidos.join("\n  ")
+      + "\n\nPulsa ACEPTAR para usar ese (" + parecidos[0] + ").\nPulsa CANCELAR si es OTRA persona distinta.");
+    if (usar) return parecidos[0];
+  }
+  REPARTIDORES_FIJOS.push(nombre);
+  try { await guardarListaRepartidores(); showToast("Repartidor " + nombre + " añadido"); }
+  catch(e) { showToast("No se pudo guardar en Firebase: " + e.message); }
+  return nombre;
+}
+
+// ---- Repartos: solo se lee la fecha consultada (caché 5 min en memoria) ----
+const _repCache = {};                        // clave: fecha "YYYY-MM-DD" o "ULT30" (últimos 30 días)
+const REP_CACHE_TTL = 5*60*1000;
+let _repFiltro = { fecha: null, rep: "all" };
+let _repTodos = null;                        // todos los repartos: solo para Estadísticas (caché 30 min)
+function _repDesde30() { const d = new Date(); d.setDate(d.getDate()-30); return d.toISOString().slice(0,10); }
+async function cargarRepartos(fecha, forzar) {
+  const clave = fecha || "ULT30";
+  const c = _repCache[clave];
+  if (!forzar && c && (Date.now() - c.ts) < REP_CACHE_TTL) return c.lista;
+  const q = fecha
+    ? query(collection(db,"repartos"), where("fecha_entrega","==",fecha))
+    : query(collection(db,"repartos"), where("fecha_entrega",">=",_repDesde30()));
+  const sn = await getDocs(q);
+  const lista = [];
+  sn.forEach(d => { const x = d.data(); if (!x.id) x.id = d.id; lista.push(x); });
+  _repCache[clave] = { ts: Date.now(), lista };
+  return lista;
+}
+async function cargarTodosRepartos() {
+  if (_repTodos && (Date.now() - _repTodos.ts) < 30*60*1000) return _repTodos.lista;
+  const sn = await getDocs(collection(db,"repartos"));
+  const lista = [];
+  sn.forEach(d => { const x = d.data(); if (!x.id) x.id = d.id; lista.push(x); });
+  _repTodos = { ts: Date.now(), lista };
+  return lista;
+}
+// Tras guardar o borrar: actualiza la memoria SIN volver a leer Firebase
+function repCacheAplicar(r, borrar) {
+  Object.entries(_repCache).forEach(([clave, c]) => {
+    c.lista = c.lista.filter(x => x.id !== r.id);
+    if (borrar) return;
+    const encaja = clave === "ULT30" ? (r.fecha_entrega >= _repDesde30()) : (r.fecha_entrega === clave);
+    if (encaja) c.lista.push(r);
+  });
+  if (_repTodos) {
+    _repTodos.lista = _repTodos.lista.filter(x => x.id !== r.id);
+    if (!borrar) _repTodos.lista.push(r);
+  }
+}
+
+async function initRepartos(forzar) {
   const cont = document.getElementById("repartos-content");
   if(!cont) return;
+  if (_repFiltro.fecha === null) _repFiltro.fecha = today();
   cont.innerHTML = "<div class='spinner'>Cargando repartos...</div>";
   try {
-    const sn = await getDocs(collection(db, "repartos"));
-    const repartos = [];
-    sn.forEach(d => repartos.push(d.data()));
+    await cargarListaRepartidores();
+    const repartos = await cargarRepartos(_repFiltro.fecha, forzar);
     renderRepartos(repartos, cont);
   } catch(e) {
     cont.innerHTML = "<div class='card'><p class='empty'>Error: " + e.message + "</p></div>";
@@ -5104,8 +5198,10 @@ function renderRepartos(repartos, cont) {
   btnStats.style.cssText = "padding:10px 14px;font-size:13px";
   btnStats.textContent = "📊 Estadisticas";
   btnStats.addEventListener("click", () => {
-    mostrarModalClave(function() {
-      mostrarEstadisticasRepartos(repartos);
+    mostrarModalClave(async function() {
+      showToast("Cargando estadísticas...");
+      try { mostrarEstadisticasRepartos(await cargarTodosRepartos()); }
+      catch(e) { showToast("Error: " + e.message); }
     });
   });
 
@@ -5140,7 +5236,7 @@ function renderRepartos(repartos, cont) {
   const fechaInp = document.createElement("input");
   fechaInp.type = "date";
   fechaInp.id = "rep-fil-fecha";
-  fechaInp.value = today();
+  fechaInp.value = _repFiltro.fecha || "";
   fechaInp.style.cssText = "padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px;background:#fff;-webkit-appearance:none";
   fechaWrap.appendChild(fechaLbl);
   fechaWrap.appendChild(fechaInp);
@@ -5163,6 +5259,8 @@ function renderRepartos(repartos, cont) {
     o.value = r; o.textContent = r;
     repSel.appendChild(o);
   });
+  repSel.value = _repFiltro.rep;
+  if (repSel.value !== _repFiltro.rep) repSel.value = "all";
   repWrap.appendChild(repLbl);
   repWrap.appendChild(repSel);
 
@@ -5170,24 +5268,20 @@ function renderRepartos(repartos, cont) {
   btnFiltrar.className = "btn btn-primary";
   btnFiltrar.textContent = "Filtrar";
   btnFiltrar.addEventListener("click", () => {
-    const fecha = fechaInp.value;
-    const rep = repSel.value;
-    const filtered = repartos.filter(r => {
-      if (fecha && r.fecha_entrega !== fecha) return false;
-      if (rep !== "all" && r.repartidor !== rep) return false;
-      return true;
-    });
-    renderListaRepartos(filtered, listaDiv, repartos, cont);
+    // Fecha vacía = últimos 30 días. Se relee solo esa fecha (pocas lecturas) para ver lo último de otros ordenadores.
+    _repFiltro = { fecha: fechaInp.value, rep: repSel.value };
+    initRepartos(true);
   });
 
   const btnPrint = document.createElement("button");
   btnPrint.className = "btn";
   btnPrint.style.cssText = "padding:10px 14px;font-size:13px";
   btnPrint.textContent = "🖨️ Imprimir hoja";
-  btnPrint.addEventListener("click", () => {
+  btnPrint.addEventListener("click", async () => {
     const fecha = fechaInp.value;
     const rep = repSel.value;
-    const filtered = repartos.filter(r => {
+    const base = (fecha === (_repFiltro.fecha || "")) ? repartos : await cargarRepartos(fecha);
+    const filtered = base.filter(r => {
       if (fecha && r.fecha_entrega !== fecha) return false;
       if (rep !== "all" && r.repartidor !== rep) return false;
       return true;
@@ -5206,9 +5300,9 @@ function renderRepartos(repartos, cont) {
   listaDiv.id = "lista-repartos";
   cont.appendChild(listaDiv);
 
-  // Show today by default
-  const hoy = repartos.filter(r => r.fecha_entrega === today());
-  renderListaRepartos(hoy, listaDiv, repartos, cont);
+  // Muestra la fecha y el repartidor seleccionados
+  const visibles = repartos.filter(r => _repFiltro.rep === "all" || r.repartidor === _repFiltro.rep);
+  renderListaRepartos(visibles, listaDiv, repartos, cont);
 }
 
 function renderListaRepartos(lista, listaDiv, allRepartos, cont) {
@@ -5285,7 +5379,7 @@ function renderListaRepartos(lista, listaDiv, allRepartos, cont) {
 
       tr.innerHTML = "<td style='padding:8px 10px;text-align:center;font-weight:700;color:#e65100'>" + (i+1) + "</td>"
         + "<td style='padding:8px 10px;font-weight:500'>" + (r.cliente||"-") + "</td>"
-        + "<td style='padding:8px 10px;color:#555;font-size:11px'>" + (r.direccion||"-") + "</td>"
+        + "<td style='padding:8px 10px;color:#555;font-size:11px'>" + (r.direccion||"-") + (r.poblacion ? " — <b style='color:#333'>" + r.poblacion + "</b>" : "") + "</td>"
         + "<td style='padding:8px 10px;font-size:11px'>" + (r.telefono||"-") + "</td>"
         + "<td style='padding:8px 10px;font-size:11px'>" + (r.tienda||"-") + "</td>"
         + "<td style='padding:8px 10px;font-size:11px'>" + (r.bultos||"-") + "</td>"
@@ -5305,8 +5399,10 @@ function renderListaRepartos(lista, listaDiv, allRepartos, cont) {
       btnEnt.title = r.entregado ? "Marcar pendiente" : "Marcar entregado";
       btnEnt.textContent = r.entregado ? "↩" : "✓";
       btnEnt.addEventListener("click", async () => {
-        await setDoc(doc(db,"repartos",r.id), {...r, entregado:!r.entregado}, {merge:true});
+        const nuevo = {...r, entregado:!r.entregado};
+        await setDoc(doc(db,"repartos",r.id), nuevo, {merge:true});
         showToast(r.entregado ? "Pendiente" : "Entregado ✓");
+        repCacheAplicar(nuevo);
         initRepartos();
       });
 
@@ -5325,6 +5421,7 @@ function renderListaRepartos(lista, listaDiv, allRepartos, cont) {
           if (!confirm("Eliminar este reparto?")) return;
           await deleteDoc(doc(db,"repartos",r.id));
           showToast("Eliminado");
+          repCacheAplicar(r, true);
           initRepartos();
         });
       });
@@ -5376,10 +5473,11 @@ function mostrarFormReparto(reparto, allRepartos, cont) {
     + "<label style='font-size:12px;color:#666;display:block;margin-bottom:3px'>Repartidor</label>"
     + "<div style='display:flex;gap:8px;margin-bottom:10px'>"
     + "<select id='rep-repartidor-sel' style='flex:1;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:15px;background:#fff;-webkit-appearance:none'>"
+    + (isEdit ? "" : "<option value='' selected>— Elige repartidor —</option>")
     + REPARTIDORES_FIJOS.map(x => "<option" + (r.repartidor===x?" selected":"") + ">" + x + "</option>").join("")
-    + "<option value='_otro'" + (!REPARTIDORES_FIJOS.includes(r.repartidor)&&r.repartidor?" selected":"") + ">Otro (externo)...</option>"
+    + (r.repartidor && !REPARTIDORES_FIJOS.includes(r.repartidor) ? "<option selected>" + r.repartidor + "</option>" : "")
+    + "<option value='_nuevo'>+ Añadir repartidor nuevo...</option>"
     + "</select>"
-    + "<input id='rep-repartidor-ext' type='text' placeholder='Nombre repartidor externo' value='" + (!REPARTIDORES_FIJOS.includes(r.repartidor)&&r.repartidor ? r.repartidor : "") + "' style='flex:1;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:15px;display:" + (!REPARTIDORES_FIJOS.includes(r.repartidor)&&r.repartidor ? "block" : "none") + "'>"
     + "</div>"
 
     // Matricula
@@ -5400,7 +5498,12 @@ function mostrarFormReparto(reparto, allRepartos, cont) {
 
     // Direccion
     + "<label style='font-size:12px;color:#666;display:block;margin-bottom:3px'>Direccion de entrega</label>"
-    + "<input id='rep-dir' type='text' placeholder='Calle, numero, piso, localidad' value='" + (r.direccion||"").replace(/\x27/g,"&#39;") + "' style='width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:10px'>"
+    + "<input id='rep-dir' type='text' placeholder='Calle, numero, piso' value='" + (r.direccion||"").replace(/\x27/g,"&#39;") + "' style='width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:10px'>"
+
+    // Poblacion (para el informe de dietas de repartidores)
+    + "<label style='font-size:12px;color:#666;display:block;margin-bottom:3px'>Población <span style='color:#e65100'>*</span></label>"
+    + "<input id='rep-poblacion' type='text' list='rep-pob-list' placeholder='Ej: LUGONES, GIJON, CANDAS...' value='" + (r.poblacion||"").replace(/\x27/g,"&#39;") + "' style='width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:10px;text-transform:uppercase'>"
+    + "<datalist id='rep-pob-list'>" + REP_POBLACIONES.map(p => "<option value='" + p + "'>").join("") + "</datalist>"
 
     // Tienda y vendedor
     + "<div style='display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px'>"
@@ -5440,10 +5543,18 @@ function mostrarFormReparto(reparto, allRepartos, cont) {
   document.body.appendChild(overlay);
 
   // Wire repartidor selector
-  document.getElementById("rep-repartidor-sel").addEventListener("change", function() {
-    const ext = document.getElementById("rep-repartidor-ext");
-    ext.style.display = this.value === "_otro" ? "block" : "none";
-    if (this.value !== "_otro") ext.value = "";
+  document.getElementById("rep-repartidor-sel").addEventListener("change", async function() {
+    if (this.value !== "_nuevo") return;
+    const sel = this;
+    const escrito = prompt("Nombre del repartidor nuevo (nombre, apellidos y DNI si lo tienes):");
+    const nombre = await anadirRepartidorNuevo(escrito || "");
+    if (!nombre) { sel.value = ""; return; }
+    if (![...sel.options].some(o => o.value === nombre)) {
+      const o = document.createElement("option");
+      o.value = nombre; o.textContent = nombre;
+      sel.insertBefore(o, sel.querySelector("option[value='_nuevo']"));
+    }
+    sel.value = nombre;
   });
 
   document.getElementById("rep-form-close").addEventListener("click", () => overlay.remove());
@@ -5451,12 +5562,12 @@ function mostrarFormReparto(reparto, allRepartos, cont) {
 
   document.getElementById("rep-form-save").addEventListener("click", async () => {
     const sel = document.getElementById("rep-repartidor-sel");
-    const repartidor = sel.value === "_otro"
-      ? document.getElementById("rep-repartidor-ext").value.trim()
-      : sel.value;
+    const repartidor = sel.value === "_nuevo" ? "" : sel.value;
     if (!repartidor) { showToast("Indica el repartidor"); return; }
     const cliente = document.getElementById("rep-cliente").value.trim();
     if (!cliente) { showToast("Indica el cliente"); return; }
+    const poblacion = repNormNombre(document.getElementById("rep-poblacion").value);
+    if (!poblacion) { showToast("Indica la población"); return; }
 
     const data = {
       id: r.id,
@@ -5466,6 +5577,7 @@ function mostrarFormReparto(reparto, allRepartos, cont) {
       cliente,
       telefono: document.getElementById("rep-telefono").value.trim(),
       direccion: document.getElementById("rep-dir").value.trim(),
+      poblacion,
       tienda: document.getElementById("rep-tienda").value,
       vendedor: document.getElementById("rep-vendedor").value.trim(),
       bultos: document.getElementById("rep-bultos").value.trim(),
@@ -5482,14 +5594,16 @@ function mostrarFormReparto(reparto, allRepartos, cont) {
       await setDoc(doc(db, "repartos", data.id), data);
       showToast("Reparto guardado");
       overlay.remove();
+      repCacheAplicar(data);
       initRepartos();
     } catch(e) { showToast("Error: " + e.message); }
   });
 }
 
-function gestionarRepartidores() {
+async function gestionarRepartidores() {
   const old = document.getElementById("rep-gestionar-overlay");
   if (old) old.remove();
+  await cargarListaRepartidores(true);       // lista al día (1 lectura)
 
   const overlay = document.createElement("div");
   overlay.id = "rep-gestionar-overlay";
@@ -5520,21 +5634,21 @@ function gestionarRepartidores() {
       btn.addEventListener("click", function() {
         const idx = parseInt(this.getAttribute("data-idx"));
         const nombre = REPARTIDORES_FIJOS[idx];
-        mostrarModalClave(function() {
+        mostrarModalClave(async function() {
+          if (!confirm("¿Quitar a " + nombre + " de la lista de repartidores?\n(Los repartos ya hechos no se borran)")) return;
           REPARTIDORES_FIJOS.splice(idx, 1);
+          try { await guardarListaRepartidores(); showToast("Repartidor " + nombre + " eliminado"); }
+          catch(e) { showToast("No se pudo guardar en Firebase: " + e.message); }
           renderContent();
-          showToast("Repartidor " + nombre + " eliminado");
         });
       });
     });
 
-    box.querySelector("#btn-rep-add-new").addEventListener("click", function() {
-      const nombre = box.querySelector("#rep-new-name").value.trim().toUpperCase();
-      if (!nombre) { showToast("Escribe el nombre"); return; }
-      if (REPARTIDORES_FIJOS.includes(nombre)) { showToast("Ya existe"); return; }
-      REPARTIDORES_FIJOS.push(nombre);
+    box.querySelector("#btn-rep-add-new").addEventListener("click", async function() {
+      const escrito = box.querySelector("#rep-new-name").value;
+      if (!escrito.trim()) { showToast("Escribe el nombre"); return; }
+      await anadirRepartidorNuevo(escrito);
       renderContent();
-      showToast("Repartidor " + nombre + " añadido");
     });
 
     box.querySelector("#rep-new-name").addEventListener("keydown", function(e) {
@@ -5859,7 +5973,7 @@ function imprimirHojaRepartos(lista, fecha, repartidor) {
         + "<td style='padding:6px 8px;text-align:center;font-weight:700;border-bottom:1px solid #ccc'>" + (i+1) + "</td>"
         + "<td style='padding:6px 8px;border-bottom:1px solid #ccc'>"
           + "<div style='font-weight:700;font-size:12px'>" + (r.cliente||"—") + "</div>"
-          + "<div style='font-size:10px;color:#555'>" + (r.direccion||"—") + "</div>"
+          + "<div style='font-size:10px;color:#555'>" + (r.direccion||"—") + (r.poblacion ? " — <b>" + r.poblacion + "</b>" : "") + "</div>"
           + "<div style='font-size:10px;color:#777'>Tel: " + (r.telefono||"—") + "</div>"
         + "</td>"
         + "<td style='padding:6px 8px;font-size:11px;border-bottom:1px solid #ccc'>" + (r.tienda||"—") + "</td>"
