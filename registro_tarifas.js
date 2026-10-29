@@ -119,6 +119,7 @@ const REGISTRO_TARIFAS = {
       {cod:"DINO", nombre:"ORTIZ-DINO", script:"tarifas_ortiz425/catalogo_ortiz425_dino.js", variable:"CATALOGO_ORTIZ425_DINO", carpeta:"tarifas_ortiz425/img", color:"#8d5a2b"},
       {cod:"ELVAS", nombre:"ORTIZ-ELVAS", script:"tarifas_ortiz425/catalogo_ortiz425_elvas.js", variable:"CATALOGO_ORTIZ425_ELVAS", carpeta:"tarifas_ortiz425/img", color:"#8d5a2b"},
       {cod:"EROS", nombre:"ORTIZ-EROS", script:"tarifas_ortiz425/catalogo_ortiz425_eros.js", variable:"CATALOGO_ORTIZ425_EROS", carpeta:"tarifas_ortiz425/img", color:"#8d5a2b"},
+      {cod:"ETHEL", nombre:"ORTIZ-ETHEL", script:"tarifas_ortiz425/catalogo_ortiz425_ethel.js", variable:"CATALOGO_ORTIZ425_ETHEL", carpeta:"tarifas_ortiz425/img", color:"#8d5a2b"},
       {cod:"EVELIN", nombre:"ORTIZ-EVELIN", script:"tarifas_ortiz425/catalogo_ortiz425_evelin.js", variable:"CATALOGO_ORTIZ425_EVELIN", carpeta:"tarifas_ortiz425/img", color:"#8d5a2b"},
       {cod:"GAMMA", nombre:"ORTIZ-GAMMA", script:"tarifas_ortiz425/catalogo_ortiz425_gamma.js", variable:"CATALOGO_ORTIZ425_GAMMA", carpeta:"tarifas_ortiz425/img", color:"#8d5a2b"},
       {cod:"IFNI", nombre:"ORTIZ-IFNI", script:"tarifas_ortiz425/catalogo_ortiz425_ifni.js", variable:"CATALOGO_ORTIZ425_IFNI", carpeta:"tarifas_ortiz425/img", color:"#8d5a2b"},
@@ -153,6 +154,7 @@ const REGISTRO_TARIFAS = {
       {cod:"TREVI", nombre:"ORTIZ-TREVI", script:"tarifas_ortiz425/catalogo_ortiz425_trevi.js", variable:"CATALOGO_ORTIZ425_TREVI", carpeta:"tarifas_ortiz425/img", color:"#8d5a2b"},
       {cod:"VEGA", nombre:"ORTIZ-VEGA", script:"tarifas_ortiz425/catalogo_ortiz425_vega.js", variable:"CATALOGO_ORTIZ425_VEGA", carpeta:"tarifas_ortiz425/img", color:"#8d5a2b"},
       {cod:"VIANA", nombre:"ORTIZ-VIANA", script:"tarifas_ortiz425/catalogo_ortiz425_viana.js", variable:"CATALOGO_ORTIZ425_VIANA", carpeta:"tarifas_ortiz425/img", color:"#8d5a2b"},
+      {cod:"VISEU", nombre:"ORTIZ-VISEU", script:"tarifas_ortiz425/catalogo_ortiz425_viseu.js", variable:"CATALOGO_ORTIZ425_VISEU", carpeta:"tarifas_ortiz425/img", color:"#8d5a2b"},
       {cod:"VIVIAN", nombre:"ORTIZ-VIVIAN", script:"tarifas_ortiz425/catalogo_ortiz425_vivian.js", variable:"CATALOGO_ORTIZ425_VIVIAN", carpeta:"tarifas_ortiz425/img", color:"#8d5a2b"},
       {cod:"WEST", nombre:"ORTIZ-WEST", script:"tarifas_ortiz425/catalogo_ortiz425_west.js", variable:"CATALOGO_ORTIZ425_WEST", carpeta:"tarifas_ortiz425/img", color:"#8d5a2b"},
       {cod:"ZEUS", nombre:"ORTIZ-ZEUS", script:"tarifas_ortiz425/catalogo_ortiz425_zeus.js", variable:"CATALOGO_ORTIZ425_ZEUS", carpeta:"tarifas_ortiz425/img", color:"#8d5a2b"}
