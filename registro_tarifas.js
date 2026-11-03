@@ -176,6 +176,14 @@ const REGISTRO_TARIFAS = {
       {cod:"VENTO", nombre:"REFERENZZA-VENTO", script:"tarifas_4028/catalogo_4028_vento.js", variable:"CATALOGO_4028_VENTO", carpeta:"tarifas_4028/img", color:"#c2185b"}
     ]
   },
+  "678": {
+    nombre: "678-JUNIOR",
+    precioPunto: 0.81, dtoMax: 20,
+    desplegable: true,
+    modelos: [
+      {cod:"JUNIOR", nombre:"JUNIOR", script:"tarifas_678/catalogo_678_junior.js", variable:"CATALOGO_678_JUNIOR", carpeta:"tarifas_678/img", color:"#e65100"}
+    ]
+  },
   "6028": {
     nombre: "6028 · Quality",
     precioPunto: 3.02, dtoMax: 25,
