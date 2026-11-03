@@ -193,6 +193,12 @@
   }
   .campo-config-input input:focus{outline:none;}
   .campo-config-input span{font-size:12px;color:#8a5a00;font-weight:700;}
+  .ops-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px}
+  .op-tab{padding:5px 11px;border:1px solid #d9d2c5;border-radius:8px 8px 0 0;background:#f4f1ea;font-size:12px;font-weight:600;color:#5a3a22;cursor:pointer;user-select:none}
+  .op-tab.on{background:#1a1714;color:#fff;border-color:#1a1714}
+  .op-tab .op-x{margin-left:4px;opacity:.6;font-weight:400}
+  .op-tab .op-x:hover{opacity:1}
+  .op-add{border-style:dashed;background:#fff;color:#c0602a}
   .cart-list{
     overflow-y:auto;
     flex:1 1 auto;
@@ -404,6 +410,7 @@
       </div>
     </div>
 
+    <div class="ops-tabs" id="opsTabs"></div>
     <div class="cart-list" id="cartList"></div>
 
     <div class="total-row">
@@ -508,7 +515,36 @@ let OCULTOS = {};          // proveedor -> [códigos de modelo borrados]
 let modeloActual = "";
 let paginaActual = 0;
 const CATALOGOS = {};      // "prov|modelo" -> catálogo cargado
-const carrito = {};        // uid -> {item, cantidad, modelo, prov, descripcion, color}
+let carrito = {};          // uid -> {item, cantidad, modelo, prov, descripcion, color}  (= la opción activa)
+/* ---------- VARIOS PRESUPUESTOS (OPCIONES) PARA UN MISMO CLIENTE ----------
+   OPS = lista de opciones; cada una tiene su propia lista de artículos.
+   "carrito" apunta siempre a la opción activa, así todo lo demás funciona igual. */
+const OPS = [{carrito: carrito}];
+let opActual = 0;
+let PRES_ALCANCE = "activa";   // "activa" = solo la opción en pantalla · "todas" = todas las que tengan artículos
+const OPS_MAX = 6;
+function totalDe(c){ let t = 0; Object.keys(c).forEach(function(k){ const e = c[k]; t += precioUnidad(e) * e.cantidad; }); return Math.round(t); }
+function opsConArticulos(){ return OPS.filter(function(o){ return Object.keys(o.carrito).length > 0; }); }
+function pintarOps(){
+  const box = document.getElementById("opsTabs"); if(!box) return;
+  let h = "";
+  OPS.forEach(function(o, i){
+    const n = Object.keys(o.carrito).length;
+    h += '<span class="op-tab' + (i === opActual ? " on" : "") + '" onclick="cambiarOp(' + i + ')">Op. ' + (i + 1)
+      + (n ? ' · ' + totalDe(o.carrito) + '€' : '')
+      + (OPS.length > 1 ? ' <b class="op-x" title="Quitar esta opción" onclick="event.stopPropagation();cerrarOp(' + i + ')">✕</b>' : '') + '</span>';
+  });
+  if(OPS.length < OPS_MAX) h += '<span class="op-tab op-add" onclick="nuevaOp()" title="Nuevo presupuesto para el mismo cliente">＋</span>';
+  box.innerHTML = h;
+}
+function cambiarOp(i){ if(i < 0 || i >= OPS.length) return; opActual = i; carrito = OPS[i].carrito; pintarCarrito(); }
+function nuevaOp(){ if(OPS.length >= OPS_MAX) return; OPS.push({carrito: {}}); cambiarOp(OPS.length - 1); }
+function cerrarOp(i){
+  if(Object.keys(OPS[i].carrito).length && !confirm("Se borrará la Op. " + (i + 1) + " con sus artículos. ¿Seguro?")) return;
+  OPS.splice(i, 1);
+  if(opActual > i || opActual >= OPS.length) opActual = Math.max(0, opActual - 1);
+  carrito = OPS[opActual].carrito; pintarCarrito();
+}
 
 function calcularPrecio(puntos, prov){
   const c = CONFIG[prov] || CONFIG[PROV_ACTUAL];
@@ -988,6 +1024,7 @@ function precioUnidad(en){
 }
 
 function pintarCarrito(){
+  pintarOps();
   document.querySelectorAll(".hotspot").forEach(function(hs){
     const uid = hs.id.replace("hs_", "");
     const en = carrito[uid];
@@ -1061,6 +1098,7 @@ function actualizarTotales(){
     if(celda) celda.textContent = subtotal + " €";
   });
   document.getElementById("totalTxt").textContent = total + " €";
+  pintarOps();
 }
 
 function mostrarTexto(){
@@ -1257,7 +1295,13 @@ function abrirModalImpresion(){
 
 function imprimirPresupuesto(){
   const ids = Object.keys(carrito);
-  if(ids.length === 0){ alert("No hay artículos en el presupuesto todavía."); return; }
+  const con = opsConArticulos();
+  if(ids.length === 0 && con.length === 0){ alert("No hay artículos en el presupuesto todavía."); return; }
+  PRES_ALCANCE = "activa";
+  if(con.length > 1){
+    PRES_ALCANCE = confirm("Tienes " + con.length + " opciones con artículos.\n\nAceptar = imprimir TODAS las opciones en un mismo presupuesto.\nCancelar = imprimir solo la opción que estás viendo (Op. " + (opActual + 1) + ").") ? "todas" : "activa";
+  }
+  if(PRES_ALCANCE === "activa" && ids.length === 0){ alert("La opción que estás viendo está vacía."); return; }
   TIPO_IMPRESION_ACTUAL = "cliente";
   abrirModalImpresion();
 }
@@ -1333,25 +1377,40 @@ function ejecutarImpresionPresupuesto(){
       +"</div>";
   }
 
+  const opsImp = (PRES_ALCANCE === "todas") ? opsConArticulos() : [OPS[opActual]];
+  function tablaOp(op, titulo){
+    const guardCarrito = carrito; carrito = op.carrito;
+    try{
   let total = 0;
-  const filas = Object.keys(carrito).map(function(uid){
-    const en = carrito[uid];
-    if(en.caract){
-      // Características técnicas: una fila de ancho completo bajo el artículo, letra pequeña y gris, sin cantidad ni precio
-      return "<tr><td colspan='4' style='padding:1px 8px 9px 18px;border-bottom:1px solid #f0ece6;font-size:9.5px;color:#777;line-height:1.35'>"+esc(en.descripcion)+"</td></tr>";
-    }
-    const pu = precioUnidad(en);
-    const sub = pu * en.cantidad;
-    total += sub;
-    // Sin nombre de modelo y sin puntos — el cliente no debe verlos. Sí sale el número de proveedor.
-    const provTxt = en.modelo === "MANUAL" ? "" : "<div style='font-size:9.5px;color:#999;margin-top:2px'>Prov. "+provNum(en.prov)+"</div>";
-    return "<tr>"
-      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;font-size:12px'><strong>"+en.descripcion+"</strong>"+provTxt+"</td>"
-      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center'>"+en.cantidad+"</td>"
-      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700'>"+pu+" €</td>"
-      +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700'>"+sub+" €</td>"
-      +"</tr>";
-  }).join("");
+    const filas = Object.keys(carrito).map(function(uid){
+      const en = carrito[uid];
+      if(en.caract){
+        // Características técnicas: una fila de ancho completo bajo el artículo, letra pequeña y gris, sin cantidad ni precio
+        return "<tr><td colspan='4' style='padding:1px 8px 9px 18px;border-bottom:1px solid #f0ece6;font-size:9.5px;color:#777;line-height:1.35'>"+esc(en.descripcion)+"</td></tr>";
+      }
+      const pu = precioUnidad(en);
+      const sub = pu * en.cantidad;
+      total += sub;
+      // Sin nombre de modelo y sin puntos — el cliente no debe verlos. Sí sale el número de proveedor.
+      const provTxt = en.modelo === "MANUAL" ? "" : "<div style='font-size:9.5px;color:#999;margin-top:2px'>Prov. "+provNum(en.prov)+"</div>";
+      return "<tr>"
+        +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;font-size:12px'><strong>"+en.descripcion+"</strong>"+provTxt+"</td>"
+        +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center'>"+en.cantidad+"</td>"
+        +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700'>"+pu+" €</td>"
+        +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700'>"+sub+" €</td>"
+        +"</tr>";
+    }).join("");
+      return (titulo ? "<div style='font-size:13px;font-weight:800;margin:8px 0 6px;color:"+st.color+"'>"+titulo+"</div>" : "") + "<table style='width:100%;border-collapse:collapse'><thead><tr>"
+    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:left'>Artículo</th>"
+    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:center;width:60px'>Cant.</th>"
+    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:right;width:90px'>P.Unit.</th>"
+    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:right;width:90px'>Total</th>"
+    +"</tr></thead><tbody>"+filas+"</tbody>"
+    +"<tfoot><tr><td colspan='3' style='padding:10px 8px;text-align:right;font-weight:700;font-size:14px;border-top:2px solid #1a1714'>TOTAL</td>"
+    +"<td style='padding:10px 8px;text-align:right;font-weight:800;font-size:18px;color:"+st.color+";border-top:2px solid #1a1714'>"+Math.round(total)+" €</td></tr></tfoot></table>";
+    } finally { carrito = guardCarrito; }
+  }
+  const tablas = opsImp.map(function(o){ return tablaOp(o, opsImp.length > 1 ? "Opción " + (OPS.indexOf(o) + 1) : ""); }).join("<div style='height:20px'></div>");
 
   let bloqueResena = "";
   if(QR_RESENA_TIENDA[tienda]){
@@ -1374,14 +1433,7 @@ function ejecutarImpresionPresupuesto(){
       +"<div style='font-size:15px;font-weight:800'>Presupuesto</div>"
       +"<div style='font-size:12px;color:#888'>"+fecha+"</div>"
     +"</div>"+bloqueCliente
-    +"<table style='width:100%;border-collapse:collapse'><thead><tr>"
-    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:left'>Artículo</th>"
-    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:center;width:60px'>Cant.</th>"
-    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:right;width:90px'>P.Unit.</th>"
-    +"<th style='background:#1a1714;color:white;padding:8px;font-size:10px;text-transform:uppercase;text-align:right;width:90px'>Total</th>"
-    +"</tr></thead><tbody>"+filas+"</tbody>"
-    +"<tfoot><tr><td colspan='3' style='padding:10px 8px;text-align:right;font-weight:700;font-size:14px;border-top:2px solid #1a1714'>TOTAL</td>"
-    +"<td style='padding:10px 8px;text-align:right;font-weight:800;font-size:18px;color:"+st.color+";border-top:2px solid #1a1714'>"+Math.round(total)+" €</td></tr></tfoot></table>"
+    +tablas
     +bloqueResena
     +"<div style='margin-top:16px;padding-top:12px;border-top:1px solid #ddd;font-size:9px;color:#888;line-height:1.5;text-align:justify'>"+CONDICIONES_GENERALES_8194+"</div>"
     +"</div>";
@@ -1506,70 +1558,77 @@ async function guardarEImprimir(){
   if(!FIREBASE_AUTH_OK){ alert("Sin sesión de Firebase detectada. Abre esta página desde menu.html o facturacion.html."); return; }
   const nombre = document.getElementById("cli-nombre").value.trim();
   if(!nombre){ alert("Introduce el nombre del cliente para poder guardar"); return; }
-  const ids = Object.keys(carrito);
-  if(ids.length === 0){ alert("No hay artículos en el presupuesto todavía."); return; }
+  const opsG = (PRES_ALCANCE === "todas") ? opsConArticulos() : [OPS[opActual]];
+  if(opsG.length === 0 || opsG.every(function(o){ return Object.keys(o.carrito).length === 0; })){ alert("No hay artículos en el presupuesto todavía."); return; }
 
   const btnG = document.getElementById("btnGuardarImprimir");
   const textoOriginal = btnG.textContent;
   btnG.disabled = true; btnG.textContent = "Guardando...";
-
-  const lines = ids.map(function(uidKey, idx){
-    const en = carrito[uidKey];
-    if(en.caract){
-      return { id: idx + 1, tipo: "caract", desc: en.descripcion, fabrica: "", medidas: "", color: "", qty: 1, price: 0, img: "", cheslon: "" };
-    }
-    const esManual = en.modelo === "MANUAL";
-    const precio = precioUnidad(en);
-    return {
-      id: idx + 1,
-      desc: en.descripcion,
-      fabrica: esManual ? "" : ("PROV." + en.prov + " | " + en.modelo + (en.item.serie ? " | " + txtSerie(en.item) : "") + " | " + en.item.puntos + "pts"),
-      medidas: "",
-      color: "",
-      qty: en.cantidad,
-      price: precio,
-      img: "",
-      cheslon: ""
-    };
-  });
-
-  const provsUsados = [];
-  ids.forEach(function(k){ const p = carrito[k].prov; if(p !== "MANUAL" && provsUsados.indexOf(p) < 0) provsUsados.push(p); });
-  const prefijoNum = provsUsados.length === 1 ? provsUsados[0] : "TAR";
-  const textoProv = provsUsados.length ? provsUsados.join(" + ") : "manual";
-
-  const data = {
-    id: uid8194(),
-    num: prefijoNum + "-" + Date.now().toString(36).toUpperCase().slice(-6),
-    fecha: today8194(),
-    estado: "pendiente",
-    cliente: {
-      nombre: nombre,
-      tel: document.getElementById("cli-tel").value.trim(),
-      email: "",
-      dni: "",
-      dir: document.getElementById("cli-poblacion").value.trim(),
-      notas: "Presupuesto rápido — Proveedor " + textoProv
-    },
-    tienda: PRES_TIENDA_SEL,
-    vendedor: document.getElementById("cli-vendedor").value.trim() || VENDEDOR_ACTUAL || "Jose Angel",
-    lines: lines,
-    mo: { desc: "", precio: 0 },
-    descuento: 0,
-    validez: "14",
-    pagos: [],
-    fin: { entidad: "", cuota: "", meses: "" }
-  };
+  const guardCarrito = carrito;
 
   try{
-    await db8194.collection("presupuestos").doc(data.id).set(data);
+    for(let k = 0; k < opsG.length; k++){
+      const op = opsG[k]; carrito = op.carrito;
+      const ids = Object.keys(carrito);
+      if(ids.length === 0) continue;
+      const lines = ids.map(function(uidKey, idx){
+        const en = carrito[uidKey];
+        if(en.caract){
+          return { id: idx + 1, tipo: "caract", desc: en.descripcion, fabrica: "", medidas: "", color: "", qty: 1, price: 0, img: "", cheslon: "" };
+        }
+        const esManual = en.modelo === "MANUAL";
+        const precio = precioUnidad(en);
+        return {
+          id: idx + 1,
+          desc: en.descripcion,
+          fabrica: esManual ? "" : ("PROV." + en.prov + " | " + en.modelo + (en.item.serie ? " | " + txtSerie(en.item) : "") + " | " + en.item.puntos + "pts"),
+          medidas: "",
+          color: "",
+          qty: en.cantidad,
+          price: precio,
+          img: "",
+          cheslon: ""
+        };
+      });
+      const provsUsados = [];
+      ids.forEach(function(kk){ const p = carrito[kk].prov; if(p !== "MANUAL" && provsUsados.indexOf(p) < 0) provsUsados.push(p); });
+      const prefijoNum = provsUsados.length === 1 ? provsUsados[0] : "TAR";
+      const textoProv = provsUsados.length ? provsUsados.join(" + ") : "manual";
+      const etiquetaOp = opsG.length > 1 ? " — Opción " + (OPS.indexOf(op) + 1) + " de " + OPS.length : "";
+      const data = {
+        id: uid8194(),
+        num: prefijoNum + "-" + Date.now().toString(36).toUpperCase().slice(-6) + (opsG.length > 1 ? "-" + (OPS.indexOf(op) + 1) : ""),
+        fecha: today8194(),
+        estado: "pendiente",
+        cliente: {
+          nombre: nombre,
+          tel: document.getElementById("cli-tel").value.trim(),
+          email: "",
+          dni: "",
+          dir: document.getElementById("cli-poblacion").value.trim(),
+          notas: "Presupuesto rápido — Proveedor " + textoProv + etiquetaOp
+        },
+        tienda: PRES_TIENDA_SEL,
+        vendedor: document.getElementById("cli-vendedor").value.trim() || VENDEDOR_ACTUAL || "Jose Angel",
+        lines: lines,
+        mo: { desc: "", precio: 0 },
+        descuento: 0,
+        validez: "14",
+        pagos: [],
+        fin: { entidad: "", cuota: "", meses: "" }
+      };
+      await db8194.collection("presupuestos").doc(data.id).set(data);
+    }
+    carrito = guardCarrito;
     btnG.textContent = "✓ Guardado";
     ejecutarImpresionPresupuesto();
-    vaciarCarrito();
+    opsG.forEach(function(op){ Object.keys(op.carrito).forEach(function(kk){ delete op.carrito[kk]; }); });
+    pintarCarrito();
     setTimeout(function(){
       btnG.disabled = false; btnG.textContent = textoOriginal;
     }, 1500);
   }catch(e){
+    carrito = guardCarrito;
     alert("Error al guardar: " + e.message);
     btnG.disabled = false; btnG.textContent = textoOriginal;
   }
