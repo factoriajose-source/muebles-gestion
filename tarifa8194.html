@@ -1410,7 +1410,7 @@ function ejecutarImpresionPresupuesto(){
     +"<td style='padding:10px 8px;text-align:right;font-weight:800;font-size:18px;color:"+st.color+";border-top:2px solid #1a1714'>"+Math.round(total)+" €</td></tr></tfoot></table>";
     } finally { carrito = guardCarrito; }
   }
-  const tablas = opsImp.map(function(o){ return tablaOp(o, opsImp.length > 1 ? "Opción " + (OPS.indexOf(o) + 1) : ""); }).join("<div style='height:20px'></div>");
+  const tablas = opsImp.map(function(o){ return tablaOp(o, opsImp.length > 1 ? "Opción " + (opsImp.indexOf(o) + 1) : ""); }).join("<div style='height:20px'></div>");
 
   let bloqueResena = "";
   if(QR_RESENA_TIENDA[tienda]){
@@ -1565,61 +1565,59 @@ async function guardarEImprimir(){
   const textoOriginal = btnG.textContent;
   btnG.disabled = true; btnG.textContent = "Guardando...";
   const guardCarrito = carrito;
+  const multi = opsG.length > 1;
 
   try{
-    for(let k = 0; k < opsG.length; k++){
-      const op = opsG[k]; carrito = op.carrito;
-      const ids = Object.keys(carrito);
-      if(ids.length === 0) continue;
-      const lines = ids.map(function(uidKey, idx){
+    /* UN SOLO presupuesto para el cliente: todas las opciones van dentro,
+       cada línea marcada con "opcion" (menu.html ya las agrupa como OPCIÓN 1, 2...) */
+    const lines = []; const provsUsados = [];
+    opsG.forEach(function(op, oi){
+      carrito = op.carrito;
+      Object.keys(carrito).forEach(function(uidKey){
         const en = carrito[uidKey];
+        let ln;
         if(en.caract){
-          return { id: idx + 1, tipo: "caract", desc: en.descripcion, fabrica: "", medidas: "", color: "", qty: 1, price: 0, img: "", cheslon: "" };
+          ln = { id: lines.length + 1, tipo: "caract", desc: en.descripcion, fabrica: "", medidas: "", color: "", qty: 1, price: 0, img: "", cheslon: "" };
+        } else {
+          const esManual = en.modelo === "MANUAL";
+          ln = {
+            id: lines.length + 1,
+            desc: en.descripcion,
+            fabrica: esManual ? "" : ("PROV." + en.prov + " | " + en.modelo + (en.item.serie ? " | " + txtSerie(en.item) : "") + " | " + en.item.puntos + "pts"),
+            medidas: "", color: "", qty: en.cantidad, price: precioUnidad(en), img: "", cheslon: ""
+          };
+          if(!esManual && provsUsados.indexOf(en.prov) < 0) provsUsados.push(en.prov);
         }
-        const esManual = en.modelo === "MANUAL";
-        const precio = precioUnidad(en);
-        return {
-          id: idx + 1,
-          desc: en.descripcion,
-          fabrica: esManual ? "" : ("PROV." + en.prov + " | " + en.modelo + (en.item.serie ? " | " + txtSerie(en.item) : "") + " | " + en.item.puntos + "pts"),
-          medidas: "",
-          color: "",
-          qty: en.cantidad,
-          price: precio,
-          img: "",
-          cheslon: ""
-        };
+        if(multi) ln.opcion = oi + 1;
+        lines.push(ln);
       });
-      const provsUsados = [];
-      ids.forEach(function(kk){ const p = carrito[kk].prov; if(p !== "MANUAL" && provsUsados.indexOf(p) < 0) provsUsados.push(p); });
-      const prefijoNum = provsUsados.length === 1 ? provsUsados[0] : "TAR";
-      const textoProv = provsUsados.length ? provsUsados.join(" + ") : "manual";
-      const etiquetaOp = opsG.length > 1 ? " — Opción " + (OPS.indexOf(op) + 1) + " de " + OPS.length : "";
-      const data = {
-        id: uid8194(),
-        num: prefijoNum + "-" + Date.now().toString(36).toUpperCase().slice(-6) + (opsG.length > 1 ? "-" + (OPS.indexOf(op) + 1) : ""),
-        fecha: today8194(),
-        estado: "pendiente",
-        cliente: {
-          nombre: nombre,
-          tel: document.getElementById("cli-tel").value.trim(),
-          email: "",
-          dni: "",
-          dir: document.getElementById("cli-poblacion").value.trim(),
-          notas: "Presupuesto rápido — Proveedor " + textoProv + etiquetaOp
-        },
-        tienda: PRES_TIENDA_SEL,
-        vendedor: document.getElementById("cli-vendedor").value.trim() || VENDEDOR_ACTUAL || "Jose Angel",
-        lines: lines,
-        mo: { desc: "", precio: 0 },
-        descuento: 0,
-        validez: "14",
-        pagos: [],
-        fin: { entidad: "", cuota: "", meses: "" }
-      };
-      await db8194.collection("presupuestos").doc(data.id).set(data);
-    }
+    });
     carrito = guardCarrito;
+    const prefijoNum = provsUsados.length === 1 ? provsUsados[0] : "TAR";
+    const textoProv = provsUsados.length ? provsUsados.join(" + ") : "manual";
+    const data = {
+      id: uid8194(),
+      num: prefijoNum + "-" + Date.now().toString(36).toUpperCase().slice(-6),
+      fecha: today8194(),
+      estado: "pendiente",
+      cliente: {
+        nombre: nombre,
+        tel: document.getElementById("cli-tel").value.trim(),
+        email: "",
+        dni: "",
+        dir: document.getElementById("cli-poblacion").value.trim(),
+        notas: "Presupuesto rápido — Proveedor " + textoProv + (multi ? " — " + opsG.length + " opciones" : "")
+      },
+      tienda: PRES_TIENDA_SEL,
+      vendedor: document.getElementById("cli-vendedor").value.trim() || VENDEDOR_ACTUAL || "Jose Angel",
+      lines: lines,
+      mo: { desc: "", precio: 0 },
+      descuento: 0,
+      validez: "14",
+      pagos: [],
+      fin: { entidad: "", cuota: "", meses: "" }
+    };
+    await db8194.collection("presupuestos").doc(data.id).set(data);
     btnG.textContent = "✓ Guardado";
     ejecutarImpresionPresupuesto();
     opsG.forEach(function(op){ Object.keys(op.carrito).forEach(function(kk){ delete op.carrito[kk]; }); });

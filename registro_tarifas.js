@@ -181,7 +181,8 @@ const REGISTRO_TARIFAS = {
     precioPunto: 0.81, dtoMax: 20,
     desplegable: true,
     modelos: [
-      {cod:"JUNIOR", nombre:"JUNIOR", script:"tarifas_678/catalogo_678_junior.js", variable:"CATALOGO_678_JUNIOR", carpeta:"tarifas_678/img", color:"#e65100"}
+      {cod:"JUNIOR", nombre:"JUNIOR", script:"tarifas_678/catalogo_678_junior.js", variable:"CATALOGO_678_JUNIOR", carpeta:"tarifas_678/img", color:"#e65100"},
+      {cod:"COMPOSICIONES", nombre:"COMPOSICIONES", script:"tarifas_678/catalogo_678_composiciones.js", variable:"CATALOGO_678_COMPOSICIONES", carpeta:"tarifas_678/img", color:"#e65100"}
     ]
   },
   "6028": {
