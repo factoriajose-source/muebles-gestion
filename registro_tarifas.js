@@ -185,6 +185,40 @@ const REGISTRO_TARIFAS = {
       {cod:"COMPOSICIONES", nombre:"COMPOSICIONES", script:"tarifas_678/catalogo_678_composiciones.js", variable:"CATALOGO_678_COMPOSICIONES", carpeta:"tarifas_678/img", color:"#e65100"}
     ]
   },
+  "5029": {
+    nombre: "5029-TAPIGRAMA",
+    precioPunto: 3.25, dtoMax: 20,
+    desplegable: true,
+    modelos: [
+      {cod:"ABRIL", nombre:"ABRIL", script:"tarifas_5029/catalogo_5029_abril.js", variable:"CATALOGO_5029_ABRIL", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"ARENA", nombre:"ARENA", script:"tarifas_5029/catalogo_5029_arena.js", variable:"CATALOGO_5029_ARENA", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"SUSANA", nombre:"SUSANA", script:"tarifas_5029/catalogo_5029_susana.js", variable:"CATALOGO_5029_SUSANA", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"ARIES", nombre:"ARIES", script:"tarifas_5029/catalogo_5029_aries.js", variable:"CATALOGO_5029_ARIES", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"PILAR", nombre:"PILAR", script:"tarifas_5029/catalogo_5029_pilar.js", variable:"CATALOGO_5029_PILAR", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"PISCIS", nombre:"PISCIS", script:"tarifas_5029/catalogo_5029_piscis.js", variable:"CATALOGO_5029_PISCIS", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"TAURO", nombre:"TAURO", script:"tarifas_5029/catalogo_5029_tauro.js", variable:"CATALOGO_5029_TAURO", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"BOOM-MANTAS", nombre:"BOOM-MANTAS", script:"tarifas_5029/catalogo_5029_boom_mantas.js", variable:"CATALOGO_5029_BOOM_MANTAS", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"BOOM", nombre:"BOOM", script:"tarifas_5029/catalogo_5029_boom.js", variable:"CATALOGO_5029_BOOM", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"SONIA", nombre:"SONIA", script:"tarifas_5029/catalogo_5029_sonia.js", variable:"CATALOGO_5029_SONIA", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"CELIA", nombre:"CELIA", script:"tarifas_5029/catalogo_5029_celia.js", variable:"CATALOGO_5029_CELIA", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"GOLD", nombre:"GOLD", script:"tarifas_5029/catalogo_5029_gold.js", variable:"CATALOGO_5029_GOLD", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"JAZZ", nombre:"JAZZ", script:"tarifas_5029/catalogo_5029_jazz.js", variable:"CATALOGO_5029_JAZZ", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"LEO", nombre:"LEO", script:"tarifas_5029/catalogo_5029_leo.js", variable:"CATALOGO_5029_LEO", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"LUZ", nombre:"LUZ", script:"tarifas_5029/catalogo_5029_luz.js", variable:"CATALOGO_5029_LUZ", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"MAGIC", nombre:"MAGIC", script:"tarifas_5029/catalogo_5029_magic.js", variable:"CATALOGO_5029_MAGIC", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"PLAS", nombre:"PLAS", script:"tarifas_5029/catalogo_5029_plas.js", variable:"CATALOGO_5029_PLAS", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"MARTA", nombre:"MARTA", script:"tarifas_5029/catalogo_5029_marta.js", variable:"CATALOGO_5029_MARTA", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"OSLO", nombre:"OSLO", script:"tarifas_5029/catalogo_5029_oslo.js", variable:"CATALOGO_5029_OSLO", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"MAX", nombre:"MAX", script:"tarifas_5029/catalogo_5029_max.js", variable:"CATALOGO_5029_MAX", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"MINI", nombre:"MINI", script:"tarifas_5029/catalogo_5029_mini.js", variable:"CATALOGO_5029_MINI", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"MOON", nombre:"MOON", script:"tarifas_5029/catalogo_5029_moon.js", variable:"CATALOGO_5029_MOON", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"SERGIO", nombre:"SERGIO", script:"tarifas_5029/catalogo_5029_sergio.js", variable:"CATALOGO_5029_SERGIO", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"SKY", nombre:"SKY", script:"tarifas_5029/catalogo_5029_sky.js", variable:"CATALOGO_5029_SKY", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"ZEN", nombre:"ZEN", script:"tarifas_5029/catalogo_5029_zen.js", variable:"CATALOGO_5029_ZEN", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"TOPACIO-MINI", nombre:"TOPACIO-MINI", script:"tarifas_5029/catalogo_5029_topacio_mini.js", variable:"CATALOGO_5029_TOPACIO_MINI", carpeta:"tarifas_5029/img", color:"#00796b"},
+      {cod:"VARIOS", nombre:"VARIOS", script:"tarifas_5029/catalogo_5029_varios.js", variable:"CATALOGO_5029_VARIOS", carpeta:"tarifas_5029/img", color:"#00796b"}
+    ]
+  },
   "6028": {
     nombre: "6028 · Quality",
     precioPunto: 3.02, dtoMax: 25,
