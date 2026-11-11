@@ -160,6 +160,16 @@ const REGISTRO_TARIFAS = {
       {cod:"ZEUS", nombre:"ORTIZ-ZEUS", script:"tarifas_ortiz425/catalogo_ortiz425_zeus.js", variable:"CATALOGO_ORTIZ425_ZEUS", carpeta:"tarifas_ortiz425/img", color:"#8d5a2b"}
     ]
   },
+  "1014": {
+    nombre: "1014-SORIANO MARTINEZ",
+    precioPunto: 2.91, dtoMax: 25,
+    desplegable: true,
+    modelos: [
+      {cod:"924", nombre:"MOD. 924", script:"tarifas_1014/catalogo_1014_924.js", variable:"CATALOGO_1014_924", carpeta:"tarifas_1014/img", color:"#5d4037"},
+      {cod:"LEO", nombre:"LEO", script:"tarifas_1014/catalogo_1014_leo.js", variable:"CATALOGO_1014_LEO", carpeta:"tarifas_1014/img", color:"#5d4037"},
+      {cod:"MONACO", nombre:"MÓNACO", script:"tarifas_1014/catalogo_1014_monaco.js", variable:"CATALOGO_1014_MONACO", carpeta:"tarifas_1014/img", color:"#5d4037"}
+    ]
+  },
   "4028": {
     nombre: "4028-Referenzza",
     precioPunto: 3.02, dtoMax: 25,
