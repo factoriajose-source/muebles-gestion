@@ -214,6 +214,7 @@
     font-size:13px;
   }
   .cart-item .desc{flex:1;min-width:0;}
+  .cart-item .cart-dib{width:50px;height:50px;object-fit:contain;background:#fff;border:1px solid #e5e0d6;border-radius:4px;margin-right:7px;flex-shrink:0;align-self:center;}
   .cart-item .desc input.desc-edit{
     width:100%;
     border:1px solid transparent;
@@ -921,6 +922,47 @@ function cargarPagina(idx){
   aplicarZoomPagina();
 }
 
+/* ---------- DIBUJITO del artículo ----------
+   Si el artículo tiene "dib":[x0,y0,x1,y1] (rectángulo del dibujo dentro de la página de la tarifa),
+   se recorta ese trozo de la imagen de la página (que ya está cargada: no gasta lecturas de Firebase)
+   y se guarda como miniatura pequeña (JPEG) dentro de la línea del presupuesto.
+   Es genérico: cualquier proveedor cuyo catálogo traiga "dib" en sus artículos lo tendrá. */
+const DIB_IMG_CACHE = {};
+function paginaDeItem(cat, item){
+  for(let i = 0; i < cat.pages.length; i++){ if(cat.pages[i].items.indexOf(item) >= 0) return cat.pages[i]; }
+  return null;
+}
+function cargarDibujo(en, item, prov, modelo, uid){
+  if(!item || !item.dib) return;
+  try{
+    const cat = CATALOGOS[prov + "|" + modelo], m = getModelo(prov, modelo);
+    if(!cat || !m) return;
+    const pg = paginaDeItem(cat, item); if(!pg) return;
+    const src = m.carpeta + "/" + pg.img;
+    const pw = pg.pageWidth || cat.pageWidth;
+    const hacer = function(im){
+      try{
+        const k = im.naturalWidth / pw, d = item.dib;
+        const sx = Math.max(0, d[0] * k), sy = Math.max(0, d[1] * k);
+        const sw = Math.min(im.naturalWidth - sx, (d[2] - d[0]) * k), sh = Math.min(im.naturalHeight - sy, (d[3] - d[1]) * k);
+        if(sw < 4 || sh < 4) return;
+        const esc2 = Math.min(1, 240 / Math.max(sw, sh));
+        const cv = document.createElement("canvas");
+        cv.width = Math.round(sw * esc2); cv.height = Math.round(sh * esc2);
+        const cx = cv.getContext("2d"); cx.fillStyle = "#fff"; cx.fillRect(0, 0, cv.width, cv.height);
+        cx.drawImage(im, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
+        en.dib = cv.toDataURL("image/jpeg", 0.8);
+        pintarCarrito();
+      }catch(e){ /* sin dibujito, el presupuesto sigue igual */ }
+    };
+    let im = DIB_IMG_CACHE[src];
+    if(im && im.complete && im.naturalWidth){ hacer(im); return; }
+    im = new Image(); DIB_IMG_CACHE[src] = im;
+    im.onload = function(){ hacer(im); };
+    im.src = src;
+  }catch(e){}
+}
+
 function anadirAlCarrito(item, modelo, prov){
   const uid = prov + "_" + modelo + "_" + item.id;
   if(!carrito[uid]){
@@ -931,6 +973,7 @@ function anadirAlCarrito(item, modelo, prov){
       descripcion: descripcionItem(item, prov, modelo),
       color: m ? m.color : "#555"
     };
+    cargarDibujo(carrito[uid], item, prov, modelo, uid);
     // Características técnicas del modelo: UNA sola línea por modelo (aunque se pulse otra vez el mismo modelo)
     const cat = CATALOGOS[prov + "|" + modelo];
     const cu = "CARACT_" + prov + "_" + modelo;
@@ -1070,7 +1113,8 @@ function pintarCarrito(){
     const row = document.createElement("div");
     row.className = "cart-item";
     row.innerHTML =
-      '<div class="desc">'
+      (en.dib ? '<img class="cart-dib" src="' + en.dib + '" alt="">' : '')
+      + '<div class="desc">'
       + '<span class="modelo-tag ' + tagClass + '"' + tagStyle + '>' + tagTxt + '</span>'
       + '<input type="text" class="desc-edit" value="' + esc(en.descripcion) + '" oninput="editarDescripcion(\'' + uid + '\', this.value)">'
       + subInfo
@@ -1394,7 +1438,7 @@ function ejecutarImpresionPresupuesto(){
       // Sin nombre de modelo y sin puntos — el cliente no debe verlos. Sí sale el número de proveedor.
       const provTxt = en.modelo === "MANUAL" ? "" : "<div style='font-size:9.5px;color:#999;margin-top:2px'>Prov. "+provNum(en.prov)+"</div>";
       return "<tr>"
-        +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;font-size:12px'><strong>"+en.descripcion+"</strong>"+provTxt+"</td>"
+        +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;font-size:12px'>"+(en.dib ? "<div style='display:flex;align-items:center;gap:10px'><img src='"+en.dib+"' style='width:3cm;max-height:2.8cm;object-fit:contain;flex-shrink:0'><div>" : "")+"<strong>"+en.descripcion+"</strong>"+provTxt+(en.dib ? "</div></div>" : "")+"</td>"
         +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center'>"+en.cantidad+"</td>"
         +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700'>"+pu+" €</td>"
         +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700'>"+sub+" €</td>"
@@ -1487,7 +1531,7 @@ function ejecutarImpresionFabrica(){
         +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center'>"
           +"<span style='display:inline-block;font-size:10px;font-weight:700;color:#fff;background:"+tagColor+";border-radius:6px;padding:2px 8px'>"+tagTxt+"</span>"+serie
         +"</td>"
-        +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;font-size:12px'><strong>"+en.descripcion+"</strong></td>"
+        +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;font-size:12px'>"+(en.dib ? "<div style='display:flex;align-items:center;gap:10px'><img src='"+en.dib+"' style='width:3cm;max-height:2.8cm;object-fit:contain;flex-shrink:0'><div>" : "")+"<strong>"+en.descripcion+"</strong>"+(en.dib ? "</div></div>" : "")+"</td>"
         +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:center'>"+en.cantidad+"</td>"
         +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;color:"+(esManual?"#ccc":"#1a1714")+"'>"+(esManual?"—":pts)+"</td>"
         +"<td style='padding:7px 8px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700;color:"+(esManual?"#ccc":"#1a1714")+"'>"+(esManual?"—":ptsTotal)+"</td>"
@@ -1584,7 +1628,7 @@ async function guardarEImprimir(){
             id: lines.length + 1,
             desc: en.descripcion,
             fabrica: esManual ? "" : ("PROV." + en.prov + " | " + en.modelo + (en.item.serie ? " | " + txtSerie(en.item) : "") + " | " + en.item.puntos + "pts"),
-            medidas: "", color: "", qty: en.cantidad, price: precioUnidad(en), img: "", cheslon: ""
+            medidas: "", color: "", qty: en.cantidad, price: precioUnidad(en), img: (en.dib || ""), cheslon: ""
           };
           if(!esManual && provsUsados.indexOf(en.prov) < 0) provsUsados.push(en.prov);
         }
