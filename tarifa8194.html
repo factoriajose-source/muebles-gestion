@@ -938,7 +938,7 @@ function cargarDibujo(en, item, prov, modelo, uid){
     const cat = CATALOGOS[prov + "|" + modelo], m = getModelo(prov, modelo);
     if(!cat || !m) return;
     const pg = paginaDeItem(cat, item); if(!pg) return;
-    const src = m.carpeta + "/" + pg.img;
+    const src = m.carpeta + "/" + (item.dib[4] || pg.img);   // dib[4] (opcional): imagen de OTRA página de la misma carpeta
     const pw = pg.pageWidth || cat.pageWidth;
     const hacer = function(im){
       try{
