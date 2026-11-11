@@ -193,7 +193,8 @@ const REGISTRO_TARIFAS = {
     modelos: [
       {cod:"JUNIOR", nombre:"JUNIOR", script:"tarifas_678/catalogo_678_junior.js", variable:"CATALOGO_678_JUNIOR", carpeta:"tarifas_678/img", color:"#e65100"},
       {cod:"COMPOSICIONES", nombre:"COMPOSICIONES", script:"tarifas_678/catalogo_678_composiciones.js", variable:"CATALOGO_678_COMPOSICIONES", carpeta:"tarifas_678/img", color:"#e65100"},
-      {cod:"GENESIS", nombre:"GÉNESIS LINE", script:"tarifas_678/catalogo_678_genesis.js", variable:"CATALOGO_678_GENESIS", carpeta:"tarifas_678/img", color:"#e65100"}
+      {cod:"GENESIS", nombre:"GÉNESIS LINE", script:"tarifas_678/catalogo_678_genesis.js", variable:"CATALOGO_678_GENESIS", carpeta:"tarifas_678/img", color:"#e65100"},
+      {cod:"CRETA", nombre:"CRETA BASIC V7", script:"tarifas_678/catalogo_678_creta.js", variable:"CATALOGO_678_CRETA", carpeta:"tarifas_678/img", color:"#e65100"}
     ]
   },
   "5029": {
