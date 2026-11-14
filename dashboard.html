@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<!-- dashboard.html — Cuadro de Mando General — v1.0 — 14/11/2026 -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cuadro de Mando General — Meres Central de Compras</title>
+<style>
+:root{
+  --fondo:#f4f2ec; --sup:#fcfcfb; --borde:#e3dfd3; --tinta:#2b241c; --tinta2:#5f574c; --tinta3:#8b8377;
+  --marron:#4A2C17; --beige:#C8BA8B;
+  --lf:#1a6b2a; --mk:#2460b5; --es:#E8470A;
+  --s-presu:#b08d3c; --s-pedido:#8a4f1d;
+  --bien:#1f7a3a; --mal:#b3261e; --aviso:#9a6700;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--fondo);color:var(--tinta);font-size:15px}
+header{background:var(--marron);color:#fff;padding:14px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header h1{font-size:20px;margin:0;font-weight:700}
+header .sub{font-size:13px;opacity:.8}
+header .hueco{flex:1}
+header a,header button{color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:8px 12px;font-size:14px;text-decoration:none;cursor:pointer}
+main{max-width:1280px;margin:0 auto;padding:16px 18px 40px}
+.filtros{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;background:var(--sup);border:1px solid var(--borde);border-radius:12px;padding:12px 14px;margin-bottom:8px}
+.filtros label{font-size:12px;color:var(--tinta2);display:flex;flex-direction:column;gap:4px;font-weight:600}
+.filtros select{font-size:15px;padding:8px 10px;border:1px solid #cfc9bb;border-radius:8px;background:#fff;min-width:130px}
+.filtros .chk{flex-direction:row;align-items:center;gap:8px;font-size:14px;font-weight:500;color:var(--tinta);padding-bottom:9px}
+.filtros .chk input{width:18px;height:18px}
+.btn{font-size:14px;padding:9px 14px;border-radius:8px;border:1px solid var(--marron);background:var(--marron);color:#fff;cursor:pointer}
+.btn.sec{background:#fff;color:var(--marron)}
+.estado-datos{font-size:13px;color:var(--tinta2);margin:0 4px 14px}
+.estado-datos b{color:var(--tinta)}
+h2{font-size:16px;margin:26px 0 10px;color:var(--marron);display:flex;align-items:baseline;gap:10px}
+h2 small{font-weight:400;color:var(--tinta3);font-size:13px}
+.grid{display:grid;gap:12px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.dos{grid-template-columns:repeat(auto-fit,minmax(380px,1fr))}
+.tres{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.card{background:var(--sup);border:1px solid var(--borde);border-radius:12px;padding:14px 16px}
+.card h3{margin:0 0 10px;font-size:14px;color:var(--tinta2);font-weight:600}
+.kpi .et{font-size:12px;color:var(--tinta2);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.kpi .val{font-size:26px;font-weight:700;margin:6px 0 2px;line-height:1.1}
+.kpi .pie{font-size:12.5px;color:var(--tinta3)}
+.delta{font-size:12.5px;font-weight:600}
+.delta.sube{color:var(--bien)} .delta.baja{color:var(--mal)} .delta.igual{color:var(--tinta3)}
+.avisos{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.avisos li{display:flex;gap:10px;align-items:flex-start;background:var(--sup);border:1px solid var(--borde);border-left:5px solid var(--aviso);border-radius:10px;padding:10px 12px;font-size:14.5px}
+.avisos li.rojo{border-left-color:var(--mal)} .avisos li.ok{border-left-color:var(--bien)}
+.avisos .ico{font-size:17px;line-height:1.2}
+.leyenda{display:flex;gap:16px;font-size:13px;color:var(--tinta2);margin-bottom:6px;flex-wrap:wrap}
+.leyenda i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+svg text{font-family:inherit;fill:var(--tinta2);font-size:11.5px}
+svg .mes{cursor:pointer}
+svg .mes.apagado rect.b{opacity:.35}
+.hb{display:grid;grid-template-columns:minmax(90px,170px) 1fr auto;gap:8px 10px;align-items:center;font-size:13.5px}
+.hb .nom{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hb .pista{background:#ece8dc;border-radius:4px;height:14px;overflow:hidden}
+.hb .pista i{display:block;height:100%;border-radius:0 4px 4px 0;background:var(--s-pedido)}
+.hb .num{font-variant-numeric:tabular-nums;color:var(--tinta);font-weight:600;white-space:nowrap}
+.embudo .paso{margin-bottom:10px}
+.embudo .cab{display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px}
+.embudo .cab b{font-size:17px}
+.embudo .pista{background:#ece8dc;border-radius:5px;height:22px;overflow:hidden}
+.embudo .pista i{display:block;height:100%;border-radius:0 5px 5px 0;background:var(--s-pedido)}
+.embudo .ratio{font-size:12.5px;color:var(--tinta3);margin:2px 0 0}
+.tienda{border-top:5px solid var(--tinta3)}
+.tienda.lf{border-top-color:var(--lf)} .tienda.mk{border-top-color:var(--mk)} .tienda.es{border-top-color:var(--es)}
+.tienda .nom{font-weight:700;font-size:16px;margin-bottom:8px}
+.fila{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--borde);font-size:14px}
+.fila:last-child{border-bottom:0}
+.fila .v{font-weight:600;font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:8px 8px;text-align:right;border-bottom:1px solid var(--borde);font-variant-numeric:tabular-nums;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-size:12px;color:var(--tinta2);text-transform:uppercase;letter-spacing:.03em}
+td .mini{display:inline-block;height:10px;background:var(--s-pedido);border-radius:0 3px 3px 0;vertical-align:middle;margin-right:8px}
+tfoot td{font-weight:700;border-top:2px solid var(--marron);border-bottom:0}
+.tabla-wrap{overflow-x:auto}
+.sin{color:var(--tinta3);font-size:14px;padding:10px 0}
+.error-sec{color:var(--mal);font-size:13.5px;padding:6px 0}
+#tip{position:fixed;z-index:50;pointer-events:none;background:#2b241c;color:#fff;font-size:13px;line-height:1.45;padding:8px 10px;border-radius:8px;max-width:260px;display:none;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+#login,#bloqueo{position:fixed;inset:0;background:var(--fondo);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+.caja{background:#fff;border:1px solid var(--borde);border-radius:14px;padding:26px;max-width:380px;width:100%}
+.caja h2{margin:0 0 14px}
+.caja input{width:100%;font-size:16px;padding:11px;border:1px solid #cfc9bb;border-radius:8px;margin-bottom:10px}
+.caja .err{color:var(--mal);font-size:14px;min-height:20px}
+footer{font-size:12px;color:var(--tinta3);text-align:left;padding:0 18px 20px;max-width:1280px;margin:0 auto}
+#cargando{padding:60px 0;text-align:center;color:var(--tinta2);font-size:16px}
+@media print{header a,header button,.filtros .btn,.filtros .chk{display:none} body{background:#fff} .card,.avisos li{break-inside:avoid}}
+@media (max-width:600px){.dos{grid-template-columns:1fr} .kpi .val{font-size:22px}}
+</style>
+</head>
+<body>
+
+<div id="login"><div class="caja">
+  <h2>Cuadro de Mando</h2>
+  <input type="email" id="lg-email" placeholder="Email" autocomplete="username">
+  <input type="password" id="lg-pass" placeholder="Contraseña" autocomplete="current-password">
+  <div class="err" id="lg-err"></div>
+  <button class="btn" id="lg-btn" style="width:100%">Entrar</button>
+</div></div>
+
+<div id="bloqueo"><div class="caja">
+  <h2>Acceso solo para gerencia</h2>
+  <p>Para ver el cuadro de mando, entra primero en el menú del ERP como <b>Jose Angel</b> en este mismo ordenador y vuelve a abrir esta página.</p>
+  <a class="btn" href="menu.html" style="display:inline-block;text-decoration:none">Ir al menú</a>
+</div></div>
+
+<header>
+  <div>
+    <h1>📊 Cuadro de Mando General</h1>
+    <div class="sub">Muebles La Factoría · Merkamueble · ExpoSofá</div>
+  </div>
+  <div class="hueco"></div>
+  <button id="btn-print">🖨️ Imprimir</button>
+  <a href="menu.html">← Menú</a>
+</header>
+
+<main>
+  <div class="filtros">
+    <label>Año<select id="f-anio"></select></label>
+    <label>Mes<select id="f-mes"></select></label>
+    <label>Tienda<select id="f-tienda">
+      <option value="">Todas</option>
+      <option value="lf">Muebles La Factoría</option>
+      <option value="mk">Merkamueble</option>
+      <option value="es">ExpoSofá</option>
+    </select></label>
+    <label class="chk"><input type="checkbox" id="f-cmp"> Comparar con el año anterior</label>
+    <div style="flex:1"></div>
+    <button class="btn sec" id="btn-act">🔄 Actualizar datos</button>
+  </div>
+  <div class="estado-datos" id="estado-datos"></div>
+
+  <div id="cargando">Cargando datos…</div>
+  <div id="contenido" style="display:none">
+
+    <h2>Avisos <small>lo que conviene mirar hoy</small></h2>
+    <ul class="avisos" id="avisos"></ul>
+
+    <h2>Ventas <small id="tit-periodo"></small></h2>
+    <div class="grid kpis" id="kpis"></div>
+
+    <div class="grid dos" style="margin-top:12px">
+      <div class="card">
+        <h3 id="tit-mensual">Importe por mes</h3>
+        <div class="leyenda"><span><i style="background:var(--s-presu)"></i>Presupuestado</span><span><i style="background:var(--s-pedido)"></i>Convertido en pedido</span></div>
+        <div id="g-mensual"></div>
+        <div class="sin" style="padding:4px 0 0;font-size:12.5px">Pulsa un mes para ver solo ese mes. Pulsa otra vez para volver al año.</div>
+      </div>
+      <div class="card">
+        <h3>Del cliente que entra al pedido</h3>
+        <div class="embudo" id="embudo"></div>
+      </div>
+    </div>
+
+    <h2>Por tienda</h2>
+    <div class="grid tres" id="tiendas"></div>
+
+    <h2>Por vendedor <small>ordenado por importe de pedidos</small></h2>
+    <div class="card"><div class="tabla-wrap" id="vendedores"></div></div>
+
+    <div class="grid dos" style="margin-top:12px">
+      <div class="card"><h3>Visitas medias por día de la semana</h3><div id="g-semana"></div></div>
+      <div class="card"><h3>Facturación <small style="font-weight:400;color:var(--tinta3)">(módulo de facturas del ERP)</small></h3><div id="facturas"></div></div>
+    </div>
+
+    <h2>Repartos</h2>
+    <div class="grid kpis" id="rep-kpis"></div>
+    <div class="grid dos" style="margin-top:12px">
+      <div class="card"><h3>Repartos por repartidor</h3><div class="hb" id="rep-quien"></div></div>
+      <div class="card"><h3>Repartos por mes</h3><div id="g-repmes"></div></div>
+    </div>
+
+    <h2>Fallos en pedidos</h2>
+    <div class="grid tres">
+      <div class="card kpi" id="fal-kpi"></div>
+      <div class="card"><h3>Coste por vendedor</h3><div class="hb" id="fal-vend"></div></div>
+      <div class="card"><h3>Coste por proveedor (5 mayores)</h3><div class="hb" id="fal-prv"></div></div>
+    </div>
+
+    <h2>Personal <small>ausencias de hoy y de los próximos 14 días</small></h2>
+    <div class="card" id="personal"></div>
+  </div>
+</main>
+<footer>Cuadro de Mando General · v1.0 — 14/11/2026</footer>
+<div id="tip"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+// ================================================================
+//  CUADRO DE MANDO GENERAL — v1.0 — 14/11/2026
+//  AHORRO DE LECTURAS FIREBASE:
+//   - Solo se lee el AÑO elegido (consultas filtradas por fecha).
+//   - Lo leido se guarda resumido en este navegador (localStorage):
+//       año en curso  -> vale 6 horas
+//       años pasados  -> valen 30 dias (ya no cambian)
+//   - Cambiar de mes o de tienda NO lee nada: se filtra en memoria.
+//   - No se leen fichajes ni incidencias (documentos muy pesados).
+// ================================================================
+firebase.initializeApp({
+  apiKey:"AIzaSyBx_LGd36aQPk3Bsspv05YCycIbvCo_s1c",
+  authDomain:"muebles-presupuestos.firebaseapp.com",
+  projectId:"muebles-presupuestos",
+  storageBucket:"muebles-presupuestos.firebasestorage.app",
+  messagingSenderId:"37365883872",
+  appId:"1:37365883872:web:842ca4d318c01652684185"
+});
+var auth=firebase.auth(), db=firebase.firestore();
+
+var USUARIO_GERENCIA="Jose Angel";
+var CACHE_PREFIJO="dash_v1_";
+var HORAS_ANIO_ACTUAL=6, DIAS_ANIO_PASADO=30;
+var DIAS_SEGUIMIENTO=30;       // presupuestos pendientes mas viejos que esto -> aviso
+var MESES=["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+var TIENDAS={lf:"Muebles La Factoría",mk:"Merkamueble",es:"ExpoSofá"};
+var DATOS={};                  // DATOS[anio] = paquete resumido
+
+function gi(id){return document.getElementById(id);}
+function esc(s){return (s==null?"":String(s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function num(n){n=Math.round(Number(n)||0);var s=String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g,".");return (n<0?"-":"")+s;}
+function eur(n){return num(n)+" €";}
+function eurK(n){n=Number(n)||0;return n>=1000?(Math.round(n/100)/10).toString().replace(".",",")+"k":String(Math.round(n));}
+function pct(a,b){return b?Math.round(a/b*100):0;}
+function hoyISO(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function fechaES(f){return f?f.slice(0,10).split("-").reverse().join("/"):"—";}
+function sumaDias(iso,n){var d=new Date(iso+"T12:00:00");d.setDate(d.getDate()+n);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function tiendaCod(t){
+  var s=String(t||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+  if(s.indexOf("factor")>=0)return "lf";
+  if(s.indexOf("merka")>=0)return "mk";
+  if(s.indexOf("expo")>=0)return "es";
+  return "";
+}
+function limpiaNombre(s){ // quita DNI pegados al nombre del repartidor
+  return String(s||"").replace(/\b\d{7,8}[A-Za-z]\b/g,"").replace(/\s+/g," ").trim()||"Sin nombre";
+}
+function totalPresupuesto(d){ // misma cuenta que el Cuadro de mando de facturacion.html
+  var lines=d.lines||d.lineas||[];
+  var base=lines.reduce(function(s,l){return s+(Number(l.qty||l.cant)||0)*(Number(l.price||l.precio)||0);},0);
+  base-=base*(Number(d.descuento)||0)/100;
+  var mo=(d.mo&&d.mo.precio)?Number(d.mo.precio)||0:0;
+  return Math.round((base+mo)*100)/100;
+}
+
+// ---------------- LECTURA + CACHE ----------------
+function leerCache(anio){
+  try{
+    var r=JSON.parse(localStorage.getItem(CACHE_PREFIJO+anio)||"null");
+    if(!r)return null;
+    var actual=String(new Date().getFullYear())===String(anio);
+    var max=actual?HORAS_ANIO_ACTUAL*3600e3:DIAS_ANIO_PASADO*86400e3;
+    if(Date.now()-r.ts>max)return null;
+    return r;
+  }catch(e){return null;}
+}
+function guardarCache(anio,p){try{localStorage.setItem(CACHE_PREFIJO+anio,JSON.stringify(p));}catch(e){}}
+
+function traerAnio(anio){
+  var a=String(anio), ini=a+"-01-01", fin=a+"-12-31";
+  var p={ts:Date.now(),lect:0,err:{},P:[],V:[],R:[],F:[],FA:[],VB:[],AG:0};
+  function seguro(clave,promesa,fn){
+    return promesa.then(function(snap){p.lect+=snap.size;snap.forEach(function(doc){try{fn(doc.data());}catch(e){}});})
+      .catch(function(e){p.err[clave]=e.message||String(e);});
+  }
+  var tareas=[
+    seguro("P",db.collection("presupuestos").where("fecha",">=",ini).where("fecha","<=",fin).get(),function(d){
+      p.P.push([String(d.fecha||"").slice(0,10),String(d.vendedor||"").trim()||"Sin vendedor",tiendaCod(d.tienda),String(d.estado||"pendiente").toLowerCase(),totalPresupuesto(d)]);
+    }),
+    seguro("V",db.collection("visitas").where("fecha",">=",ini).where("fecha","<=",fin).get(),function(d){
+      var por={};["m","t"].forEach(function(k){var o=d[k]||{};Object.keys(o).forEach(function(v){por[v]=(por[v]||0)+(Number(o[v])||0);});});
+      p.V.push([String(d.fecha||"").slice(0,10),tiendaCod(d.tienda),por]);
+    }),
+    seguro("R",db.collection("repartos").where("fecha_entrega",">=",ini).where("fecha_entrega","<=",fin).get(),function(d){
+      p.R.push([String(d.fecha_entrega||"").slice(0,10),tiendaCod(d.tienda),limpiaNombre(d.repartidor),d.entregado?1:0,Number(d.importe_reparto)||0,Number(d.saldo_cobrar)||0]);
+    }),
+    seguro("F",db.collection("fallos").where("fecha",">=",a+"-01").where("fecha","<=",a+"-12").get(),function(d){
+      p.F.push([String(d.fecha||"").slice(0,7),String(d.vendedor||"").trim()||"Sin vendedor",tiendaCod(d.tienda),String(d.prvNombre||d.prvCod||"Sin proveedor"),Number(d.calculo)||0]);
+    }),
+    seguro("FA",db.collection("facturas").where("fecha",">=",ini).where("fecha","<=",fin).get(),function(d){
+      p.FA.push([String(d.fecha||"").slice(0,10),tiendaCod(d.tienda),String(d.estado||"").toLowerCase(),Number(d.total)||0,String(d.vencimiento||"").slice(0,10)]);
+    })
+  ];
+  if(a===String(new Date().getFullYear())){
+    tareas.push(seguro("VB",db.collection("vacaciones_bajas").where("anio","==",Number(a)).get(),function(d){
+      if(d.alias&&d.fechaIni&&d.fechaFin)p.VB.push([d.alias,d.tipo||"",d.fechaIni,d.fechaFin]);
+    }));
+    tareas.push(seguro("AG",db.collection("alertas_geo").where("leida","==",false).get(),function(){p.AG++;}));
+  }
+  return Promise.all(tareas).then(function(){guardarCache(a,p);return p;});
+}
+function asegurar(anio,forzar){
+  if(!forzar){
+    if(DATOS[anio])return Promise.resolve(DATOS[anio]);
+    var c=leerCache(anio);
+    if(c){c.deCache=true;DATOS[anio]=c;return Promise.resolve(c);}
+  }
+  return traerAnio(anio).then(function(p){p.deCache=false;DATOS[anio]=p;return p;});
+}
+
+// ---------------- FILTROS ----------------
+function filtros(){return {anio:gi("f-anio").value,mes:gi("f-mes").value,tienda:gi("f-tienda").value,cmp:gi("f-cmp").checked};}
+// corte: "MM-DD" hasta donde contar (para comparar el mismo tramo del año anterior)
+function dentro(fecha,tienda,f,corte,ignorarMes){
+  if(f.tienda&&tienda!==f.tienda)return false;
+  if(!ignorarMes&&f.mes&&fecha.slice(5,7)!==f.mes)return false;
+  if(corte&&fecha.slice(5)>corte)return false;
+  return true;
+}
+function corteComparacion(f){
+  var h=hoyISO();
+  if(f.anio!==h.slice(0,4))return "";
+  if(f.mes&&f.mes!==h.slice(5,7))return "";
+  return h.slice(5);
+}
+
+// ---------------- CALCULOS ----------------
+function resumenVentas(p,f,corte){
+  var P=p.P.filter(function(x){return dentro(x[0],x[2],f,corte);});
+  var V=p.V.filter(function(x){return dentro(x[0],x[1],f,corte);});
+  var ped=P.filter(function(x){return x[3]==="pedido";});
+  var visitas=V.reduce(function(s,x){return s+Object.keys(x[2]).reduce(function(a,k){return a+x[2][k];},0);},0);
+  var impPed=ped.reduce(function(s,x){return s+x[4];},0);
+  return {P:P,V:V,visitas:visitas,presu:P.length,pedidos:ped.length,
+    impPresu:P.reduce(function(s,x){return s+x[4];},0),impPed:impPed,
+    conv:pct(ped.length,P.length),ticket:ped.length?impPed/ped.length:0};
+}
+function delta(act,ant,anioAnt,esPuntos){
+  if(ant==null)return "";
+  if(!ant&&!act)return '<div class="delta igual">= igual que en '+anioAnt+'</div>';
+  if(!ant)return '<div class="delta igual">sin dato en '+anioAnt+'</div>';
+  var d=esPuntos?Math.round(act-ant):Math.round((act-ant)/ant*100);
+  var u=esPuntos?" puntos":"%";
+  if(d===0)return '<div class="delta igual">= igual que en '+anioAnt+'</div>';
+  return '<div class="delta '+(d>0?"sube":"baja")+'">'+(d>0?"▲ +":"▼ ")+d+u+' respecto a '+anioAnt+'</div>';
+}
+function kpi(et,val,pie,dl){return '<div class="card kpi"><div class="et">'+et+'</div><div class="val">'+val+'</div><div class="pie">'+pie+'</div>'+(dl||"")+'</div>';}
+function barrasH(el,pares,fmt,vacio){ // pares: [[nombre,valor]]
+  var max=pares.reduce(function(m,x){return Math.max(m,x[1]);},0)||1;
+  el.innerHTML=pares.length?pares.map(function(x){
+    return '<div class="nom" data-tip="'+esc(x[0])+'">'+esc(x[0])+'</div><div class="pista"><i style="width:'+Math.max(1,Math.round(x[1]/max*100))+'%"></i></div><div class="num">'+fmt(x[1])+'</div>';
+  }).join(""):'<div class="sin" style="grid-column:1/-1">'+(vacio||"Sin datos en este período.")+'</div>';
+}
+function agrupar(arr,fn,val){var o={};arr.forEach(function(x){var k=fn(x);o[k]=(o[k]||0)+(val?val(x):1);});return o;}
+function ordenar(o,n){var a=Object.keys(o).map(function(k){return [k,o[k]];}).sort(function(x,y){return y[1]-x[1];});return n?a.slice(0,n):a;}
+
+// ---------------- GRAFICO DE COLUMNAS (SVG) ----------------
+// series: [{color,valores[12]}]  tips[12]  etiquetas[12]
+function columnas(el,series,etiquetas,tips,opc){
+  opc=opc||{};
+  var W=560,H=230,ml=44,mr=8,mt=16,mb=26,n=etiquetas.length;
+  var max=opc.euros?100:4;series.forEach(function(s){s.valores.forEach(function(v){if(v>max)max=v;});});
+  var paso=Math.pow(10,Math.floor(Math.log10(max)));var tope=Math.ceil(max/paso)*paso;if(tope/paso<=2){paso=paso/2;}
+  var gw=(W-ml-mr)/n, bw=Math.min(22,(gw-8)/series.length-2), ph=H-mt-mb;
+  var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="'+esc(opc.titulo||"Gráfico")+'">';
+  for(var g=0;g<=tope+0.001;g+=paso){
+    var y=mt+ph-(g/tope)*ph;
+    s+='<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+y+'" y2="'+y+'" stroke="#e7e2d5" stroke-width="1"/>';
+    s+='<text x="'+(ml-6)+'" y="'+(y+4)+'" text-anchor="end">'+(opc.euros?eurK(g):num(g))+'</text>';
+  }
+  for(var i=0;i<n;i++){
+    var x0=ml+i*gw, ancho=series.length*(bw+2)-2, xi=x0+(gw-ancho)/2;
+    var apag=(opc.resaltar&&opc.resaltar!==i+1)?" apagado":"";
+    s+='<g class="mes'+apag+'" data-i="'+(i+1)+'" data-tip="'+esc(tips[i])+'">';
+    s+='<rect x="'+x0+'" y="'+mt+'" width="'+gw+'" height="'+(ph+mb)+'" fill="transparent"/>';
+    series.forEach(function(se,k){
+      var v=se.valores[i]||0, h=v?Math.max(2,v/tope*ph):0;
+      if(h)s+='<rect class="b" x="'+(xi+k*(bw+2))+'" y="'+(mt+ph-h)+'" width="'+bw+'" height="'+h+'" rx="3" fill="'+se.color+'"/>';
+    });
+    s+='<text x="'+(x0+gw/2)+'" y="'+(H-8)+'" text-anchor="middle">'+esc(etiquetas[i])+'</text></g>';
+  }
+  s+='<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+(mt+ph)+'" y2="'+(mt+ph)+'" stroke="#bdb6a4" stroke-width="1"/></svg>';
+  el.innerHTML=s;
+  if(opc.alPulsar){
+    Array.prototype.forEach.call(el.querySelectorAll("g.mes"),function(g){
+      g.addEventListener("click",function(){opc.alPulsar(parseInt(g.getAttribute("data-i"),10));});
+    });
+  }
+}
+
+// ---------------- PINTAR ----------------
+function pintar(){
+  var f=filtros(), p=DATOS[f.anio]; if(!p)return;
+  var anioAnt=String(Number(f.anio)-1), pa=f.cmp?DATOS[anioAnt]:null;
+  var corte=corteComparacion(f), hoy=hoyISO(), esActual=f.anio===hoy.slice(0,4);
+  var r=resumenVentas(p,f,""), ra=pa?resumenVentas(pa,f,corte):null;
+
+  var periodo=(f.mes?MESES[parseInt(f.mes,10)]+" de ":"Año ")+f.anio+(f.tienda?" · "+TIENDAS[f.tienda]:" · las 3 tiendas");
+  gi("tit-periodo").textContent=periodo+(pa&&corte?" · comparado con "+anioAnt+" hasta el mismo día":"");
+
+  // --- KPIs ventas
+  function d(campo,pts){return ra?delta(r[campo],ra[campo],anioAnt,pts):"";}
+  gi("kpis").innerHTML=
+     kpi("Visitas",num(r.visitas),"clientes que entraron",d("visitas"))
+    +kpi("Presupuestos",num(r.presu),eur(r.impPresu)+" presupuestado",d("presu"))
+    +kpi("Pedidos",num(r.pedidos),"presupuestos convertidos",d("pedidos"))
+    +kpi("Conversión",r.conv+"%","pedidos de cada 100 presupuestos",d("conv",true))
+    +kpi("Importe pedidos",eur(r.impPed),"venta confirmada",d("impPed"))
+    +kpi("Ticket medio",eur(r.ticket),"importe medio por pedido",d("ticket"));
+
+  // --- Mensual (siempre el año entero; resalta el mes elegido)
+  var fAnio={anio:f.anio,mes:"",tienda:f.tienda};
+  var presuMes=[],pedMes=[],tips=[],etq=[];
+  for(var m=1;m<=12;m++){
+    var mm=String(m).padStart(2,"0");
+    var Pm=p.P.filter(function(x){return dentro(x[0],x[2],fAnio)&&x[0].slice(5,7)===mm;});
+    var pe=Pm.filter(function(x){return x[3]==="pedido";});
+    var a=Pm.reduce(function(s,x){return s+x[4];},0), b=pe.reduce(function(s,x){return s+x[4];},0);
+    presuMes.push(a);pedMes.push(b);etq.push(MESES[m].slice(0,3));
+    tips.push(MESES[m]+" "+f.anio+"|Presupuestado: "+eur(a)+" ("+Pm.length+")|En pedido: "+eur(b)+" ("+pe.length+")|Conversión: "+pct(pe.length,Pm.length)+"%");
+  }
+  gi("tit-mensual").textContent="Importe por mes · "+f.anio;
+  columnas(gi("g-mensual"),[{color:"#b08d3c",valores:presuMes},{color:"#8a4f1d",valores:pedMes}],etq,tips,
+    {euros:true,titulo:"Importe presupuestado y en pedido por mes",resaltar:f.mes?parseInt(f.mes,10):0,
+     alPulsar:function(i){var v=String(i).padStart(2,"0");gi("f-mes").value=(gi("f-mes").value===v)?"":v;pintar();}});
+
+  // --- Embudo
+  var pasos=[["Visitas",r.visitas,""],["Presupuestos",r.presu,r.visitas?pct(r.presu,r.visitas)+" presupuestos por cada 100 visitas":"Sin visitas apuntadas en este período"],["Pedidos",r.pedidos,r.presu?r.conv+" pedidos por cada 100 presupuestos"+(r.visitas?" · "+pct(r.pedidos,r.visitas)+" por cada 100 visitas":""):""]];
+  var maxE=Math.max(r.visitas,r.presu,r.pedidos,1);
+  gi("embudo").innerHTML=pasos.map(function(x){
+    return '<div class="paso"><div class="cab"><span>'+x[0]+'</span><b>'+num(x[1])+'</b></div><div class="pista"><i style="width:'+Math.max(1,Math.round(x[1]/maxE*100))+'%"></i></div>'+(x[2]?'<div class="ratio">'+x[2]+'</div>':'')+'</div>';
+  }).join("")+(p.err.V?'<div class="error-sec">No se pudieron leer las visitas: '+esc(p.err.V)+'</div>':"");
+
+  // --- Tiendas (ignora el filtro de tienda para poder compararlas)
+  gi("tiendas").innerHTML=["lf","mk","es"].map(function(t){
+    var ft={anio:f.anio,mes:f.mes,tienda:t}, x=resumenVentas(p,ft,""), xa=pa?resumenVentas(pa,ft,corte):null;
+    return '<div class="card tienda '+t+'"><div class="nom">'+TIENDAS[t]+'</div>'
+      +'<div class="fila"><span>Visitas</span><span class="v">'+num(x.visitas)+'</span></div>'
+      +'<div class="fila"><span>Presupuestos</span><span class="v">'+num(x.presu)+'</span></div>'
+      +'<div class="fila"><span>Pedidos</span><span class="v">'+num(x.pedidos)+' · '+x.conv+'%</span></div>'
+      +'<div class="fila"><span>Importe pedidos</span><span class="v">'+eur(x.impPed)+'</span></div>'
+      +'<div class="fila"><span>Ticket medio</span><span class="v">'+eur(x.ticket)+'</span></div>'
+      +(xa?delta(x.impPed,xa.impPed,anioAnt):"")+'</div>';
+  }).join("");
+
+  // --- Vendedores
+  var V={};
+  function fila(n){return V[n]||(V[n]={vis:0,pre:0,ped:0,imp:0,fal:0});}
+  r.P.forEach(function(x){var o=fila(x[1]);o.pre++;if(x[3]==="pedido"){o.ped++;o.imp+=x[4];}});
+  r.V.forEach(function(x){Object.keys(x[2]).forEach(function(k){if(x[2][k])fila(k).vis+=x[2][k];});});
+  var Ff=p.F.filter(function(x){return dentro(x[0]+"-01",x[2],f,"");});
+  Ff.forEach(function(x){fila(x[1]).fal+=x[4];});
+  var lista=Object.keys(V).map(function(k){return [k,V[k]];}).sort(function(a,b){return b[1].imp-a[1].imp||b[1].pre-a[1].pre;});
+  var maxImp=lista.reduce(function(m,x){return Math.max(m,x[1].imp);},0)||1;
+  gi("vendedores").innerHTML=lista.length?'<table><thead><tr><th>Vendedor</th><th>Visitas</th><th>Presup.</th><th>Pedidos</th><th>Conversión</th><th>Importe pedidos</th><th>Ticket medio</th><th>Fallos</th></tr></thead><tbody>'
+    +lista.map(function(x){var o=x[1];
+      return '<tr><td>'+esc(x[0])+'</td><td>'+num(o.vis)+'</td><td>'+num(o.pre)+'</td><td>'+num(o.ped)+'</td><td>'+pct(o.ped,o.pre)+'%</td>'
+        +'<td><span class="mini" style="width:'+Math.round(o.imp/maxImp*70)+'px"></span>'+eur(o.imp)+'</td><td>'+(o.ped?eur(o.imp/o.ped):"—")+'</td><td>'+(o.fal?eur(o.fal):"—")+'</td></tr>';
+    }).join("")
+    +'</tbody><tfoot><tr><td>TOTAL</td><td>'+num(r.visitas)+'</td><td>'+num(r.presu)+'</td><td>'+num(r.pedidos)+'</td><td>'+r.conv+'%</td><td>'+eur(r.impPed)+'</td><td>'+eur(r.ticket)+'</td><td>'+eur(Ff.reduce(function(s,x){return s+x[4];},0))+'</td></tr></tfoot></table>'
+    :'<div class="sin">Sin presupuestos ni visitas en este período.</div>'+(p.err.P?'<div class="error-sec">No se pudieron leer los presupuestos: '+esc(p.err.P)+'</div>':"");
+
+  // --- Visitas por dia de la semana (media por dia con registro)
+  var DS=["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"], porDia={}, sumaDia=[0,0,0,0,0,0,0], diasCon=[{},{},{},{},{},{},{}];
+  r.V.forEach(function(x){var t=Object.keys(x[2]).reduce(function(a,k){return a+x[2][k];},0);porDia[x[0]]=(porDia[x[0]]||0)+t;});
+  Object.keys(porDia).forEach(function(fe){var w=new Date(fe+"T12:00:00").getDay();sumaDia[w]+=porDia[fe];diasCon[w][fe]=1;});
+  var orden=[1,2,3,4,5,6,0].filter(function(w){return w!==0||sumaDia[0]>0;});
+  if(Object.keys(porDia).length){
+    columnas(gi("g-semana"),[{color:"#8a4f1d",valores:orden.map(function(w){var n=Object.keys(diasCon[w]).length;return n?Math.round(sumaDia[w]/n*10)/10:0;})}],
+      orden.map(function(w){return DS[w];}),
+      orden.map(function(w){var n=Object.keys(diasCon[w]).length;return DS[w]+"|Media: "+(n?(Math.round(sumaDia[w]/n*10)/10).toString().replace(".",","):0)+" visitas al día|"+num(sumaDia[w])+" visitas en "+n+" días apuntados";}),
+      {titulo:"Visitas medias por día de la semana"});
+  }else gi("g-semana").innerHTML='<div class="sin">Sin visitas apuntadas en este período.</div>';
+
+  // --- Facturas
+  var FA=p.FA.filter(function(x){return dentro(x[0],x[1],f,"")&&x[2]!=="borrador";});
+  var fTot=0,fCob=0,fPen=0,fVen=0;
+  FA.forEach(function(x){fTot+=x[3];
+    if(x[2]==="cobrada")fCob+=x[3];
+    else if(x[2]==="vencida"||(x[4]&&x[4]<hoy))fVen+=x[3];
+    else fPen+=x[3];});
+  gi("facturas").innerHTML=p.err.FA?'<div class="error-sec">No se pudieron leer las facturas: '+esc(p.err.FA)+'</div>':
+    (FA.length?'<div class="fila"><span>Facturas emitidas</span><span class="v">'+num(FA.length)+'</span></div>'
+    +'<div class="fila"><span>Total facturado</span><span class="v">'+eur(fTot)+'</span></div>'
+    +'<div class="fila"><span>Cobrado</span><span class="v">'+eur(fCob)+'</span></div>'
+    +'<div class="fila"><span>Pendiente de cobro (en plazo)</span><span class="v">'+eur(fPen)+'</span></div>'
+    +'<div class="fila"><span>Vencido sin cobrar</span><span class="v">'+eur(fVen)+'</span></div>'
+    :'<div class="sin">No hay facturas en este período en el módulo de facturación.</div>');
+
+  // --- Repartos
+  var R=p.R.filter(function(x){return dentro(x[0],x[1],f,"");});
+  var ent=R.filter(function(x){return x[3];}).length;
+  var atras=R.filter(function(x){return !x[3]&&x[0]<hoy;});
+  var saldoPte=R.filter(function(x){return !x[3];}).reduce(function(s,x){return s+x[5];},0);
+  gi("rep-kpis").innerHTML=p.err.R?'<div class="error-sec">No se pudieron leer los repartos: '+esc(p.err.R)+'</div>':
+     kpi("Repartos",num(R.length),"hojas de reparto")
+    +kpi("Entregados",pct(ent,R.length)+"%",num(ent)+" de "+num(R.length))
+    +kpi("Sin marcar entregado",num(atras.length),"con fecha ya pasada")
+    +kpi("Por cobrar en la entrega",eur(saldoPte),"en repartos aún no entregados")
+    +kpi("Importe de reparto",eur(R.reduce(function(s,x){return s+x[4];},0)),"suma del campo importe reparto");
+  barrasH(gi("rep-quien"),ordenar(agrupar(R,function(x){return x[2];}),8),num);
+  var repMes=[],repTips=[];
+  for(var m2=1;m2<=12;m2++){var mm2=String(m2).padStart(2,"0");
+    var c=p.R.filter(function(x){return dentro(x[0],x[1],fAnio)&&x[0].slice(5,7)===mm2;}).length;
+    repMes.push(c);repTips.push(MESES[m2]+" "+f.anio+"|"+num(c)+" repartos");}
+  columnas(gi("g-repmes"),[{color:"#8a4f1d",valores:repMes}],etq,repTips,{titulo:"Repartos por mes",resaltar:f.mes?parseInt(f.mes,10):0});
+
+  // --- Fallos
+  var costeF=Ff.reduce(function(s,x){return s+x[4];},0);
+  gi("fal-kpi").innerHTML=p.err.F?'<div class="error-sec">No se pudieron leer los fallos: '+esc(p.err.F)+'</div>':
+    '<div class="et">Fallos registrados</div><div class="val">'+num(Ff.length)+'</div><div class="pie">Coste calculado: <b>'+eur(costeF)+'</b></div>'
+    +(r.impPed?'<div class="pie">'+(Math.round(costeF/r.impPed*1000)/10).toString().replace(".",",")+'% del importe de pedidos</div>':"");
+  barrasH(gi("fal-vend"),ordenar(agrupar(Ff,function(x){return x[1];},function(x){return x[4];})),eur,"Sin fallos en este período.");
+  barrasH(gi("fal-prv"),ordenar(agrupar(Ff,function(x){return x[3];},function(x){return x[4];}),5),eur,"Sin fallos en este período.");
+
+  // --- Personal
+  var hasta=sumaDias(hoy,14);
+  var aus=(esActual?p.VB:[]).filter(function(x){return x[3]>=hoy&&x[2]<=hasta;}).sort(function(a,b){return a[2].localeCompare(b[2]);});
+  gi("personal").innerHTML=!esActual?'<div class="sin">Solo se muestra para el año en curso.</div>':
+    (p.err.VB?'<div class="error-sec">No se pudieron leer vacaciones y bajas: '+esc(p.err.VB)+'</div>':
+    (aus.length?aus.map(function(x){
+      var ahora=x[2]<=hoy;
+      return '<div class="fila"><span>'+(ahora?"🔴 ":"🗓️ ")+'<b>'+esc(x[0])+'</b> — '+(String(x[1]).toLowerCase().indexOf("baja")>=0?"baja":"vacaciones")+(ahora?" (ausente hoy)":"")+'</span><span class="v">'+fechaES(x[2])+' → '+fechaES(x[3])+'</span></div>';
+    }).join(""):'<div class="sin">Nadie de vacaciones ni de baja en los próximos 14 días.</div>'));
+
+  // --- Avisos (solo año en curso, sin filtro de mes)
+  var av=[];
+  if(esActual){
+    var fA={anio:f.anio,mes:"",tienda:f.tienda}, limite=sumaDias(hoy,-DIAS_SEGUIMIENTO);
+    var viejos=p.P.filter(function(x){return dentro(x[0],x[2],fA)&&x[3]==="pendiente"&&x[0]<limite;});
+    var acept=p.P.filter(function(x){return dentro(x[0],x[2],fA)&&x[3]==="aceptado";});
+    var atr=p.R.filter(function(x){return dentro(x[0],x[1],fA)&&!x[3]&&x[0]<hoy;});
+    var venc=p.FA.filter(function(x){return dentro(x[0],x[1],fA)&&x[2]!=="cobrada"&&x[2]!=="borrador"&&(x[2]==="vencida"||(x[4]&&x[4]<hoy));});
+    if(viejos.length)av.push(["","📋","<b>"+num(viejos.length)+" presupuestos pendientes</b> con más de "+DIAS_SEGUIMIENTO+" días sin respuesta ("+eur(viejos.reduce(function(s,x){return s+x[4];},0))+"). Conviene llamar al cliente o darlos por rechazados."]);
+    if(acept.length)av.push(["","✅","<b>"+num(acept.length)+" presupuestos aceptados</b> que todavía no están pasados a pedido ("+eur(acept.reduce(function(s,x){return s+x[4];},0))+")."]);
+    if(atr.length)av.push(["rojo","🚚","<b>"+num(atr.length)+" repartos con fecha pasada</b> sin marcar como entregados (por cobrar: "+eur(atr.reduce(function(s,x){return s+x[5];},0))+")."]);
+    if(venc.length)av.push(["rojo","💶","<b>"+num(venc.length)+" facturas vencidas</b> sin cobrar ("+eur(venc.reduce(function(s,x){return s+x[3];},0))+")."]);
+    if(p.AG)av.push(["rojo","📍","<b>"+num(p.AG)+" fichajes fuera de zona</b> sin revisar."]);
+    var hoyAus=p.VB.filter(function(x){return x[2]<=hoy&&x[3]>=hoy;});
+    if(hoyAus.length)av.push(["","👥","<b>Ausentes hoy:</b> "+hoyAus.map(function(x){return esc(x[0]);}).join(", ")+"."]);
+    if(!av.length)av.push(["ok","👍","Nada pendiente que destacar."]);
+  }else av.push(["ok","ℹ️","Los avisos solo se calculan para el año en curso."]);
+  gi("avisos").innerHTML=av.map(function(x){return '<li class="'+x[0]+'"><span class="ico">'+x[1]+'</span><span>'+x[2]+'</span></li>';}).join("");
+
+  // --- Estado de los datos
+  var min=Math.round((Date.now()-p.ts)/60000);
+  var hace=min<1?"ahora mismo":(min<60?"hace "+min+" min":"hace "+Math.round(min/60)+" h");
+  gi("estado-datos").innerHTML=(p.deCache?"📦 Datos guardados en este ordenador, leídos de Firebase <b>"+hace+"</b> (sin gastar lecturas ahora).":"🔥 Datos recién leídos de Firebase: <b>"+num(p.lect)+" lecturas</b>.")
+    +(pa?" Año "+anioAnt+": "+(pa.deCache?"guardado":num(pa.lect)+" lecturas")+".":"");
+}
+
+function cargar(forzar){
+  var f=filtros();
+  gi("cargando").style.display="";gi("cargando").textContent="Cargando datos…";
+  var tareas=[asegurar(f.anio,forzar)];
+  if(f.cmp)tareas.push(asegurar(String(Number(f.anio)-1),false));
+  Promise.all(tareas).then(function(){
+    gi("cargando").style.display="none";gi("contenido").style.display="";pintar();
+  }).catch(function(e){gi("cargando").textContent="Error al leer los datos: "+(e.message||e);});
+}
+
+// ---------------- TOOLTIP ----------------
+(function(){
+  var tip=gi("tip");
+  document.addEventListener("mousemove",function(e){
+    var t=e.target.closest?e.target.closest("[data-tip]"):null;
+    if(!t){tip.style.display="none";return;}
+    var lineas=t.getAttribute("data-tip").split("|");
+    tip.textContent="";
+    lineas.forEach(function(l,i){var d=document.createElement("div");d.textContent=l;if(i===0)d.style.fontWeight="700";tip.appendChild(d);});
+    tip.style.display="block";
+    var x=e.clientX+14,y=e.clientY+14;
+    if(x+tip.offsetWidth>window.innerWidth-8)x=e.clientX-tip.offsetWidth-10;
+    if(y+tip.offsetHeight>window.innerHeight-8)y=e.clientY-tip.offsetHeight-10;
+    tip.style.left=x+"px";tip.style.top=y+"px";
+  });
+})();
+
+// ---------------- ARRANQUE ----------------
+function esGerencia(){
+  var u="";
+  try{u=localStorage.getItem("meres_usuario_actual")||"";}catch(e){}
+  return u===USUARIO_GERENCIA;
+}
+function iniciar(){
+  var y=new Date().getFullYear(),h="";
+  for(var i=0;i<5;i++)h+='<option value="'+(y-i)+'">'+(y-i)+'</option>';
+  gi("f-anio").innerHTML=h;
+  var hm='<option value="">Todo el año</option>';
+  for(var m=1;m<=12;m++)hm+='<option value="'+String(m).padStart(2,"0")+'">'+MESES[m]+'</option>';
+  gi("f-mes").innerHTML=hm;
+  try{gi("f-cmp").checked=localStorage.getItem("dash_cmp")==="1";}catch(e){}
+  gi("f-anio").addEventListener("change",function(){cargar(false);});
+  gi("f-mes").addEventListener("change",pintar);
+  gi("f-tienda").addEventListener("change",pintar);
+  gi("f-cmp").addEventListener("change",function(){try{localStorage.setItem("dash_cmp",gi("f-cmp").checked?"1":"0");}catch(e){}cargar(false);});
+  gi("btn-act").addEventListener("click",function(){cargar(true);});
+  gi("btn-print").addEventListener("click",function(){window.print();});
+  cargar(false);
+}
+var arrancado=false;
+auth.onAuthStateChanged(function(user){
+  if(!user){gi("login").style.display="flex";return;}
+  gi("login").style.display="none";
+  if(!esGerencia()){gi("bloqueo").style.display="flex";return;}
+  if(!arrancado){arrancado=true;iniciar();}
+});
+function entrar(){
+  gi("lg-err").textContent="";
+  auth.signInWithEmailAndPassword(gi("lg-email").value.trim(),gi("lg-pass").value)
+    .catch(function(){gi("lg-err").textContent="Email o contraseña incorrectos";});
+}
+gi("lg-btn").addEventListener("click",entrar);
+gi("lg-pass").addEventListener("keydown",function(e){if(e.key==="Enter")entrar();});
+</script>
+</body>
+</html>
