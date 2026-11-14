@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- v4.0 — 14/11/2026 — AHORRO DE LECTURAS FIREBASE: presupuestos (ultimos 60 dias + cache 5 min + recuento para numerar), fichajes por rango de fechas, visitas/repartos/fiestas filtrados, cache de repartos, incidencias, vacaciones y vendedores -->
 <!-- v3.9 — 07/10/2026 — NUEVO: botón "🚦 Calendario vacaciones" en PERSONAL (todos) → vacaciones-consulta.html -->
 <html lang="es">
 <head>
@@ -308,7 +309,7 @@ tr:last-child td{border-bottom:none}
     </div>
 
   </div>
-  <div style="position:fixed;bottom:10px;left:12px;font-size:11px;color:#888;font-family:monospace;pointer-events:none;font-weight:700">v3.9 — 07/10/2026</div>
+  <div style="position:fixed;bottom:10px;left:12px;font-size:11px;color:#888;font-family:monospace;pointer-events:none;font-weight:700">v4.0 — 14/11/2026</div>
   <!-- BOTÓN FLOTANTE FICHAJE en pantalla de selección -->
   <button onclick="window._abrirFichajeRapido&&window._abrirFichajeRapido()" style="position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:#1a6b2a;color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(26,107,42,.4);z-index:500;display:flex;align-items:center;justify-content:center;touch-action:manipulation" title="Fichar">⏱️</button>
 </div>
@@ -350,6 +351,7 @@ tr:last-child td{border-bottom:none}
 
     <div class="sb-divider"></div>
     <div class="sb-section" id="mn-sec-admin" style="display:none">Administración</div>
+    <div class="sb-item" id="mn-dashboard" style="display:none" onclick="abrirDashboard()"><span class="ico">📈</span> Cuadro de Mando</div>
     <div class="sb-item" id="mn-stats" style="display:none" onclick="navegar('stats','Estadísticas')"><span class="ico">📊</span> Estadísticas</div>
     <div class="sb-item" id="mn-editor" style="display:none" onclick="abrirEditor()"><span class="ico">✏️</span> Editor Fichajes</div>
     <div class="sb-item" id="mn-auditoria" style="display:none" onclick="abrirAuditoria()"><span class="ico">🔍</span> Auditoría Fichajes</div>
@@ -735,7 +737,7 @@ tr:last-child td{border-bottom:none}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, getDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, getDoc, query, where, orderBy, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -786,6 +788,91 @@ const MESES_N = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Ag
 
 let currentUser = null;
 let presupuestos = [];
+
+// ===== AHORRO DE LECTURAS FIREBASE (v4.0) =====
+// Regla: nunca leer una coleccion entera si basta con un tramo de fechas.
+const CACHE_MIN = 5;            // minutos que vale lo leido (en memoria)
+const PRES_DIAS_LISTA = 60;     // la lista de presupuestos abre con los ultimos 60 dias
+const REP_DIAS = 30;            // la hoja de repartos carga los ultimos 30 dias (y los futuros)
+let _presCache = { ts: 0, desde: null };   // desde: null = nada cargado, "" = todo el historico
+let _presTotal = 0;             // total de presupuestos en Firebase (para numerar)
+let _listaDesde = null;         // tramo que muestra la lista
+let _statsCargando = false;
+let _repCache = { ts: 0, desde: null, data: [] };
+let _incCache = { ts: 0, data: null };
+let _vacCache = { ts: 0, data: null };
+let _vendTs = 0;
+
+function fechaMasDias(iso, n) {
+  const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n);
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+function fechaHaceDias(n) { return fechaMasDias(today(), -n); }
+function cacheFresca(ts) { return (Date.now() - ts) < CACHE_MIN * 60000; }
+
+// Presupuestos: desde = "AAAA-MM-DD" (solo de esa fecha en adelante) o "" (todos)
+async function cargarPresupuestos(desde, forzar) {
+  const cubre = _presCache.desde !== null && (_presCache.desde === "" || (desde !== "" && _presCache.desde <= desde));
+  if (!forzar && cubre && cacheFresca(_presCache.ts)) return;
+  const ref = collection(db, "presupuestos");
+  const sn = await getDocs(desde ? query(ref, where("fecha", ">=", desde)) : ref);
+  const arr = []; sn.forEach(d => arr.push(d.data()));
+  presupuestos = arr;
+  _presCache = { ts: Date.now(), desde: desde };
+  if (desde === "") _presTotal = arr.length;
+  else await contarPresupuestos();
+}
+// Cuenta los presupuestos sin descargarlos (1 lectura por cada 1000). Si falla, lee todo como antes.
+async function contarPresupuestos() {
+  try {
+    const c = await getCountFromServer(collection(db, "presupuestos"));
+    _presTotal = c.data().count;
+  } catch(e) {
+    const sn = await getDocs(collection(db, "presupuestos"));
+    const arr = []; sn.forEach(d => arr.push(d.data()));
+    presupuestos = arr; _presTotal = arr.length;
+    _presCache = { ts: Date.now(), desde: "" };
+  }
+}
+// Fichajes: solo el tramo de fechas pedido (sin tramo = todos, como antes)
+function leerFichajes(desde, hasta) {
+  const ref = collection(db, "fichajes");
+  if (!desde || !hasta) return getDocs(ref);
+  return getDocs(query(ref, where("fecha", ">=", desde), where("fecha", "<=", hasta)));
+}
+function rangoFichas(tipo, anio, mes, fechaRef) {
+  if ((tipo === "mes" || tipo === "semanas-mes") && /^\d{4}$/.test(String(anio)) && /^\d{2}$/.test(String(mes))) return [anio + "-" + mes + "-01", anio + "-" + mes + "-31"];
+  if (tipo === "semana" && fechaRef) return [fechaMasDias(fechaRef, -7), fechaMasDias(fechaRef, 7)];
+  return [null, null];
+}
+// Repartos: desde = "AAAA-MM-DD" o "" (todos)
+async function cargarRepartos(desde, forzar) {
+  const cubre = _repCache.desde !== null && (_repCache.desde === "" || (desde !== "" && _repCache.desde <= desde));
+  if (!forzar && cubre && cacheFresca(_repCache.ts)) return _repCache.data;
+  const ref = collection(db, "repartos");
+  const sn = await getDocs(desde ? query(ref, where("fecha_entrega", ">=", desde)) : ref);
+  const arr = []; sn.forEach(d => arr.push(d.data()));
+  _repCache = { ts: Date.now(), desde: desde, data: arr };
+  return arr;
+}
+function repCachePoner(d) {
+  if (_repCache.desde === null) return;
+  const i = _repCache.data.findIndex(x => x.id === d.id);
+  if (i >= 0) _repCache.data[i] = d; else _repCache.data.push(d);
+}
+function repCacheQuitar(id) { _repCache.data = _repCache.data.filter(x => x.id !== id); }
+// Si se pide una fecha anterior a lo cargado (o sin fecha), trae lo que falta y lo añade a la lista
+async function repartosParaFiltro(repartos, fecha) {
+  if (_repCache.desde === "" || (fecha && _repCache.desde !== null && fecha >= _repCache.desde)) return;
+  let extra = [];
+  if (!fecha) extra = await cargarRepartos("", true);
+  else {
+    const sn = await getDocs(query(collection(db, "repartos"), where("fecha_entrega", "==", fecha)));
+    sn.forEach(d => extra.push(d.data()));
+  }
+  const ids = new Set(repartos.map(r => r.id));
+  extra.forEach(r => { if (!ids.has(r.id)) { repartos.push(r); ids.add(r.id); } });
+}
 let lines = [];
 let lineCounter = 0;
 let editingId = null;
@@ -958,6 +1045,9 @@ function actualizarSidebar(name){
   // Vendedores SOLO Jose Angel
   var mnVend = document.getElementById("mn-vendedores");
   if(mnVend) mnVend.style.display = (name==="Jose Angel") ? "" : "none";
+  // Cuadro de Mando (dashboard.html) SOLO Jose Angel
+  var mnDash = document.getElementById("mn-dashboard");
+  if(mnDash) mnDash.style.display = (name==="Jose Angel") ? "" : "none";
   // ERP (facturacion.html) SOLO Jose Angel
   var mnERP = document.getElementById("mn-erp");
   if(mnERP) mnERP.style.display = (name==="Jose Angel") ? "" : "none";
@@ -984,6 +1074,15 @@ function abrirERP(){
 }
 window.abrirERP = abrirERP;
 
+// Cuadro de Mando General (dashboard.html) SOLO Jose Angel
+function abrirDashboard(){
+  var a=document.createElement("a");
+  a.href="dashboard.html"; a.target="_blank"; a.rel="noopener";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  cerrarSidebar();
+}
+window.abrirDashboard = abrirDashboard;
+
 function abrirTarifa8194(){
   if(!currentUser){ showToast("Identifícate primero"); return; }
   var a=document.createElement("a");
@@ -1009,6 +1108,7 @@ function logout() {
   document.getElementById("app-shell").style.display = "none";
   document.getElementById("login-screen").style.display = "flex";
   lines = []; presupuestos = []; editingId = null; lineCounter = 0;
+  _presCache = { ts: 0, desde: null }; _listaDesde = null;
 }
 window.logout = logout;
 
@@ -1239,20 +1339,27 @@ window.cargarFirmaAnterior = async function() {
 
   try {
     // Buscar todos los fichajes de este trabajador y coger el más reciente
-    const sn = await getDocs(collection(db, "fichajes"));
+    // v4.0: en vez de leer TODOS los fichajes, se miran solo los dias recientes de este trabajador
+    // (primero los ultimos 5 dias; si no hay firma, hasta 45 dias atras)
     let mejorFecha = "";
     let mejorDoc   = null;
-    sn.forEach(d => {
-      const datos = d.data();
-      if ((datos.alias || "").toLowerCase() === alias.toLowerCase()) {
+    const hoyF = today();
+    for (const tramo of [[0, 4], [5, 45]]) {
+      if (mejorDoc) break;
+      const proms = [];
+      for (let i = tramo[0]; i <= tramo[1]; i++) proms.push(getDoc(doc(db, "fichajes", fichajeKey(alias, fechaMasDias(hoyF, -i)))));
+      const snaps = await Promise.all(proms);
+      snaps.forEach(sd => {
+        if (!sd.exists()) return;
+        const datos = sd.data();
         // Buscar uno que tenga al menos una firma
         const tieneFirma = datos.firma_ini_m || datos.firma_fin_m || datos.firma_ini_t || datos.firma_fin_t;
-        if (tieneFirma && datos.fecha > mejorFecha) {
+        if (tieneFirma && (datos.fecha || "") > mejorFecha) {
           mejorFecha = datos.fecha;
           mejorDoc   = datos;
         }
-      }
-    });
+      });
+    }
 
     if (mejorDoc) {
       // Guardar las firmas encontradas
@@ -1588,7 +1695,7 @@ function getFormData() {
   const existing = presupuestos.find(p => p.id === editingId);
   return {
     id: editingId || uid(),
-    num: editingId ? (existing ? existing.num : "0001") : String(presupuestos.length + 1).padStart(4,"0"),
+    num: editingId ? (existing ? existing.num : "0001") : String(Math.max(presupuestos.length, _presTotal) + 1).padStart(4,"0"),
     fecha: today(), estado: editingId ? (existing ? existing.estado : "pendiente") : "pendiente",
     cliente: { nombre: document.getElementById("c-nombre").value, tel: document.getElementById("c-tel").value, email: document.getElementById("c-email").value, dni: document.getElementById("c-dni").value, dir: document.getElementById("c-dir").value, notas: document.getElementById("c-notas").value },
     tienda: document.getElementById("c-tienda").value, vendedor: currentUser,
@@ -1601,6 +1708,8 @@ function getFormData() {
 }
 
 async function savePresupuesto() {
+  // Presupuesto nuevo: recuento al momento para dar el numero siguiente correcto
+  if (!editingId) { try { await contarPresupuestos(); } catch(e) {} }
   const data = getFormData();
   if (!data.cliente.nombre) { showToast("Introduce el nombre del cliente"); return; }
   if (!lines.length) { showToast("Anade al menos un producto"); return; }
@@ -1608,6 +1717,9 @@ async function savePresupuesto() {
   try {
     showToast("Guardando...");
     await setDoc(doc(db, "presupuestos", data.id), data);
+    // Actualizar la lista en memoria (sin volver a leer de Firebase)
+    const iLoc = presupuestos.findIndex(x => x.id === data.id);
+    if (iLoc >= 0) presupuestos[iLoc] = data; else { presupuestos.push(data); _presTotal++; }
     showToast("Presupuesto guardado - N " + data.num);
     clearForm();
   } catch(e) { showToast("Error: " + e.message); }
@@ -1679,28 +1791,49 @@ function loadToForm(pid) {
 }
 
 async function setEstado(pid, estado) {
-  try { const ref = doc(db,"presupuestos",pid); const sn = await getDoc(ref); if (sn.exists()) { await setDoc(ref, {...sn.data(), estado}, {merge:true}); showToast("Estado actualizado"); } } catch(e) { showToast("Error: "+e.message); }
+  try { const ref = doc(db,"presupuestos",pid); const sn = await getDoc(ref); if (sn.exists()) { await setDoc(ref, {...sn.data(), estado}, {merge:true}); const pLoc = presupuestos.find(x => x.id === pid); if (pLoc) pLoc.estado = estado; showToast("Estado actualizado"); renderLista(); } } catch(e) { showToast("Error: "+e.message); }
 }
 
 async function deletePresupuesto(pid) {
   mostrarModalClave(async function() {
     if (!confirm("Eliminar este presupuesto? Esta accion no se puede deshacer.")) return;
-    try { await deleteDoc(doc(db,"presupuestos",pid)); showToast("Presupuesto eliminado"); renderLista(); }
+    try { await deleteDoc(doc(db,"presupuestos",pid)); presupuestos = presupuestos.filter(x => x.id !== pid); _presTotal = Math.max(0, _presTotal - 1); showToast("Presupuesto eliminado"); renderLista(); }
     catch(e) { showToast("Error: "+e.message); }
   });
 }
 
-async function cargarYMostrarLista() {
+async function cargarYMostrarLista(forzar) {
   document.getElementById("lista-content").innerHTML = "<div class='spinner'>Cargando presupuestos...</div>";
+  if (_listaDesde === null) _listaDesde = fechaHaceDias(PRES_DIAS_LISTA);
   try {
-    // Always load fresh from Firebase
-    const sn = await getDocs(collection(db, "presupuestos"));
-    presupuestos = [];
-    sn.forEach(d => presupuestos.push(d.data()));
+    // v4.0: solo el tramo elegido (por defecto ultimos 60 dias) y con cache de 5 min
+    await cargarPresupuestos(_listaDesde, forzar === true);
   } catch(e) {
     console.log("Error cargando presupuestos:", e);
   }
   renderLista();
+}
+
+// Barra bajo la lista: que tramo se ve y botones para ver mas
+function barraListaPresupuestos() {
+  const bar = document.createElement("div");
+  bar.style.cssText = "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:13px;color:#666";
+  const txt = document.createElement("span");
+  txt.textContent = _listaDesde === "" ? "Se muestran todos los presupuestos." : "Se muestran los presupuestos desde el " + fmtDate(_listaDesde) + ".";
+  bar.appendChild(txt);
+  function boton(texto, fn) {
+    const b = document.createElement("button"); b.className = "btn"; b.style.cssText = "padding:6px 10px;font-size:12px";
+    b.textContent = texto; b.addEventListener("click", fn); bar.appendChild(b);
+  }
+  if (_listaDesde !== "") {
+    boton("Ver 6 meses", () => { _listaDesde = fechaHaceDias(183); cargarYMostrarLista(); });
+    boton("Ver 1 año", () => { _listaDesde = fechaHaceDias(365); cargarYMostrarLista(); });
+    boton("Ver todos", () => { _listaDesde = ""; cargarYMostrarLista(); });
+  } else {
+    boton("Ver solo ultimos " + PRES_DIAS_LISTA + " dias", () => { _listaDesde = fechaHaceDias(PRES_DIAS_LISTA); cargarYMostrarLista(); });
+  }
+  boton("🔄 Actualizar", () => cargarYMostrarLista(true));
+  return bar;
 }
 
 function renderLista() {
@@ -1710,17 +1843,18 @@ function renderLista() {
   // Force tienda filter for restricted vendors
   const tiendaForzada = RESTRICCIONES_TIENDA[currentUser];
   let list = presupuestos.filter(p => {
+    if (_listaDesde && (p.fecha || "") < _listaDesde) return false;
     if (tiendaForzada && p.tienda !== tiendaForzada) return false;
     if (fe !== "all" && p.estado !== fe) return false;
     if (ft !== "all" && p.tienda !== ft) return false;
     if (fv !== "all" && p.vendedor !== fv) return false;
     return true;
   }).sort((a,b) => b.fecha.localeCompare(a.fecha));
-  if (!list.length && !presupuestos.length) {
+  if (!list.length && _presCache.desde === null) {
     document.getElementById("lista-content").innerHTML = "<div class='spinner'>Cargando presupuestos...</div>";
     return;
   }
-  if (!list.length) { document.getElementById("lista-content").innerHTML = "<div class='card'><p class='empty'>Sin presupuestos</p></div>"; return; }
+  if (!list.length) { const c0 = document.getElementById("lista-content"); c0.innerHTML = "<div class='card'><p class='empty'>Sin presupuestos</p></div>"; c0.appendChild(barraListaPresupuestos()); return; }
   const badges = {pendiente:"badge-pendiente",aceptado:"badge-aceptado",rechazado:"badge-rechazado",pedido:"badge-pedido"};
   const labels = {pendiente:"Pendiente",aceptado:"Aceptado",rechazado:"Rechazado",pedido:"Pedido"};
   const cont = document.getElementById("lista-content");
@@ -1751,6 +1885,7 @@ function renderLista() {
     actTd.appendChild(actDiv); tbody.appendChild(tr);
   });
   table.appendChild(tbody); scrollDiv.appendChild(table); wrapper.appendChild(scrollDiv); cont.innerHTML = ""; cont.appendChild(wrapper);
+  cont.appendChild(barraListaPresupuestos());
 }
 
 // ===== VISITAS =====
@@ -1846,7 +1981,8 @@ async function saveVisita() {
 
 async function loadVisHistorico() {
   try {
-    const sn = await getDocs(collection(db,"visitas"));
+    // v4.0: solo las ultimas 3 semanas (se muestran los 10 ultimos registros)
+    const sn = await getDocs(query(collection(db,"visitas"), where("fecha",">=",fechaHaceDias(21))));
     let entries = []; sn.forEach(d => entries.push(d.data()));
     entries.sort((a,b) => b.fecha.localeCompare(a.fecha)); entries = entries.slice(0,10);
     if (!entries.length) { document.getElementById("vis-historico").innerHTML = ""; return; }
@@ -2083,6 +2219,16 @@ function imprimirExcelPresupuestos(year) {
 function renderStats() {
   if (currentStatsTab === "visitas") { renderVisStats(); return; }
   if (currentStatsTab === "vendedores") { renderVendedores(); return; }
+  if (currentStatsTab !== "mensajes" && _presCache.desde !== "") {
+    // v4.0: las estadisticas usan todo el historico; se lee una vez al entrar
+    if (_statsCargando) return;
+    _statsCargando = true;
+    document.getElementById("stats-content").innerHTML = "<div class='spinner'>Cargando presupuestos...</div>";
+    cargarPresupuestos("", false)
+      .then(() => { _statsCargando = false; renderStats(); })
+      .catch(e => { _statsCargando = false; document.getElementById("stats-content").innerHTML = "<div class='card'><p class='empty'>Error: " + e.message + "</p></div>"; });
+    return;
+  }
   const period = document.getElementById("st-period").value;
   const mes = document.getElementById("st-mes").value;
   const tienda = document.getElementById("st-tienda").value;
@@ -2125,7 +2271,15 @@ async function renderVisStats() {
   const tienda = document.getElementById("st-tienda").value;
   document.getElementById("stats-content").innerHTML = "<div class='spinner'>Cargando visitas...</div>";
   try {
-    const sn = await getDocs(collection(db,"visitas")); let entries = []; sn.forEach(d => entries.push(d.data()));
+    // v4.0: leer solo el tramo que pide el filtro
+    let desdeV = "";
+    if (mes === "all") {
+      if (period === "year") desdeV = new Date().getFullYear() + "-01-01";
+      else if (period === "month") desdeV = fechaHaceDias(32);
+      else if (period === "week") desdeV = fechaHaceDias(8);
+    }
+    const refV = collection(db,"visitas");
+    const sn = await getDocs(desdeV ? query(refV, where("fecha",">=",desdeV)) : refV); let entries = []; sn.forEach(d => entries.push(d.data()));
     entries = entries.filter(e => { if (tienda!=="all"&&e.tienda!==tienda) return false; if (mes!=="all") return e.fecha.slice(5,7)===mes; return inPeriod(e.fecha,period); });
     if (!entries.length) { document.getElementById("stats-content").innerHTML = "<div class='card'><p class='empty'>Sin registros de visitas</p></div>"; return; }
     let totM=0,totT=0; entries.forEach(e=>{ totM+=Object.values(e.m||{}).reduce((s,v)=>s+v,0); totT+=Object.values(e.t||{}).reduce((s,v)=>s+v,0); });
@@ -3234,7 +3388,7 @@ async function verificarHorasSemana(vendedor, fechaFichaje) {
   // También comprobar si hay fiestas en el calendario de fiestas_anuales
   try {
     const anio = parseInt(lunesStr.slice(0,4));
-    const snF = await getDocs(collection(db, "fiestas_anuales"));
+    const snF = await getDocs(query(collection(db, "fiestas_anuales"), where("fecha", ">=", lunesStr), where("fecha", "<=", domingoStr)));
     for (const fd of snF.docs) {
       const fdata = fd.data();
       if (fdata.fecha >= lunesStr && fdata.fecha <= domingoStr) {
@@ -3665,6 +3819,7 @@ async function registrarFichaje(turno, hora, firmaData, v) {
 // ===== IMPRESION FICHAS =====
 // Lee vacaciones_bajas usando el SDK de Firebase (mismo que fichajes)
 async function getVacacionesBajasREST() {
+  if (_vacCache.data && cacheFresca(_vacCache.ts)) return _vacCache.data;
   try {
     const sn = await getDocs(collection(db, "vacaciones_bajas"));
     const docs = [];
@@ -3675,6 +3830,7 @@ async function getVacacionesBajasREST() {
       }
     });
     console.log("VAC SDK OK:", docs.length, "registros", docs.length ? "ejemplo:"+JSON.stringify(docs[0]) : "");
+    _vacCache = { ts: Date.now(), data: docs };
     return docs;
   } catch(e) {
     console.error("VAC SDK error:", e);
@@ -3698,8 +3854,9 @@ async function imprimirFichaRango(alias, anio, mes, tipo, fechaRef) {
   const v = vendedoresData.find(x => x.alias === alias);
   showToast("Generando ficha...");
   try {
+    const rgF = rangoFichas(tipo, anio, mes, fechaRef);
     const [snF, vacDocs] = await Promise.all([
-      getDocs(collection(db, "fichajes")),
+      leerFichajes(rgF[0], rgF[1]),
       getVacacionesBajasREST()
     ]);
     let registros = [];
@@ -3767,7 +3924,7 @@ async function imprimirFichaDia(fecha) {
   showToast("Generando listado del dia...");
   try {
     const [snF, vacDocs] = await Promise.all([
-      getDocs(collection(db, "fichajes")),
+      leerFichajes(fecha, fecha),
       getVacacionesBajasREST()
     ]);
     let registros = [];
@@ -3991,8 +4148,8 @@ async function cargarPanelFichajes() {
       }
     }
 
-    // Load all fichajes for date range
-    const sn = await getDocs(collection(db, "fichajes"));
+    // Load fichajes for date range only (v4.0)
+    const sn = await leerFichajes(fechas[0], fechas[fechas.length - 1]);
     const allFichajes = {};
     let debugInfo = [];
     sn.forEach(d => {
@@ -4147,9 +4304,12 @@ async function cargarPanelFichajes() {
 // ===== VENDEDORES =====
 let vendedoresData = [];
 
-async function loadVendedores() {
+async function loadVendedores(forzar) {
+  // v4.0: si se leyeron hace menos de 10 min, no se vuelven a leer (salvo tras guardar cambios)
+  if (forzar !== true && vendedoresData.length && (Date.now() - _vendTs) < 10 * 60000) return;
   try {
     const sn = await getDocs(collection(db, "vendedores"));
+    _vendTs = Date.now();
     vendedoresData = [];
     sn.forEach(d => vendedoresData.push(d.data()));
     vendedoresData.sort((a,b) => a.alias.localeCompare(b.alias));
@@ -4309,7 +4469,7 @@ async function saveVendedor(data) {
     await setDoc(doc(db, "vendedores", data.alias), data);
     showToast("Vendedor guardado: " + data.alias);
     _fotoDNIBase64 = null;
-    await loadVendedores();
+    await loadVendedores(true);
     renderVendedores();
   } catch(e) { showToast("Error: " + e.message); }
 }
@@ -4321,7 +4481,7 @@ async function toggleVendedorActivo(alias, activo) {
     if (sn.exists()) {
       await setDoc(ref, {...sn.data(), activo}, {merge:true});
       showToast(activo ? alias + " activado" : alias + " dado de baja");
-      await loadVendedores();
+      await loadVendedores(true);
       renderVendedores();
     }
   } catch(e) { showToast("Error: " + e.message); }
@@ -4504,13 +4664,18 @@ const ESTADOS_PRODUCTO = [
   { label:"Otros",                                            icon:"📋", bg:"#f5f4f0", col:"#555"    }
 ];
 
-async function initIncidencias() {
+async function initIncidencias(forzar) {
   const cont = document.getElementById("incidencias-content");
   cont.innerHTML = "<div class='spinner'>Cargando incidencias...</div>";
   try {
-    const sn = await getDocs(collection(db, "incidencias"));
-    const lista = [];
-    sn.forEach(d => lista.push(d.data()));
+    // v4.0: cache de 5 min (las incidencias pesan mucho por las fotos); tras un cambio se vuelve a leer
+    let lista = [];
+    if (forzar !== true && _incCache.data && cacheFresca(_incCache.ts)) lista = _incCache.data.slice();
+    else {
+      const sn = await getDocs(collection(db, "incidencias"));
+      sn.forEach(d => lista.push(d.data()));
+      _incCache = { ts: Date.now(), data: lista.slice() };
+    }
     lista.sort((a,b) => (b.fecha_revision||"").localeCompare(a.fecha_revision||""));
     renderIncidencias(lista, cont);
   } catch(e) {
@@ -4712,7 +4877,7 @@ function renderListaInc(lista, listaDiv, allInc, cont) {
     btnCerrar.addEventListener("click", async () => {
       const nuevo = inc.estado==="cerrada" ? "abierta" : "cerrada";
       await setDoc(doc(db,"incidencias",inc.id), {...inc, estado:nuevo}, {merge:true});
-      showToast("Incidencia " + nuevo); initIncidencias();
+      showToast("Incidencia " + nuevo); initIncidencias(true);
     });
     const btnDel = document.createElement("button");
     btnDel.className = "btn btn-danger"; btnDel.style.cssText = "padding:6px 12px;font-size:12px";
@@ -4721,7 +4886,7 @@ function renderListaInc(lista, listaDiv, allInc, cont) {
       mostrarModalClave(async () => {
         if (!confirm("Eliminar esta incidencia?")) return;
         await deleteDoc(doc(db,"incidencias",inc.id));
-        showToast("Eliminada"); initIncidencias();
+        showToast("Eliminada"); initIncidencias(true);
       });
     });
     [btnEdit, btnPDF, btnCerrar, btnDel].forEach(b => acts.appendChild(b));
@@ -4950,7 +5115,7 @@ function mostrarFormIncidencia(inc, allInc, cont) {
     };
     try{
       await setDoc(doc(db,"incidencias",data.id),data);
-      showToast("Incidencia guardada ✓"); overlay.remove(); initIncidencias();
+      showToast("Incidencia guardada ✓"); overlay.remove(); initIncidencias(true);
     }catch(err){showToast("Error: "+err.message);btnSave.disabled=false;btnSave.textContent="Guardar incidencia";}
   });
   box.appendChild(btnSave);
@@ -5072,9 +5237,8 @@ async function initRepartos() {
   if(!cont) return;
   cont.innerHTML = "<div class='spinner'>Cargando repartos...</div>";
   try {
-    const sn = await getDocs(collection(db, "repartos"));
-    const repartos = [];
-    sn.forEach(d => repartos.push(d.data()));
+    // v4.0: ultimos 30 dias + futuros, con cache de 5 min. Fechas anteriores se piden al filtrar.
+    const repartos = (await cargarRepartos(fechaHaceDias(REP_DIAS), false)).slice();
     renderRepartos(repartos, cont);
   } catch(e) {
     cont.innerHTML = "<div class='card'><p class='empty'>Error: " + e.message + "</p></div>";
@@ -5112,8 +5276,12 @@ function renderRepartos(repartos, cont) {
   btnStats.style.cssText = "padding:10px 14px;font-size:13px";
   btnStats.textContent = "📊 Estadisticas";
   btnStats.addEventListener("click", () => {
-    mostrarModalClave(function() {
-      mostrarEstadisticasRepartos(repartos);
+    mostrarModalClave(async function() {
+      // v4.0: las estadisticas usan todos los repartos; se leen solo al pedirlas
+      let todos = repartos;
+      showToast("Cargando repartos...");
+      try { todos = await cargarRepartos("", false); } catch(e) {}
+      mostrarEstadisticasRepartos(todos);
     });
   });
 
@@ -5177,9 +5345,10 @@ function renderRepartos(repartos, cont) {
   const btnFiltrar = document.createElement("button");
   btnFiltrar.className = "btn btn-primary";
   btnFiltrar.textContent = "Filtrar";
-  btnFiltrar.addEventListener("click", () => {
+  btnFiltrar.addEventListener("click", async () => {
     const fecha = fechaInp.value;
     const rep = repSel.value;
+    try { await repartosParaFiltro(repartos, fecha); } catch(e) { showToast("Error: " + e.message); }
     const filtered = repartos.filter(r => {
       if (fecha && r.fecha_entrega !== fecha) return false;
       if (rep !== "all" && r.repartidor !== rep) return false;
@@ -5192,9 +5361,10 @@ function renderRepartos(repartos, cont) {
   btnPrint.className = "btn";
   btnPrint.style.cssText = "padding:10px 14px;font-size:13px";
   btnPrint.textContent = "🖨️ Imprimir hoja";
-  btnPrint.addEventListener("click", () => {
+  btnPrint.addEventListener("click", async () => {
     const fecha = fechaInp.value;
     const rep = repSel.value;
+    try { await repartosParaFiltro(repartos, fecha); } catch(e) { showToast("Error: " + e.message); }
     const filtered = repartos.filter(r => {
       if (fecha && r.fecha_entrega !== fecha) return false;
       if (rep !== "all" && r.repartidor !== rep) return false;
@@ -5315,6 +5485,7 @@ function renderListaRepartos(lista, listaDiv, allRepartos, cont) {
       btnEnt.addEventListener("click", async () => {
         await setDoc(doc(db,"repartos",r.id), {...r, entregado:!r.entregado}, {merge:true});
         showToast(r.entregado ? "Pendiente" : "Entregado ✓");
+        repCachePoner({...r, entregado:!r.entregado});
         initRepartos();
       });
 
@@ -5333,6 +5504,7 @@ function renderListaRepartos(lista, listaDiv, allRepartos, cont) {
           if (!confirm("Eliminar este reparto?")) return;
           await deleteDoc(doc(db,"repartos",r.id));
           showToast("Eliminado");
+          repCacheQuitar(r.id);
           initRepartos();
         });
       });
@@ -5490,6 +5662,7 @@ function mostrarFormReparto(reparto, allRepartos, cont) {
       await setDoc(doc(db, "repartos", data.id), data);
       showToast("Reparto guardado");
       overlay.remove();
+      repCachePoner(data);
       initRepartos();
     } catch(e) { showToast("Error: " + e.message); }
   });
@@ -5963,7 +6136,7 @@ async function enviarResumenJefe() {
     const TIENDAS = ["Muebles La Factoría","Merkamueble","ExpoSofá"];
     const diaNum = new Date(hoy+"T12:00:00").getDay();
     const diaNombre = DIAS_SEMANA[diaNum];
-    const snapP = await getDocs(collection(db,"presupuestos"));
+    const snapP = await getDocs(query(collection(db,"presupuestos"), where("fecha","==",hoy)));
     const presupHoy = []; snapP.forEach(d=>{ const p=d.data(); if(p.fecha===hoy) presupHoy.push(p); });
     const visitasHoy = {};
     for (const tienda of TIENDAS) {
@@ -6211,8 +6384,9 @@ window._btnPrintDia = function() {
 
 async function imprimirFichasMultiples(aliasSelect, anio, mes, tipo, fechaRef) {
   // Cargar fichajes Y vacaciones en paralelo
+  const rgF = rangoFichas(tipo, anio, mes, fechaRef);
   const [sn, vacDocs] = await Promise.all([
-    getDocs(collection(db, "fichajes")),
+    leerFichajes(rgF[0], rgF[1]),
     getVacacionesBajasREST()
   ]);
   const allRecs = [];
