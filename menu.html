@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- v4.1 — 14/11/2026 — SEGURIDAD: las claves de acceso ya no estan escritas en el codigo (se comparan por huella SHA-256). Misma funcionalidad. -->
 <!-- v4.0 — 14/11/2026 — AHORRO DE LECTURAS FIREBASE: presupuestos (ultimos 60 dias + cache 5 min + recuento para numerar), fichajes por rango de fechas, visitas/repartos/fiestas filtrados, cache de repartos, incidencias, vacaciones y vendedores -->
 <!-- v3.9 — 07/10/2026 — NUEVO: botón "🚦 Calendario vacaciones" en PERSONAL (todos) → vacaciones-consulta.html -->
 <html lang="es">
@@ -880,6 +881,7 @@ let visCurrentData = {};
 let unsubPresupuestos = null;
 let currentStatsTab = "presup";
 
+async function sha256Hex(t){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(String(t)));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("");}
 function today() { return new Date().toISOString().split("T")[0]; }
 function fmt(n) { return n.toFixed(2).replace(".",",") + " euro"; }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
@@ -5285,7 +5287,7 @@ function renderRepartos(repartos, cont) {
     });
   });
 
-  // ===== Botón: Estadisticas Reparto (abre el panel externo, clave 7557) =====
+  // ===== Botón: Estadisticas Reparto (abre el panel externo, pide clave) =====
   const btnStatsPanel = document.createElement("button");
   btnStatsPanel.className = "btn";
   btnStatsPanel.style.cssText = "padding:10px 14px;font-size:13px;background:#7A9A01;color:#fff;border-color:#7A9A01;font-weight:600";
@@ -6246,8 +6248,8 @@ function initAccessScreen() {
   const btnOk = document.getElementById("btn-access-ok");
   const errDiv = document.getElementById("access-error");
 
-  function tryAccess() {
-    if (input.value === "7410") {
+  async function tryAccess() {
+    if (await sha256Hex(input.value) === "d4758ff40ebce1b5d0980f165c14d660f4723e50cd8c59d25403cde2ad87edc6") {
       grantDailyAccess();
       document.getElementById("access-screen").style.display = "none";
       document.getElementById("login-screen").style.display = "flex";
@@ -6277,9 +6279,9 @@ function mostrarModalClave(onSuccess) {
   inp.value = "";
   setTimeout(() => inp.focus(), 100);
 
-  function tryPwd() {
+  async function tryPwd() {
     const val = document.getElementById("stats-pwd-input").value;
-    if (val === "7557") {
+    if (await sha256Hex(val) === "d7bf08e6602a741a0d3ca2e65907bb5f32def1b31a11e0c87b0a7d44545fcb10") {
       overlay.style.display = "none";
       // Mostrar botón fichaje manual solo si es Jose Angel
       const btnFM = document.getElementById("st-tab-fichaje-manual");

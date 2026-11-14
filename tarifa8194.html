@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- tarifa8194: 14/11/2026 — clave de borrado ya no escrita en el codigo (huella SHA-256) -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -485,7 +486,8 @@
      Proveedores (misma caché de 4 h que selector-tarifas: 0 lecturas
      de Firebase si ya está en caché) y se pueden corregir a mano.
    ============================================================ */
-const CLAVE_BORRADO = "7557";   // misma clave que ya se usa en selector-tarifas.html
+const CLAVE_BORRADO_HASH = "d7bf08e6602a741a0d3ca2e65907bb5f32def1b31a11e0c87b0a7d44545fcb10";   // huella SHA-256 (la clave ya no esta escrita en el codigo)
+async function sha256Hex(t){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(String(t)));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("");}
 const CACHE_TTL = 4*60*60*1000;
 
 function cacheGet(key){
@@ -1265,7 +1267,7 @@ async function cambiarOculto(cod, ocultar){
   const m = getModelo(PROV_ACTUAL, cod);
   const k = prompt("Introduce tu clave para " + (ocultar ? "BORRAR" : "RECUPERAR") + " el modelo " + m.nombre + ":");
   if(k === null) return;
-  if(k !== CLAVE_BORRADO){ alert("Clave incorrecta"); return; }
+  if((await sha256Hex(k)) !== CLAVE_BORRADO_HASH){ alert("Clave incorrecta"); return; }
   if(ocultar && !confirm("¿Borrar el modelo " + m.nombre + " de la lista? (se puede recuperar desde «Gestionar modelos»)")) return;
   const lista = (OCULTOS[PROV_ACTUAL] || []).filter(function(c){ return c !== cod; });
   if(ocultar) lista.push(cod);

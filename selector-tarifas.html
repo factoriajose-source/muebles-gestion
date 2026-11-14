@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- selector-tarifas: v+ 14/11/2026 — clave de borrado ya no escrita en el codigo (huella SHA-256) -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -514,6 +515,7 @@ input:focus,select:focus{outline:none;border-color:#c4571a;}
 </div>
 
 <script>
+async function sha256Hex(t){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(String(t)));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("");}
 var db, auth;
 var ARTICULOS=[],PROVEEDORES_MAP={},XL_DATA=null,XL_COLS=[];
 // Multi-presupuesto
@@ -1657,12 +1659,12 @@ function guardarImagenes(){
   });
 }
 
-function borrarImagenes(){
+async function borrarImagenes(){
   var prv=document.getElementById("img-prv").value;
   var mod=document.getElementById("img-mod").value;
   var msg=document.getElementById("img-msg");
   if(!prv||!mod){ msg.textContent="Selecciona proveedor y modelo"; msg.style.color="#c0392b"; msg.style.display="block"; return; }
-  var clave=prompt("Introduce la clave para borrar imágenes:");if(clave!=="7557"){ toast("Clave incorrecta","err"); return; }
+  var clave=prompt("Introduce la clave para borrar imágenes:");if(clave===null||(await sha256Hex(clave))!=="d7bf08e6602a741a0d3ca2e65907bb5f32def1b31a11e0c87b0a7d44545fcb10"){ toast("Clave incorrecta","err"); return; }
   if(!confirm("¿Borrar las imágenes de "+mod+" de Firebase?"))return;
   var docId=getDocId(prv,mod);
   db.collection("imagenes_modelos").doc(docId).delete().then(function(){
@@ -1696,8 +1698,8 @@ function mostrarEspacio(){
   }).catch(function(e){ infoEl.textContent="Error: "+e.message; });
 }
 
-function borrarTodasImagenes(){
-  var clave=prompt("Introduce la clave para borrar TODAS las imágenes:");if(clave!=="7557"){ toast("Clave incorrecta","err"); return; }
+async function borrarTodasImagenes(){
+  var clave=prompt("Introduce la clave para borrar TODAS las imágenes:");if(clave===null||(await sha256Hex(clave))!=="d7bf08e6602a741a0d3ca2e65907bb5f32def1b31a11e0c87b0a7d44545fcb10"){ toast("Clave incorrecta","err"); return; }
   if(!confirm("¿Borrar TODAS las imágenes de Firebase de todos los modelos?"))return;
   db.collection("imagenes_modelos").get().then(function(sn){
     var promesas=[];
