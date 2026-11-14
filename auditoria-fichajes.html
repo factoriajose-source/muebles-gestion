@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- auditoria-fichajes 14/11/2026 — arreglado: alias con espacio al corregir salidas + horario de sabado. -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -744,8 +745,7 @@ async function corregirSalidas(){
       var dd = new Date(p.fecha+"T12:00:00");
       var esSab = dd.getDay()===6;
       var horaContrato = "";
-      if(turno==="fin_m") horaContrato = esSab ? (horario.fin_m_sab||horario.fin_m||"") : (horario.fin_m||"");
-      if(turno==="fin_t") horaContrato = esSab ? (horario.fin_t_sab||horario.fin_t||"") : (horario.fin_t||"");
+      horaContrato = esSab ? (horario["sab_"+turno]||horario[turno+"_sab"]||horario[turno]||"") : (horario[turno]||"");
 
       // Si ya tiene firma de salida, la conservamos; si no, copiamos la de entrada
       var firmaExistente = r["firma_"+turno];
@@ -820,7 +820,7 @@ async function corregirSalidas(){
       if(!c.hora) continue; // sin hora contractual no guardamos
       var key = c.alias+"_"+c.fecha.replace(/-/g,"_");
       // Reconstruir clave real: alias_YYYY-MM-DD
-      var docKey = "fichaje_"+c.alias+"_"+c.fecha;
+      var docKey = "fichaje_"+c.alias.split(" ").join("_")+"_"+c.fecha;
       try {
         var upd = {};
         upd[c.turno] = c.hora;

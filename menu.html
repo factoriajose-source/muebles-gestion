@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- v4.2 — 14/11/2026 — NUEVO: cierre automatico de salidas olvidadas (1 vez al dia, al entrar Jose Angel/Marisa; no domingos). -->
 <!-- v4.1 — 14/11/2026 — SEGURIDAD: las claves de acceso ya no estan escritas en el codigo (se comparan por huella SHA-256). Misma funcionalidad. -->
 <!-- v4.0 — 14/11/2026 — AHORRO DE LECTURAS FIREBASE: presupuestos (ultimos 60 dias + cache 5 min + recuento para numerar), fichajes por rango de fechas, visitas/repartos/fiestas filtrados, cache de repartos, incidencias, vacaciones y vendedores -->
 <!-- v3.9 — 07/10/2026 — NUEVO: botón "🚦 Calendario vacaciones" en PERSONAL (todos) → vacaciones-consulta.html -->
@@ -738,7 +739,7 @@ tr:last-child td{border-bottom:none}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, getDoc, query, where, orderBy, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, getDoc, updateDoc, query, where, orderBy, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -898,6 +899,70 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove("show"), 2500);
 }
 
+
+// ===== v4.2 CIERRE AUTOMATICO DE SALIDAS OLVIDADAS (opcion B) =====
+// Una vez al dia (cuando entra Jose Angel o Marisa) busca fichajes ya pasados con ENTRADA y sin SALIDA
+// y pone la hora de fin de contrato + la firma de entrada del mismo turno. No toca domingos, hoy, ni dias especiales.
+// Lecturas: 1 consulta por fechas (solo desde la ultima vez, maximo 7 dias).
+function _aMin(t) { const m = /^(\d{1,2}):(\d{2})/.exec(String(t || "")); return m ? (+m[1]) * 60 + (+m[2]) : null; }
+function _horaContrato(v, turno, esSab) {
+  const h = (v && v.horario) || {};
+  return esSab ? (h["sab_" + turno] || h[turno + "_sab"] || h[turno] || "") : (h[turno] || "");
+}
+function calcularCierres(registros, vends) {
+  // registros: [{ref, data}] — devuelve [{ref, upd, alias, fecha, turno}] (funcion pura para poder probarla)
+  const ESPECIALES = ["FIESTA", "VAC", "BAJA"];
+  const out = [];
+  registros.forEach(({ ref, data: r }) => {
+    if (!r || !r.fecha || !r.alias || r.especial || r.alias === "Jose Angel") return;
+    const dow = new Date(r.fecha + "T12:00:00").getDay();
+    if (dow === 0) return; // domingos no se trabaja
+    const v = vends.find(x => x.alias === r.alias);
+    if (!v || v.activo === false) return;
+    [["ini_m", "fin_m"], ["ini_t", "fin_t"]].forEach(([ci, cf]) => {
+      const ini = r[ci], fin = r[cf];
+      if (!ini || fin) return;
+      const hc = _horaContrato(v, cf, dow === 6);
+      const mi = _aMin(ini), mc = _aMin(hc);
+      if (mc === null || mi === null || mi >= mc) return; // sin hora de contrato o entrada posterior: lo revisa Auditoria
+      const fOrig = r["firma_" + cf];
+      const firmaReal = fOrig && ESPECIALES.indexOf(fOrig) < 0;
+      const upd = {};
+      upd[cf] = hc;
+      if (!firmaReal) upd["firma_" + cf] = r["firma_" + ci] || null;
+      upd["auto_" + cf] = true;
+      upd["auto_ts"] = new Date().toISOString();
+      out.push({ ref, upd, alias: r.alias, fecha: r.fecha, turno: cf });
+    });
+  });
+  return out;
+}
+async function cerrarSalidasOlvidadas() {
+  try {
+    if (currentUser !== "Jose Angel" && currentUser !== "Marisa") return;
+    const hoy = nowMadridFull().fecha;
+    const ult = localStorage.getItem("autosalida_ult") || "";
+    if (ult === hoy) return;
+    const tope = fechaMasDias(hoy, -7);
+    const desde = (ult && ult > tope) ? ult : tope;
+    const hasta = fechaMasDias(hoy, -1);
+    if (desde <= hasta) {
+      await loadVendedores();
+      const sn = await leerFichajes(desde, hasta);
+      const regs = []; sn.forEach(d => regs.push({ ref: d.ref, data: d.data() }));
+      const cierres = calcularCierres(regs, vendedoresData);
+      let ok = 0, err = 0;
+      for (const c of cierres) {
+        try { await updateDoc(c.ref, c.upd); ok++; } catch (e) { err++; console.warn("autosalida", c.alias, c.fecha, e); }
+      }
+      if (ok) showToast("🕒 " + ok + " salida(s) olvidada(s) cerrada(s) automáticamente");
+      if (err) return; // no se marca el dia: se reintenta la proxima vez
+    }
+    localStorage.setItem("autosalida_ult", hoy);
+  } catch (e) { console.warn("cerrarSalidasOlvidadas", e); }
+}
+window.calcularCierres = calcularCierres;
+
 // ===== LOGIN =====
 // Vendor grid is populated dynamically from Firebase via loadVendedores()
 const vendorGrid = document.getElementById("vendor-grid");
@@ -916,6 +981,7 @@ function login(name) {
   sel.value = name;
   sel.disabled = false;
   initApp();
+  setTimeout(cerrarSalidasOlvidadas, 4000); // v4.2: cierra salidas olvidadas (1 vez al dia)
   // Apply store restriction for Carmen/Livi
   aplicarRestriccionTienda(name);
   // Show floating repartos button

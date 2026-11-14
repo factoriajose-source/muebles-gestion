@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- index.html 14/11/2026 — NUEVO: al entrar, si falta la salida del dia laborable anterior, pide firmarla (no domingos). -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -437,6 +438,7 @@ async function entrarFichaje(v){
   };
 
   renderTurnos();
+  revisarSalidaAnterior(v); // v+: pregunta por la salida olvidada del dia anterior (1 lectura)
 
   // Historial solo para Jose Angel
   if(v.alias === "Jose Angel"){
@@ -613,6 +615,10 @@ function limpiarFirma(){
 }
 
 function cerrarFirma(){
+  if(_corrActual){ // dijo "Cancelar": no se le vuelve a preguntar hoy (el menu la cerrara solo)
+    try{ localStorage.setItem("corrsal_"+empleadoActual.alias+"_"+nowMadridFull().fecha,"1"); }catch(e){}
+    _corrActual=null; _corrPend=[];
+  }
   document.getElementById("firmaOverlay").classList.remove("open");
   _turnoEnFirma = null;
 }
@@ -647,6 +653,7 @@ async function confirmarFirma(){
   if(!tieneFirma){ showToast("Por favor firma antes de confirmar"); return; }
 
   var firmaBase64 = canvas.toDataURL("image/png");
+  if(_corrActual){ await guardarCorreccion(firmaBase64); return; }
   var turno = _turnoEnFirma;
   var horaFichaje = calcularHoraFichaje(turno);
   var {fecha} = nowMadridFull();
@@ -733,6 +740,69 @@ function nowMadridFull(){
     hora:  pad(madrid.getHours())+":"+pad(madrid.getMinutes())+":"+pad(madrid.getSeconds()),
     horaCorta: pad(madrid.getHours())+":"+pad(madrid.getMinutes())
   };
+}
+
+// ── v+ SALIDA OLVIDADA DEL DIA ANTERIOR (opcion A) ───────────────────────
+var _corrPend=[], _corrActual=null, _corrFecha=null, _corrDatos=null;
+function diaLaborableAnterior(fecha){
+  var d=new Date(fecha+"T12:00:00"); d.setDate(d.getDate()-1);
+  if(d.getDay()===0) d.setDate(d.getDate()-1); // domingo no se trabaja
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function _aMin(t){ var m=/^(\d{1,2}):(\d{2})/.exec(String(t||"")); return m?(+m[1])*60+(+m[2]):null; }
+function calcularPendientes(r, hor, esSab){
+  var ESPECIALES=["FIESTA","VAC","BAJA"], out=[];
+  if(!r || r.especial) return out;
+  [["ini_m","fin_m","Salida Mañana"],["ini_t","fin_t","Salida Tarde"]].forEach(function(t){
+    var ini=r[t[0]], fin=r[t[1]], f=r["firma_"+t[1]];
+    if(!ini || fin || (f && ESPECIALES.indexOf(f)<0)) return;
+    var hc = esSab ? (hor["sab_"+t[1]]||hor[t[1]+"_sab"]||hor[t[1]]) : hor[t[1]];
+    var mi=_aMin(ini), mc=_aMin(hc);
+    if(mi===null || mc===null || mi>=mc) return;
+    out.push({turno:t[1], hora:hc, label:t[2]});
+  });
+  return out;
+}
+async function revisarSalidaAnterior(v){
+  try{
+    if(v.alias==="Jose Angel") return;
+    var fecha=nowMadridFull().fecha;
+    var skipKey="corrsal_"+v.alias+"_"+fecha;
+    if(localStorage.getItem(skipKey)) return;      // ya dijo "ahora no" hoy
+    var ayer=diaLaborableAnterior(fecha);
+    var snap=await db.collection("fichajes").doc(fichajeKey(v.alias,ayer)).get(); // 1 lectura
+    if(!snap.exists) return;
+    var r=snap.data();
+    var esSab=new Date(ayer+"T12:00:00").getDay()===6;
+    var pend=calcularPendientes(r, v.horario||{}, esSab);
+    if(!pend.length) return;
+    _corrFecha=ayer; _corrDatos=r; _corrPend=pend;
+    siguienteCorreccion();
+  }catch(e){ console.warn("revisarSalidaAnterior", e); }
+}
+function siguienteCorreccion(){
+  if(!_corrPend.length){ _corrActual=null; return; }
+  _corrActual=_corrPend.shift();
+  _turnoEnFirma=null;
+  var p=_corrFecha.split("-");
+  document.getElementById("firmaTitulo").textContent="✍️ Se te olvidó firmar: "+_corrActual.label;
+  document.getElementById("firmaSubtitulo").textContent=empleadoActual.alias+" · "+p[2]+"/"+p[1]+"/"+p[0];
+  document.getElementById("firmaHora").textContent=_corrActual.hora;
+  document.getElementById("firmaGeoText").textContent="Si saliste a esa hora, firma aquí. Si no, pulsa Cancelar y díselo a José Ángel.";
+  limpiarFirma();
+  document.getElementById("firmaOverlay").classList.add("open");
+  iniciarCanvas();
+}
+async function guardarCorreccion(firma){
+  var c=_corrActual;
+  var upd={}; upd[c.turno]=c.hora; upd["firma_"+c.turno]=firma; upd["corr_"+c.turno+"_ts"]=new Date().toISOString();
+  if(geoActual) upd["geo_"+c.turno]={lat:geoActual.lat,lon:geoActual.lon,acc:geoActual.acc,dir:direccionActual||""};
+  try{
+    await db.collection("fichajes").doc(fichajeKey(empleadoActual.alias,_corrFecha)).update(upd);
+    document.getElementById("firmaOverlay").classList.remove("open");
+    showToast("✅ Salida del día anterior firmada");
+    siguienteCorreccion();
+  }catch(e){ showToast("Error al guardar: "+e.message); }
 }
 function fichajeKey(alias,fecha){
   return "fichaje_"+alias.split(" ").join("_")+"_"+fecha;
