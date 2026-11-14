@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- dashboard.html — Cuadro de Mando General — v1.0 — 14/11/2026 -->
+<!-- dashboard.html — Cuadro de Mando General — v1.1 — 14/11/2026 — CORREGIDO: lo de hoy siempre sale (al abrir se vuelven a leer los ultimos 14 dias), el gráfico de repartidores muestra TODOS (antes solo 8) con los repartos de hoy, y se juntan nombres repetidos (ALFREDO). Nuevos botones Actualizar / Recargar año entero. -->
+<!-- v1.0 — 14/11/2026 — primera versión -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -57,6 +58,7 @@ svg .mes.apagado rect.b{opacity:.35}
 .hb .pista{background:#ece8dc;border-radius:4px;height:14px;overflow:hidden}
 .hb .pista i{display:block;height:100%;border-radius:0 4px 4px 0;background:var(--s-pedido)}
 .hb .num{font-variant-numeric:tabular-nums;color:var(--tinta);font-weight:600;white-space:nowrap}
+.hb .num .hoy{background:#e4f1e6;color:#1f7a3a;border-radius:10px;padding:1px 8px;font-size:12px;font-weight:600;margin-left:8px}
 .embudo .paso{margin-bottom:10px}
 .embudo .cab{display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px}
 .embudo .cab b{font-size:17px}
@@ -128,7 +130,8 @@ footer{font-size:12px;color:var(--tinta3);text-align:left;padding:0 18px 20px;ma
     </select></label>
     <label class="chk"><input type="checkbox" id="f-cmp"> Comparar con el año anterior</label>
     <div style="flex:1"></div>
-    <button class="btn sec" id="btn-act">🔄 Actualizar datos</button>
+    <button class="btn sec" id="btn-act" title="Vuelve a leer solo los últimos 14 días (pocas lecturas)">🔄 Actualizar</button>
+    <button class="btn sec" id="btn-todo" title="Vuelve a leer el año entero (más lecturas)">Recargar año entero</button>
   </div>
   <div class="estado-datos" id="estado-datos"></div>
 
@@ -168,7 +171,7 @@ footer{font-size:12px;color:var(--tinta3);text-align:left;padding:0 18px 20px;ma
     <h2>Repartos</h2>
     <div class="grid kpis" id="rep-kpis"></div>
     <div class="grid dos" style="margin-top:12px">
-      <div class="card"><h3>Repartos por repartidor</h3><div class="hb" id="rep-quien"></div></div>
+      <div class="card"><h3>Repartos por repartidor <small style="font-weight:400;color:var(--tinta3)">· todos los del período · «hoy» = apuntados hoy</small></h3><div class="hb" id="rep-quien"></div></div>
       <div class="card"><h3>Repartos por mes</h3><div id="g-repmes"></div></div>
     </div>
 
@@ -183,7 +186,7 @@ footer{font-size:12px;color:var(--tinta3);text-align:left;padding:0 18px 20px;ma
     <div class="card" id="personal"></div>
   </div>
 </main>
-<footer>Cuadro de Mando General · v1.0 — 14/11/2026</footer>
+<footer>Cuadro de Mando General · v1.1 — 14/11/2026</footer>
 <div id="tip"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -195,8 +198,10 @@ footer{font-size:12px;color:var(--tinta3);text-align:left;padding:0 18px 20px;ma
 //  AHORRO DE LECTURAS FIREBASE:
 //   - Solo se lee el AÑO elegido (consultas filtradas por fecha).
 //   - Lo leido se guarda resumido en este navegador (localStorage):
-//       año en curso  -> vale 6 horas
+//       año en curso  -> el año guardado vale 6 horas
 //       años pasados  -> valen 30 dias (ya no cambian)
+//   - Al abrir (y al pulsar Actualizar) el año en curso vuelve a leer SOLO los
+//     ultimos 14 dias: asi lo de hoy siempre aparece y el gasto es pequeño.
 //   - Cambiar de mes o de tienda NO lee nada: se filtra en memoria.
 //   - No se leen fichajes ni incidencias (documentos muy pesados).
 // ================================================================
@@ -211,8 +216,12 @@ firebase.initializeApp({
 var auth=firebase.auth(), db=firebase.firestore();
 
 var USUARIO_GERENCIA="Jose Angel";
-var CACHE_PREFIJO="dash_v1_";
+var CACHE_PREFIJO="dash_v2_";
 var HORAS_ANIO_ACTUAL=6, DIAS_ANIO_PASADO=30;
+var DIAS_RECIENTES=14;         // dias que se vuelven a leer siempre en el año en curso
+var MIN_ENTRE_REFRESCOS=3;     // minutos: con la pagina ya abierta, no se relee lo reciente si se hizo hace menos
+// Nombres de repartidor que se escriben de varias formas -> uno solo ("empieza por", "nombre correcto")
+var UNIFICAR_REPARTIDORES=[["ALFREDO","ALFREDO RODRIGUEZ MORTERA"]];
 var DIAS_SEGUIMIENTO=30;       // presupuestos pendientes mas viejos que esto -> aviso
 var MESES=["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 var TIENDAS={lf:"Muebles La Factoría",mk:"Merkamueble",es:"ExpoSofá"};
@@ -234,8 +243,10 @@ function tiendaCod(t){
   if(s.indexOf("expo")>=0)return "es";
   return "";
 }
-function limpiaNombre(s){ // quita DNI pegados al nombre del repartidor
-  return String(s||"").replace(/\b\d{7,8}[A-Za-z]\b/g,"").replace(/\s+/g," ").trim()||"Sin nombre";
+function limpiaNombre(s){ // quita DNI, pasa a MAYUSCULAS sin tildes y junta nombres repetidos
+  var n=String(s||"").replace(/\b\d{7,8}[A-Za-z]\b/g,"").replace(/\s+/g," ").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  for(var i=0;i<UNIFICAR_REPARTIDORES.length;i++){if(n.indexOf(UNIFICAR_REPARTIDORES[i][0])===0)return UNIFICAR_REPARTIDORES[i][1];}
+  return n||"SIN NOMBRE";
 }
 function totalPresupuesto(d){ // misma cuenta que el Cuadro de mando de facturacion.html
   var lines=d.lines||d.lineas||[];
@@ -258,46 +269,81 @@ function leerCache(anio){
 }
 function guardarCache(anio,p){try{localStorage.setItem(CACHE_PREFIJO+anio,JSON.stringify(p));}catch(e){}}
 
-function traerAnio(anio){
-  var a=String(anio), ini=a+"-01-01", fin=a+"-12-31";
-  var p={ts:Date.now(),lect:0,err:{},P:[],V:[],R:[],F:[],FA:[],VB:[],AG:0};
+// Lee de Firebase solo el tramo de fechas desde..fin del año y lo devuelve resumido.
+// completo=true -> tambien vacaciones/bajas (solo al traer el año entero)
+function leerTramo(a,desde,completo){
+  var fin=a+"-12-31";
+  var p={lect:0,err:{},P:[],V:[],R:[],F:[],FA:[],VB:[],AG:0};
   function seguro(clave,promesa,fn){
     return promesa.then(function(snap){p.lect+=snap.size;snap.forEach(function(doc){try{fn(doc.data());}catch(e){}});})
       .catch(function(e){p.err[clave]=e.message||String(e);});
   }
   var tareas=[
-    seguro("P",db.collection("presupuestos").where("fecha",">=",ini).where("fecha","<=",fin).get(),function(d){
+    seguro("P",db.collection("presupuestos").where("fecha",">=",desde).where("fecha","<=",fin).get(),function(d){
       p.P.push([String(d.fecha||"").slice(0,10),String(d.vendedor||"").trim()||"Sin vendedor",tiendaCod(d.tienda),String(d.estado||"pendiente").toLowerCase(),totalPresupuesto(d)]);
     }),
-    seguro("V",db.collection("visitas").where("fecha",">=",ini).where("fecha","<=",fin).get(),function(d){
+    seguro("V",db.collection("visitas").where("fecha",">=",desde).where("fecha","<=",fin).get(),function(d){
       var por={};["m","t"].forEach(function(k){var o=d[k]||{};Object.keys(o).forEach(function(v){por[v]=(por[v]||0)+(Number(o[v])||0);});});
       p.V.push([String(d.fecha||"").slice(0,10),tiendaCod(d.tienda),por]);
     }),
-    seguro("R",db.collection("repartos").where("fecha_entrega",">=",ini).where("fecha_entrega","<=",fin).get(),function(d){
+    seguro("R",db.collection("repartos").where("fecha_entrega",">=",desde).where("fecha_entrega","<=",fin).get(),function(d){
       p.R.push([String(d.fecha_entrega||"").slice(0,10),tiendaCod(d.tienda),limpiaNombre(d.repartidor),d.entregado?1:0,Number(d.importe_reparto)||0,Number(d.saldo_cobrar)||0]);
     }),
-    seguro("F",db.collection("fallos").where("fecha",">=",a+"-01").where("fecha","<=",a+"-12").get(),function(d){
+    seguro("F",db.collection("fallos").where("fecha",">=",desde.slice(0,7)).where("fecha","<=",a+"-12").get(),function(d){
       p.F.push([String(d.fecha||"").slice(0,7),String(d.vendedor||"").trim()||"Sin vendedor",tiendaCod(d.tienda),String(d.prvNombre||d.prvCod||"Sin proveedor"),Number(d.calculo)||0]);
     }),
-    seguro("FA",db.collection("facturas").where("fecha",">=",ini).where("fecha","<=",fin).get(),function(d){
+    seguro("FA",db.collection("facturas").where("fecha",">=",desde).where("fecha","<=",fin).get(),function(d){
       p.FA.push([String(d.fecha||"").slice(0,10),tiendaCod(d.tienda),String(d.estado||"").toLowerCase(),Number(d.total)||0,String(d.vencimiento||"").slice(0,10)]);
     })
   ];
   if(a===String(new Date().getFullYear())){
-    tareas.push(seguro("VB",db.collection("vacaciones_bajas").where("anio","==",Number(a)).get(),function(d){
-      if(d.alias&&d.fechaIni&&d.fechaFin)p.VB.push([d.alias,d.tipo||"",d.fechaIni,d.fechaFin]);
-    }));
+    if(completo){
+      tareas.push(seguro("VB",db.collection("vacaciones_bajas").where("anio","==",Number(a)).get(),function(d){
+        if(d.alias&&d.fechaIni&&d.fechaFin)p.VB.push([d.alias,d.tipo||"",d.fechaIni,d.fechaFin]);
+      }));
+    }
     tareas.push(seguro("AG",db.collection("alertas_geo").where("leida","==",false).get(),function(){p.AG++;}));
   }
-  return Promise.all(tareas).then(function(){guardarCache(a,p);return p;});
+  return Promise.all(tareas).then(function(){return p;});
 }
-function asegurar(anio,forzar){
-  if(!forzar){
-    if(DATOS[anio])return Promise.resolve(DATOS[anio]);
-    var c=leerCache(anio);
-    if(c){c.deCache=true;DATOS[anio]=c;return Promise.resolve(c);}
-  }
-  return traerAnio(anio).then(function(p){p.deCache=false;DATOS[anio]=p;return p;});
+// Año entero (la primera vez, o al pulsar "Recargar año entero")
+function traerAnio(anio){
+  var a=String(anio);
+  return leerTramo(a,a+"-01-01",true).then(function(q){
+    q.ts=Date.now();q.tsRec=q.ts;q.lectAhora=q.lect;q.deCache=false;
+    guardarCache(a,q);return q;
+  });
+}
+// Pone al dia solo los ultimos DIAS_RECIENTES dias del año en curso (pocas lecturas)
+function refrescarReciente(p,anio){
+  var a=String(anio),desde=sumaDias(hoyISO(),-DIAS_RECIENTES);
+  if(desde<a+"-01-01")desde=a+"-01-01";
+  return leerTramo(a,desde,false).then(function(q){
+    var mes=desde.slice(0,7);
+    function mezcla(clave,corte){ // si esa lectura falla, se deja lo que habia
+      if(q.err[clave]){p.err[clave]=q.err[clave];return;}
+      delete p.err[clave];
+      p[clave]=p[clave].filter(function(x){return x[0]<corte;}).concat(q[clave]);
+    }
+    mezcla("P",desde);mezcla("V",desde);mezcla("R",desde);mezcla("FA",desde);mezcla("F",mes);
+    if(!q.err.AG)p.AG=q.AG;
+    p.tsRec=Date.now();p.lectAhora=q.lect;p.deCache=true;
+    guardarCache(a,p);return p;
+  });
+}
+// modo: "normal" (al abrir / cambiar de año) | "reciente" (boton Actualizar) | "todo" (Recargar año entero)
+function asegurar(anio,modo){
+  var a=String(anio),actual=String(new Date().getFullYear())===a;
+  if(modo==="todo")return traerAnio(a).then(function(p){DATOS[a]=p;return p;});
+  var enMemoria=!!DATOS[a];   // true = ya estaba cargado en esta pagina (cambio de año / comparacion)
+  var p=DATOS[a]||leerCache(a);
+  if(!p)return traerAnio(a).then(function(q){DATOS[a]=q;return q;});
+  DATOS[a]=p;p.deCache=true;
+  var minutos=(Date.now()-(p.tsRec||p.ts))/60000;
+  // Al ABRIR la pagina siempre se ponen al dia los ultimos dias; dentro de la misma pagina, como mucho cada 3 min
+  if(actual&&(modo==="reciente"||!enMemoria||minutos>MIN_ENTRE_REFRESCOS))return refrescarReciente(p,a);
+  p.lectAhora=0;
+  return Promise.resolve(p);
 }
 
 // ---------------- FILTROS ----------------
@@ -337,10 +383,10 @@ function delta(act,ant,anioAnt,esPuntos){
   return '<div class="delta '+(d>0?"sube":"baja")+'">'+(d>0?"▲ +":"▼ ")+d+u+' respecto a '+anioAnt+'</div>';
 }
 function kpi(et,val,pie,dl){return '<div class="card kpi"><div class="et">'+et+'</div><div class="val">'+val+'</div><div class="pie">'+pie+'</div>'+(dl||"")+'</div>';}
-function barrasH(el,pares,fmt,vacio){ // pares: [[nombre,valor]]
+function barrasH(el,pares,fmt,vacio,extra){ // pares: [[nombre,valor]]; extra(nombre) = texto añadido junto al numero
   var max=pares.reduce(function(m,x){return Math.max(m,x[1]);},0)||1;
   el.innerHTML=pares.length?pares.map(function(x){
-    return '<div class="nom" data-tip="'+esc(x[0])+'">'+esc(x[0])+'</div><div class="pista"><i style="width:'+Math.max(1,Math.round(x[1]/max*100))+'%"></i></div><div class="num">'+fmt(x[1])+'</div>';
+    return '<div class="nom" data-tip="'+esc(x[0])+'">'+esc(x[0])+'</div><div class="pista"><i style="width:'+Math.max(1,Math.round(x[1]/max*100))+'%"></i></div><div class="num">'+fmt(x[1])+(extra?extra(x[0]):"")+'</div>';
   }).join(""):'<div class="sin" style="grid-column:1/-1">'+(vacio||"Sin datos en este período.")+'</div>';
 }
 function agrupar(arr,fn,val){var o={};arr.forEach(function(x){var k=fn(x);o[k]=(o[k]||0)+(val?val(x):1);});return o;}
@@ -484,13 +530,16 @@ function pintar(){
   var ent=R.filter(function(x){return x[3];}).length;
   var atras=R.filter(function(x){return !x[3]&&x[0]<hoy;});
   var saldoPte=R.filter(function(x){return !x[3];}).reduce(function(s,x){return s+x[5];},0);
+  var Rhoy=esActual?p.R.filter(function(x){return x[0]===hoy&&dentro(x[0],x[1],f,"",true);}):[];
+  var hoyPorRep=agrupar(Rhoy,function(x){return x[2];});
   gi("rep-kpis").innerHTML=p.err.R?'<div class="error-sec">No se pudieron leer los repartos: '+esc(p.err.R)+'</div>':
-     kpi("Repartos",num(R.length),"hojas de reparto")
+     kpi("Repartos de hoy",esActual?num(Rhoy.length):"—",esActual?(Rhoy.length?num(Rhoy.filter(function(x){return x[3];}).length)+" ya entregados":"ninguno apuntado todavía"):"solo en el año en curso")
+    +kpi("Repartos",num(R.length),"hojas de reparto en el período")
     +kpi("Entregados",pct(ent,R.length)+"%",num(ent)+" de "+num(R.length))
     +kpi("Sin marcar entregado",num(atras.length),"con fecha ya pasada")
     +kpi("Por cobrar en la entrega",eur(saldoPte),"en repartos aún no entregados")
     +kpi("Importe de reparto",eur(R.reduce(function(s,x){return s+x[4];},0)),"suma del campo importe reparto");
-  barrasH(gi("rep-quien"),ordenar(agrupar(R,function(x){return x[2];}),8),num);
+  barrasH(gi("rep-quien"),ordenar(agrupar(R,function(x){return x[2];})),num,"",function(n){return hoyPorRep[n]?' <span class="hoy">hoy: '+hoyPorRep[n]+'</span>':"";});
   var repMes=[],repTips=[];
   for(var m2=1;m2<=12;m2++){var mm2=String(m2).padStart(2,"0");
     var c=p.R.filter(function(x){return dentro(x[0],x[1],fAnio)&&x[0].slice(5,7)===mm2;}).length;
@@ -535,17 +584,21 @@ function pintar(){
   gi("avisos").innerHTML=av.map(function(x){return '<li class="'+x[0]+'"><span class="ico">'+x[1]+'</span><span>'+x[2]+'</span></li>';}).join("");
 
   // --- Estado de los datos
-  var min=Math.round((Date.now()-p.ts)/60000);
-  var hace=min<1?"ahora mismo":(min<60?"hace "+min+" min":"hace "+Math.round(min/60)+" h");
-  gi("estado-datos").innerHTML=(p.deCache?"📦 Datos guardados en este ordenador, leídos de Firebase <b>"+hace+"</b> (sin gastar lecturas ahora).":"🔥 Datos recién leídos de Firebase: <b>"+num(p.lect)+" lecturas</b>.")
-    +(pa?" Año "+anioAnt+": "+(pa.deCache?"guardado":num(pa.lect)+" lecturas")+".":"");
+  function haceTxt(ts){var m=Math.round((Date.now()-ts)/60000);return m<1?"ahora mismo":(m<60?"hace "+m+" min":"hace "+Math.round(m/60)+" h");}
+  var ea;
+  if(!p.deCache)ea="🔥 Año "+f.anio+" leído completo de Firebase ahora: <b>"+num(p.lect)+" lecturas</b>.";
+  else{
+    ea="📦 Año "+f.anio+" guardado en este ordenador (leído "+haceTxt(p.ts)+").";
+    if(esActual)ea+=" Los últimos "+DIAS_RECIENTES+" días se han puesto al día <b>"+haceTxt(p.tsRec||p.ts)+"</b>"+(p.lectAhora?": "+num(p.lectAhora)+" lecturas.":" (sin lecturas ahora).");
+  }
+  gi("estado-datos").innerHTML=ea+(pa?" Año "+anioAnt+": "+(pa.deCache?"guardado":num(pa.lect)+" lecturas")+".":"");
 }
 
-function cargar(forzar){
+function cargar(modo){
   var f=filtros();
   gi("cargando").style.display="";gi("cargando").textContent="Cargando datos…";
-  var tareas=[asegurar(f.anio,forzar)];
-  if(f.cmp)tareas.push(asegurar(String(Number(f.anio)-1),false));
+  var tareas=[asegurar(f.anio,modo)];
+  if(f.cmp)tareas.push(asegurar(String(Number(f.anio)-1),"normal"));
   Promise.all(tareas).then(function(){
     gi("cargando").style.display="none";gi("contenido").style.display="";pintar();
   }).catch(function(e){gi("cargando").textContent="Error al leer los datos: "+(e.message||e);});
@@ -582,13 +635,14 @@ function iniciar(){
   for(var m=1;m<=12;m++)hm+='<option value="'+String(m).padStart(2,"0")+'">'+MESES[m]+'</option>';
   gi("f-mes").innerHTML=hm;
   try{gi("f-cmp").checked=localStorage.getItem("dash_cmp")==="1";}catch(e){}
-  gi("f-anio").addEventListener("change",function(){cargar(false);});
+  gi("f-anio").addEventListener("change",function(){cargar("normal");});
   gi("f-mes").addEventListener("change",pintar);
   gi("f-tienda").addEventListener("change",pintar);
-  gi("f-cmp").addEventListener("change",function(){try{localStorage.setItem("dash_cmp",gi("f-cmp").checked?"1":"0");}catch(e){}cargar(false);});
-  gi("btn-act").addEventListener("click",function(){cargar(true);});
+  gi("f-cmp").addEventListener("change",function(){try{localStorage.setItem("dash_cmp",gi("f-cmp").checked?"1":"0");}catch(e){}cargar("normal");});
+  gi("btn-act").addEventListener("click",function(){cargar("reciente");});
+  gi("btn-todo").addEventListener("click",function(){cargar("todo");});
   gi("btn-print").addEventListener("click",function(){window.print();});
-  cargar(false);
+  cargar("normal");
 }
 var arrancado=false;
 auth.onAuthStateChanged(function(user){
